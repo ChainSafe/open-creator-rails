@@ -2,17 +2,26 @@
 pragma solidity ^0.8.13;
 
 import {Script} from "forge-std/Script.sol";
-import {console} from "forge-std/console.sol";
+import {stdJson} from "forge-std/StdJson.sol";
 
 contract DeployScript is Script {
+
+    string internal constant DEPLOYMENTS_FILE = "deployments.json";
+    
+    function getAddress(string memory contractName) public view returns (address) {    
+        return stdJson.readAddress(vm.readFile(DEPLOYMENTS_FILE), contractName);
+    }
+
     /// @notice Generic deployment function that deploys any contract
     /// @param contractName The contract artifact path, e.g., "src/Counter.sol:Counter"
     /// @param constructorArgs ABI-encoded constructor arguments (use abi.encode(...))
     /// @return deployedAddress The address of the deployed contract
-    function deployContract(string memory contractName, bytes memory constructorArgs)
+    function deploy(string memory contractName, bytes memory constructorArgs)
         public
         returns (address deployedAddress)
     {
+
+        vm.startBroadcast();
         if (constructorArgs.length == 0) {
             deployedAddress = deployCode(contractName);
         } else {
@@ -21,24 +30,6 @@ contract DeployScript is Script {
         
         require(deployedAddress != address(0), "Deployment failed");
         
-        return deployedAddress;
-    }
-
-    /// @notice Deploy a contract with constructor arguments from command line
-    /// @param contractName The contract artifact path, e.g., "src/Counter.sol:Counter"
-    /// @param constructorArgs ABI-encoded constructor arguments as hex string (0x...)
-    /// @return deployedAddress The address of the deployed contract
-    /// 
-    /// Usage example:
-    /// forge script script/Deploy.s.sol:DeployScript \
-    ///   "src/Counter.sol:Counter" "0x000000000000000000000000000000000000000000000000000000000000002a" \
-    ///   --sig "run(string,bytes)" \
-    ///   --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
-    function run(string memory contractName, bytes memory constructorArgs) public returns (address deployedAddress) {
-        vm.startBroadcast();
-        
-        deployedAddress = deployContract(contractName, constructorArgs);
-
         vm.stopBroadcast();
 
         return deployedAddress;

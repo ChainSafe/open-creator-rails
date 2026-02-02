@@ -51,7 +51,7 @@ if [ -f "$DEPLOYMENTS_FILE" ] && [ "$FORCE_DEPLOY" = false ]; then
     fi
 fi
 
-OUTPUT=$(forge script script/Deploy.s.sol:DeployScript "src/$CONTRACT_NAME.sol:$CONTRACT_NAME" $(cast abi-encode "constructor($CONSTRUCTOR_TYPES)" $@) --sig "run(string,bytes)" --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY)
+OUTPUT=$(forge script script/Deploy.s.sol:DeployScript "src/$CONTRACT_NAME.sol:$CONTRACT_NAME" $(cast abi-encode "constructor($CONSTRUCTOR_TYPES)" $@) --sig "deploy(string,bytes)" --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY)
 EXIT_CODE=$?
 
 # Check if deploy.sh failed
