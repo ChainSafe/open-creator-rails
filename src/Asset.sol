@@ -12,19 +12,22 @@ contract Asset is Ownable, IAsset {
     address internal immutable TOKEN_ADDRESS;
 
     mapping(address => uint256) internal subscriptions;
+    address internal immutable REGISTRY_ADDRESS;
         
     error InvalidSpender();
     error PermitFailed();
     error SubscriptionFailed();
     error InsufficientFunds();
+    error Unauthorized();
 
     event SubscriptionAdded(address indexed user, uint256 expiresAt);
     event SubscriptionRevoked(address indexed user);
     
-    constructor(bytes32 _assetId, uint256 _subscriptionPrice, address _tokenAddress) Ownable(msg.sender) {
+    constructor(bytes32 _assetId, uint256 _subscriptionPrice, address _tokenAddress, address _owner) Ownable(_owner) {
         ASSET_ID = _assetId;
         SUBSCRIPTION_PRICE = _subscriptionPrice;
         TOKEN_ADDRESS = _tokenAddress;
+        REGISTRY_ADDRESS = msg.sender;
     }
 
     function getAssetId() external view returns (bytes32) {
@@ -35,11 +38,29 @@ contract Asset is Ownable, IAsset {
         return SUBSCRIPTION_PRICE * duration;
     }
 
+    function getMySubscription() external view returns (uint256) {
+        return subscriptions[msg.sender];
+    }
+
     function getSubscription(address user) external view returns (uint256) {
+        
+        if (msg.sender != REGISTRY_ADDRESS && msg.sender != owner()) {
+            revert Unauthorized();
+        }
+
         return subscriptions[user];
     }
 
+    function viewMySubscription() external view returns (bool) {
+        return subscriptions[msg.sender] > block.timestamp;
+    }
+
     function viewSubscription(address user) external view returns (bool) {
+        
+        if (msg.sender != REGISTRY_ADDRESS && msg.sender != owner()) {
+            revert Unauthorized();
+        }
+        
         return subscriptions[user] > block.timestamp;
     }
 

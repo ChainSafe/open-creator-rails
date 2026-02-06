@@ -17,7 +17,7 @@ contract AssetRegistryTest is BaseTest {
     }
 
     function test_createAsset() public {
-        address asset = assetRegistry.createAsset(ASSET_ID, 100000000, address(gameToken));
+        address asset = assetRegistry.createAsset(ASSET_ID, 100000000, address(gameToken), signer);
         assertEq(IAsset(asset).getAssetId(), ASSET_ID);
         assertEq(asset, address(assetRegistry.assets(ASSET_ID)));
     }
@@ -50,35 +50,21 @@ contract AssetRegistryTest is BaseTest {
 
     function test_viewSubscription() public {
         test_createAsset();
-        assertEq(assetRegistry.viewSubscription(ASSET_ID, signer), false);
+        assertEq(assetRegistry.viewSubscription(ASSET_ID), false);
         test_subscribe();
-        assertEq(assetRegistry.viewSubscription(ASSET_ID, signer), true);
+        assertEq(assetRegistry.viewSubscription(ASSET_ID), true);
     }
 
     function test_getSubscription() public {
         test_createAsset();
-        assertEq(assetRegistry.getSubscription(ASSET_ID, signer), 0);
+        assertEq(assetRegistry.getSubscription(ASSET_ID), 0);
         test_subscribe();
-        assertTrue(assetRegistry.getSubscription(ASSET_ID, signer) > block.timestamp);
+        assertTrue(assetRegistry.getSubscription(ASSET_ID) > block.timestamp);
     }
 
     function test_getSubscriptionPrice() public {
         test_createAsset();
         address asset = assetRegistry.getAsset(ASSET_ID);
         assertEq(assetRegistry.getSubscriptionPrice(ASSET_ID, 10), IAsset(asset).getSubscriptionPrice(10));
-    }
-
-    function test_revokeSubscription() public {
-        test_createAsset();
-        test_subscribe();
-        assertTrue(assetRegistry.viewSubscription(ASSET_ID, signer));
-        assertTrue(assetRegistry.revokeSubscription(ASSET_ID, signer));
-        assertFalse(assetRegistry.viewSubscription(ASSET_ID, signer));
-    }
-
-    function test_removeAsset() public {
-        test_createAsset();
-        assetRegistry.removeAsset(ASSET_ID);
-        assertEq(assetRegistry.assets(ASSET_ID), address(0));
     }
 }

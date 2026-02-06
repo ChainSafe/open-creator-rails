@@ -17,16 +17,8 @@ contract AssetRegistryScript is DeployScript {
 
     function createAsset(string memory _assetId, uint256 _subscriptionPrice) public {
         vm.startBroadcast();
-        address asset = assetRegistry.createAsset(keccak256(abi.encodePacked(_assetId)), _subscriptionPrice, address(gameToken));
+        address asset = assetRegistry.createAsset(keccak256(abi.encodePacked(_assetId)), _subscriptionPrice, address(gameToken), msg.sender);
         console.log(string.concat(_assetId, " Asset created: ", vm.toString(asset)));     
-        vm.stopBroadcast();
-    }
-
-    function removeAsset(string memory _assetId) public {
-        vm.startBroadcast();
-        bool success = assetRegistry.removeAsset(keccak256(abi.encodePacked(_assetId)));
-        require(success, "Failed to remove asset");
-        console.log(string.concat(_assetId, " Asset removed"));
         vm.stopBroadcast();
     }
 }

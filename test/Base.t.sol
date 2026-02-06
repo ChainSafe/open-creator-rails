@@ -20,6 +20,8 @@ contract BaseTest is Test {
         key = vm.deriveKey(MNEMONIC, 0);
         signer = vm.addr(key);
 
+        vm.startPrank(signer);
+
         gameToken.mint(signer, 1000000000000000000000000000000000000000);
     }
 

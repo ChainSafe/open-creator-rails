@@ -16,7 +16,7 @@ contract AssetTest is BaseTest {
         super.setUp();
 
         owner = signer;
-        asset = new Asset(keccak256(abi.encodePacked(ASSET_ID)), SUBSCRIPTION_PRICE, address(gameToken));
+        asset = new Asset(keccak256(abi.encodePacked(ASSET_ID)), SUBSCRIPTION_PRICE, address(gameToken), owner);
     }
 
     function test_getAssetId() public view {
@@ -39,28 +39,44 @@ contract AssetTest is BaseTest {
         
         (uint8 v, bytes32 r, bytes32 s) = getPermit(owner, spender, value, deadline);        
         
-        asset.subscribe(owner, spender, value, deadline, v, r, s);
+        bool success = asset.subscribe(owner, spender, value, deadline, v, r, s);
+        
+        assertTrue(success);
 
-        assertEq(asset.getSubscription(owner), deadline);
+        assertEq(asset.getMySubscription(), deadline);
     }
 
     function test_revokeSubscription() public {
         
         test_subscribe();
 
-        asset.revokeSubscription(owner);
+        bool success = asset.revokeSubscription(owner);
+        
+        assertTrue(success);
 
-        assertEq(asset.getSubscription(owner), 0);
+        assertEq(asset.getMySubscription(), 0);
     }
 
     function test_viewSubscription() public {
         
         test_subscribe();
 
-        assertEq(asset.viewSubscription(owner), true);
+        assertEq(asset.viewMySubscription(), true);
 
         test_revokeSubscription();
 
-        assertEq(asset.viewSubscription(owner), false);
+        assertEq(asset.viewMySubscription(), false);
+    }
+
+    function test_unauthorized() public {
+        vm.startPrank(address(1));
+
+        vm.expectRevert(Asset.Unauthorized.selector);
+        asset.getSubscription(address(1));
+
+        vm.expectRevert(Asset.Unauthorized.selector);
+        asset.viewSubscription(address(1));
+
+        vm.stopPrank();
     }
 }

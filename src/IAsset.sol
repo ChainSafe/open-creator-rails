@@ -7,8 +7,12 @@ interface IAsset {
     
     function getSubscriptionPrice(uint256 duration) external view returns (uint256);
     
+    function getMySubscription() external view returns (uint256);
+
     function getSubscription(address user) external view returns (uint256);
     
+    function viewMySubscription() external view returns (bool);
+
     function viewSubscription(address user) external view returns (bool);
     
     function subscribe(

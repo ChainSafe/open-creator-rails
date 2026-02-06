@@ -16,32 +16,19 @@ contract AssetRegistry is Ownable {
 
     constructor() Ownable(msg.sender) {}
 
-    function createAsset(bytes32 _assetId, uint256 _subscriptionPrice, address _tokenAddress) external onlyOwner returns (address)
+    function createAsset(bytes32 _assetId, uint256 _subscriptionPrice, address _tokenAddress, address _owner) external onlyOwner returns (address)
     {
 
         if (assets[_assetId] != address(0)) {
-            revert AssetAlreadyExists();
+            revert AssetAlreadyExists();    
         }
 
-        Asset asset = new Asset(_assetId, _subscriptionPrice, _tokenAddress);
+        Asset asset = new Asset(_assetId, _subscriptionPrice, _tokenAddress, _owner);
         assets[_assetId] = address(asset);
 
         emit AssetCreated(_assetId, address(asset));
 
         return address(asset);
-    }
-
-    function removeAsset(bytes32 _assetId) external onlyOwner returns (bool)
-    {
-        if (assets[_assetId] == address(0)) {
-            revert AssetNotFound();
-        }
-        
-        delete assets[_assetId];
-        
-        emit AssetRemoved(_assetId);
-        
-        return true;
     }
 
     function getAsset(bytes32 _assetId) public view returns (address)
@@ -55,18 +42,18 @@ contract AssetRegistry is Ownable {
         return asset;
     }
 
-    function viewSubscription(bytes32 _assetId, address _user) external view returns (bool)
+    function viewSubscription(bytes32 _assetId) external view returns (bool)
     {
         address asset = getAsset(_assetId);
         
-        return IAsset(asset).viewSubscription(_user);
+        return IAsset(asset).viewSubscription(msg.sender);
     }
 
-    function getSubscription(bytes32 _assetId, address _user) external view returns (uint256)
+    function getSubscription(bytes32 _assetId) external view returns (uint256)
     {
         address asset = getAsset(_assetId);
         
-        return IAsset(asset).getSubscription(_user);
+        return IAsset(asset).getSubscription(msg.sender);
     }
 
     function getSubscriptionPrice(bytes32 _assetId, uint256 _duration) external view returns (uint256)
@@ -81,12 +68,5 @@ contract AssetRegistry is Ownable {
         address asset = getAsset(_assetId);
         
         return IAsset(asset).subscribe(_owner, _spender, _value, _deadline, _v, _r, _s);
-    }
-
-    function revokeSubscription(bytes32 _assetId, address _user) external returns (bool)
-    {
-        address asset = getAsset(_assetId);
-        
-        return IAsset(asset).revokeSubscription(_user);
     }
 }
