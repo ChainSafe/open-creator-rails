@@ -39,9 +39,12 @@ if [ -f "$DEPLOYMENTS_FILE" ] && [ "$FORCE_DEPLOY" = false ]; then
             exit 1
         fi
         # Get bytecode
-        BYTECODE=$(jq -r '.deployedBytecode.object' "out/${CONTRACT_NAME}.sol/${CONTRACT_NAME}.json")
+        BYTECODE=$(forge inspect $CONTRACT_NAME deployedBytecode)
         # Get deployed bytecode
         DEPLOYED_BYTECODE=$(cast code $DEPLOYED_ADDRESS --rpc-url $RPC_URL)
+        
+        DEPLOYED_BYTECODE=$(echo "$DEPLOYED_BYTECODE" | tr 'A-F' 'a-f')
+        BYTECODE=$(echo "$BYTECODE" | tr 'A-F' 'a-f')
 
         # Compare bytecodes
         if [ "$BYTECODE" == "$DEPLOYED_BYTECODE" ]; then
@@ -51,7 +54,7 @@ if [ -f "$DEPLOYMENTS_FILE" ] && [ "$FORCE_DEPLOY" = false ]; then
     fi
 fi
 
-OUTPUT=$(forge script script/Deploy.s.sol:DeployScript "src/$CONTRACT_NAME.sol:$CONTRACT_NAME" $(cast abi-encode "constructor($CONSTRUCTOR_TYPES)" $@) --sig "deploy(string,bytes)" --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY)
+OUTPUT=$(./script/run.sh Deploy "deploy(string,bytes)" "$CONTRACT_NAME" $(cast abi-encode "constructor($CONSTRUCTOR_TYPES)" $@))
 EXIT_CODE=$?
 
 # Check if deploy.sh failed
