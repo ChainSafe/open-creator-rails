@@ -12,7 +12,6 @@ contract AssetRegistry is Ownable {
     error AssetNotFound();
 
     event AssetCreated(bytes32 indexed assetId, address indexed asset);
-    event AssetRemoved(bytes32 indexed assetId);
 
     constructor() Ownable(msg.sender) {}
 

@@ -71,10 +71,10 @@ contract AssetTest is BaseTest {
     function test_unauthorized() public {
         vm.startPrank(address(1));
 
-        vm.expectRevert(Asset.Unauthorized.selector);
+        vm.expectRevert(Asset.OnlyRegistryOrOwnerUnauthorizedAccount.selector);
         asset.getSubscription(address(1));
 
-        vm.expectRevert(Asset.Unauthorized.selector);
+        vm.expectRevert(Asset.OnlyRegistryOrOwnerUnauthorizedAccount.selector);
         asset.viewSubscription(address(1));
 
         vm.stopPrank();
