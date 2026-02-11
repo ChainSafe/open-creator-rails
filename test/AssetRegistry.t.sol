@@ -11,16 +11,26 @@ contract AssetRegistryTest is BaseTest {
     uint256 internal constant SUBSCRIPTION_PRICE = 100000000;
     uint256 internal constant DURATION = 3600;
 
+    address internal REGISTRY_OWNER;
+    address internal ASSET_OWNER;
+
     bytes32 internal constant ASSET_ID = keccak256(abi.encodePacked("asset_id"));
 
     function setUp() public override {
         super.setUp();
+        
+        REGISTRY_OWNER = address(1);
+        ASSET_OWNER = address(2);
 
+        vm.startPrank(REGISTRY_OWNER);
         assetRegistry = new AssetRegistry(70, 30);
+        vm.stopPrank();
     }
 
     function test_createAsset() public {
-        address asset = assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(gameToken), signer);
+        vm.startPrank(REGISTRY_OWNER);
+        address asset = assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(gameToken), ASSET_OWNER);
+        vm.stopPrank();
         assertEq(IAsset(asset).getAssetId(), ASSET_ID);
         assertEq(asset, address(assetRegistry.assets(ASSET_ID)));
     }
@@ -47,21 +57,31 @@ contract AssetRegistryTest is BaseTest {
         
         assertTrue(success);
 
+        vm.startPrank(ASSET_OWNER);
         assertEq(IAsset(spender).getSubscription(owner), deadline);
+        vm.stopPrank();
     }
 
     function test_viewSubscription() public {
         test_createAsset();
+        vm.startPrank(signer);
         assertEq(assetRegistry.viewSubscription(ASSET_ID), false);
+        vm.stopPrank();
         test_subscribe();
+        vm.startPrank(signer);
         assertEq(assetRegistry.viewSubscription(ASSET_ID), true);
+        vm.stopPrank();
     }
 
     function test_getSubscription() public {
         test_createAsset();
+        vm.startPrank(signer);
         assertEq(assetRegistry.getSubscription(ASSET_ID), 0);
+        vm.stopPrank();
         test_subscribe();
+        vm.startPrank(signer);
         assertTrue(assetRegistry.getSubscription(ASSET_ID) > block.timestamp);
+        vm.stopPrank();
     }
 
     function test_getSubscriptionPrice() public {
@@ -71,15 +91,17 @@ contract AssetRegistryTest is BaseTest {
     }
 
     function test_updateFeeShare() public {
+        vm.startPrank(REGISTRY_OWNER);
         assetRegistry.updateCreatorFeeShare(80);
         assetRegistry.updateRegistryFeeShare(20);
+        vm.stopPrank();
         assertEq(assetRegistry.getCreatorFee(100000000), 80000000);
         assertEq(assetRegistry.getRegistryFee(100000000), 20000000);
     }
 
     function test_feeSplit() public {
-        uint256 registryBalance = gameToken.balanceOf(assetRegistry.getOwner());
-        uint256 creatorBalance = gameToken.balanceOf(signer);
+        uint256 creatorBalance = gameToken.balanceOf(ASSET_OWNER);
+        uint256 registryBalance = gameToken.balanceOf(REGISTRY_OWNER);
         
         test_subscribe();
 
@@ -88,7 +110,7 @@ contract AssetRegistryTest is BaseTest {
         uint256 creatorFee = assetRegistry.getCreatorFee(value);
         uint256 registryFee = assetRegistry.getRegistryFee(value);
 
-        assertEq(gameToken.balanceOf(signer) - creatorBalance, creatorFee);
-        assertEq(gameToken.balanceOf(assetRegistry.getOwner()) - registryBalance, registryFee);
+        assertEq(gameToken.balanceOf(ASSET_OWNER), creatorBalance + creatorFee);
+        assertEq(gameToken.balanceOf(REGISTRY_OWNER), registryBalance + registryFee);
     }
 }
