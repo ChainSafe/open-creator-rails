@@ -14,6 +14,10 @@ interface IAsset {
     /// @return Total price for the duration.
     function getSubscriptionPrice(uint256 duration) external view returns (uint256);
 
+    /// @notice Sets the subscription price for the asset.
+    /// @param newSubscriptionPrice New subscription price.
+    function setSubscriptionPrice(uint256 newSubscriptionPrice) external;
+
     /// @notice Returns the caller's current subscription expiry timestamp.
     /// @return Expiry timestamp in seconds; 0 if no active subscription.
     function getMySubscription() external view returns (uint256);
