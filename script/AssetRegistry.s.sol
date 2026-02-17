@@ -8,6 +8,10 @@ import {GameToken} from "../src/GameToken.sol";
 import {DeployScript} from "./Deploy.s.sol";
 import {IERC20Permit} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
+/// @title AssetRegistryScript
+/// @notice Scripts for creating assets and subscribing via the AssetRegistry.
+/// @dev Usage: run with `./script/run.sh AssetRegistry "<signature>" <args...>`.
+///      For address arguments use $(get_address "ContractName") after running `source ./script/utils.sh` to get addresses from deployments.json.
 contract AssetRegistryScript is DeployScript {
     AssetRegistry public assetRegistry;
     GameToken public gameToken;
@@ -21,6 +25,8 @@ contract AssetRegistryScript is DeployScript {
         gameToken = GameToken(getAddress(".GameToken"));
     }
 
+    /// @notice Creates a new asset in the registry (registry owner only).
+    /// @dev Usage: ./script/run.sh AssetRegistry "createAsset(string,uint256)" "<assetId>" <subscriptionPrice>
     function createAsset(string memory _assetId, uint256 _subscriptionPrice) public {
         vm.startBroadcast();
         address asset = assetRegistry.createAsset(keccak256(abi.encodePacked(_assetId)), _subscriptionPrice, address(gameToken), msg.sender);
@@ -28,6 +34,8 @@ contract AssetRegistryScript is DeployScript {
         vm.stopBroadcast();
     }
 
+    /// @notice Subscribes the signer to an asset for the given duration using an ERC-20 permit.
+    /// @dev Usage: ./script/run.sh AssetRegistry "subscribe(string,uint256)" "<assetId>" <duration>
     function subscribe(string memory _assetId, uint256 _duration) public {
         vm.startBroadcast();
         
@@ -48,6 +56,8 @@ contract AssetRegistryScript is DeployScript {
         vm.stopBroadcast();
     }
 
+    /// @notice Signs a permit for subscription payment (helper; usually called internally by subscribe).
+    /// @dev Usage: ./script/run.sh AssetRegistry "signPermit(uint256,uint256,address)" <value> <duration> <spender>
     function signPermit(uint256 value, uint256 duration, address spender) public view returns (uint8 v, bytes32 r, bytes32 s, uint256 deadline, address owner) {
         
         uint256 privateKey = vm.envUint("PRIVATE_KEY");

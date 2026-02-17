@@ -6,6 +6,9 @@ import {IAsset} from "./IAsset.sol";
 import {Asset} from "./Asset.sol";
 import {IAssetRegistry} from "./IAssetRegistry.sol";
 
+/// @title AssetRegistry
+/// @notice Implementation of IAssetRegistry: deploys and indexes Asset contracts by id, forwards
+///         subscription queries and subscribe calls to the correct asset, and manages creator vs registry fee shares.
 contract AssetRegistry is Ownable, IAssetRegistry {
     mapping(bytes32 => address) public assets;
 
@@ -16,8 +19,11 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     error AssetAlreadyExists();
     error AssetNotFound();
 
-    event AssetCreated(bytes32 indexed assetId, address indexed asset);
+    event AssetCreated(bytes32 indexed assetId, address indexed asset, uint256 subscriptionPrice, address tokenAddress, address indexed owner);
 
+    /// @notice Initializes the registry with fee shares. Caller becomes owner.
+    /// @param _creatorFeeShare Share of subscription payments allocated to asset creators.
+    /// @param _registryFeeShare Share of subscription payments allocated to the registry.
     constructor(uint256 _creatorFeeShare, uint256 _registryFeeShare) Ownable(msg.sender) {
         creatorFeeShare = _creatorFeeShare;
         registryFeeShare = _registryFeeShare;
@@ -34,7 +40,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         Asset asset = new Asset(_assetId, _subscriptionPrice, _tokenAddress, _owner);
         assets[_assetId] = address(asset);
 
-        emit AssetCreated(_assetId, address(asset));
+        emit AssetCreated(_assetId, address(asset), _subscriptionPrice, _tokenAddress, _owner);
 
         return address(asset);
     }
@@ -55,18 +61,46 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return asset;
     }
 
+    /// @notice Checks whether a user has an active subscription for the given asset.
+    /// @param _assetId Asset identifier.
+    /// @param _user User address.
+    /// @return True if the user's subscription for that asset is active.
+    function _viewSubscription(bytes32 _assetId, address _user) internal view returns (bool)
+    {
+        address asset = getAsset(_assetId);
+
+        return IAsset(asset).viewSubscription(_user);
+    }
+    
     function viewSubscription(bytes32 _assetId) external view returns (bool)
+    {
+        return _viewSubscription(_assetId, msg.sender);
+    }
+
+    function viewSubscription(bytes32 _assetId, address _user) external onlyOwner view returns (bool)
+    {
+        return _viewSubscription(_assetId, _user);
+    }
+
+    /// @notice Returns the subscription expiry timestamp for the given user for the given asset.
+    /// @param _assetId Asset identifier.
+    /// @param _user User address.
+    /// @return Expiry timestamp in seconds; 0 if no subscription.
+    function _getSubscription(bytes32 _assetId, address _user) internal view returns (uint256)
     {
         address asset = getAsset(_assetId);
         
-        return IAsset(asset).viewSubscription(msg.sender);
+        return IAsset(asset).getSubscription(_user);
     }
 
     function getSubscription(bytes32 _assetId) external view returns (uint256)
     {
-        address asset = getAsset(_assetId);
-        
-        return IAsset(asset).getSubscription(msg.sender);
+        return _getSubscription(_assetId, msg.sender);
+    }
+
+    function getSubscription(bytes32 _assetId, address _user) external onlyOwner view returns (uint256)
+    {
+        return _getSubscription(_assetId, _user);
     }
 
     function getSubscriptionPrice(bytes32 _assetId, uint256 _duration) external view returns (uint256)

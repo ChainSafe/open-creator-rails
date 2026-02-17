@@ -8,29 +8,37 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 import {IAssetRegistry} from "./IAssetRegistry.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
+/// @title Asset
+/// @notice Implementation of IAsset: a subscription-gated asset with permit-based ERC20 payment.
+///         Deployed by the asset registry; subscription revenue is split between creator (owner) and registry.
 contract Asset is Ownable, ReentrancyGuard, IAsset {
     bytes32 internal immutable ASSET_ID;
-    uint256 internal immutable SUBSCRIPTION_PRICE;
     address internal immutable TOKEN_ADDRESS;
     address internal immutable REGISTRY_ADDRESS;
 
     IAssetRegistry internal immutable ASSET_REGISTRY;
-
+    
     mapping(address => uint256) internal subscriptions;
+    uint256 internal subscriptionPrice;
 
     error InvalidSpender();
     error PermitFailed();
     error SubscriptionFailed();
     error InsufficientFunds();
     error OnlyRegistryOrOwnerUnauthorizedAccount();
-    error BannedAddress();
 
     event SubscriptionAdded(address indexed user, uint256 expiresAt);
+    event SubscriptionPriceUpdated(uint256 newSubscriptionPrice);
     event SubscriptionRevoked(address indexed user);
 
+    /// @notice Initializes the asset with id, price, payment token, and owner. Callable only by the registry (msg.sender).
+    /// @param _assetId Unique identifier for this asset.
+    /// @param _subscriptionPrice Price per subscription period in seconds.
+    /// @param _tokenAddress ERC20 (with permit) used for subscription payments.
+    /// @param _owner Creator/owner of the asset; receives creator share of subscription fees.
     constructor(bytes32 _assetId, uint256 _subscriptionPrice, address _tokenAddress, address _owner) Ownable(_owner) {
         ASSET_ID = _assetId;
-        SUBSCRIPTION_PRICE = _subscriptionPrice;
+        subscriptionPrice = _subscriptionPrice;
         TOKEN_ADDRESS = _tokenAddress;
         REGISTRY_ADDRESS = msg.sender;
         ASSET_REGISTRY = IAssetRegistry(REGISTRY_ADDRESS);
@@ -40,8 +48,13 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return ASSET_ID;
     }
 
+    function setSubscriptionPrice(uint256 newSubscriptionPrice) external onlyOwner {
+        subscriptionPrice = newSubscriptionPrice;
+        emit SubscriptionPriceUpdated(newSubscriptionPrice);
+    }
+
     function getSubscriptionPrice(uint256 duration) external view returns (uint256) {
-        return SUBSCRIPTION_PRICE * duration;
+        return subscriptionPrice * duration;
     }
 
     function getMySubscription() external view returns (uint256) {
@@ -73,9 +86,9 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
         try tokenPermit.permit(owner, address(this), value, deadline, v, r, s) {
             
-            value -= value % SUBSCRIPTION_PRICE;
+            value -= value % subscriptionPrice;
 
-            if (value < SUBSCRIPTION_PRICE) {
+            if (value < subscriptionPrice) {
                 revert InsufficientFunds();
             }
 
@@ -93,7 +106,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             revert PermitFailed();
         }
 
-        uint256 duration = value / SUBSCRIPTION_PRICE;
+        uint256 duration = value / subscriptionPrice;
 
         uint256 subscription = subscriptions[owner] > block.timestamp ? subscriptions[owner] : block.timestamp;
 
