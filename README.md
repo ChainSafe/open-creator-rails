@@ -53,49 +53,6 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
    forge test
    ```
 
-### Deploying contracts
-
-Deploy a contract and record its address in `deployments.json`:
-
-```bash
-./script/deploy.sh "<ContractName>" "<ConstructorTypes>" <ConstructorArgs>
-```
-
-Force redeploy when the contract is already in `deployments.json`:
-
-```bash
-./script/deploy.sh -f "<ContractName>" "<ConstructorTypes>" <ConstructorArgs>
-```
-
-Example — deploy registry then token:
-
-```bash
-./script/deploy.sh "AssetRegistry" "uint256,uint256" 80 20
-```
-
-### Running scripts
-
-Call script functions (e.g. mint, createAsset, subscribe) via:
-
-```bash
-./script/run.sh <ScriptName> "<FunctionSignature>" <args...>
-```
-
-Example:
-
-```bash
-./script/run.sh GameToken "mint(address,uint256)" <to_address> <amount>
-```
-
-To use deployed addresses in `deployments.json` from the CLI, source `utils.sh` and use `get_address`:
-
-```bash
-source ./script/utils.sh
-./script/run.sh GameToken "mint(address,uint256)" $(get_address "AssetRegsitry") 1000000
-```
-
-Script names are the filename without `.s.sol` (e.g. `GameToken`, `AssetRegistry`, `Deploy`).
-
 ---
 
 ## RPC API Reference
