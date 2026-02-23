@@ -34,13 +34,6 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
    | `PRIVATE_KEY` | Private key used to deploy and send transactions (e.g. `0x...`). |
    | `RPC_URL`     | JSON-RPC URL of the network (e.g. `https://sepolia.infura.io/v3/YOUR_KEY` or `http://127.0.0.1:8545` for local). |
 
-   Example:
-
-   ```bash
-   PRIVATE_KEY=0x...
-   RPC_URL=https://sepolia.infura.io/v3/YOUR_PROJECT_ID
-   ```
-
 3. **Build**
 
    ```bash

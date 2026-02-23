@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {AssetRegistry} from "../src/AssetRegistry.sol";
 import {IAsset} from "../src/IAsset.sol";
 import {BaseTest} from "./Base.t.sol";
+import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract AssetRegistryTest is BaseTest {
 
@@ -22,6 +23,8 @@ contract AssetRegistryTest is BaseTest {
         }
 
         vm.startPrank(registryOwner);
+        vm.expectEmit(true, false, true, true);
+        emit AssetRegistry.AssetCreated(ASSET_ID, address(0), SUBSCRIPTION_PRICE, address(testToken), assetOwner);
         asset = IAsset(assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner));
         vm.stopPrank();
         
@@ -97,5 +100,102 @@ contract AssetRegistryTest is BaseTest {
 
         assertEq(assetRegistry.getCreatorFee(100000000), 80000000);
         assertEq(assetRegistry.getRegistryFee(100000000), 20000000);
+    }
+
+    function test_updateCreatorFeeShare_emitsEvent() public {
+        vm.startPrank(registryOwner);
+
+        vm.expectEmit(true, true, true, true);
+        emit AssetRegistry.CreatorFeeShareUpdated(80);
+        assetRegistry.updateCreatorFeeShare(80);
+
+        vm.stopPrank();
+    }
+
+    function test_updateRegistryFeeShare_emitsEvent() public {
+        vm.startPrank(registryOwner);
+
+        vm.expectEmit(true, true, true, true);
+        emit AssetRegistry.RegistryFeeShareUpdated(20);
+        assetRegistry.updateRegistryFeeShare(20);
+
+        vm.stopPrank();
+    }
+
+    function test_getOwner() public view {
+        assertEq(assetRegistry.getOwner(), registryOwner);
+    }
+
+    function test_createAsset_assetAlreadyExists() public {
+        test_createAsset();
+
+        vm.startPrank(registryOwner);
+        vm.expectRevert(AssetRegistry.AssetAlreadyExists.selector);
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner);
+        vm.stopPrank();
+    }
+
+    function test_getAsset_assetNotFound() public {
+        bytes32 nonexistentId = keccak256("nonexistent");
+
+        vm.expectRevert(AssetRegistry.AssetNotFound.selector);
+        assetRegistry.getAsset(nonexistentId);
+    }
+
+    function test_createAsset_unauthorized() public {
+        vm.startPrank(address(403));
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(403)));
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner);
+        vm.stopPrank();
+    }
+
+    function test_updateCreatorFeeShare_unauthorized() public {
+        vm.startPrank(address(403));
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(403)));
+        assetRegistry.updateCreatorFeeShare(80);
+        vm.stopPrank();
+    }
+
+    function test_updateRegistryFeeShare_unauthorized() public {
+        vm.startPrank(address(403));
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(403)));
+        assetRegistry.updateRegistryFeeShare(20);
+        vm.stopPrank();
+    }
+
+    function test_viewSubscription_withUser_ownerCanCall() public {
+        test_createAsset();
+        test_subscribe();
+
+        vm.startPrank(registryOwner);
+        assertTrue(assetRegistry.viewSubscription(ASSET_ID, signer));
+        vm.stopPrank();
+    }
+
+    function test_viewSubscription_withUser_unauthorized() public {
+        test_createAsset();
+
+        vm.startPrank(address(403));
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(403)));
+        assetRegistry.viewSubscription(ASSET_ID, signer);
+        vm.stopPrank();
+    }
+
+    function test_getSubscription_withUser_ownerCanCall() public {
+        test_createAsset();
+        test_subscribe();
+
+        vm.startPrank(registryOwner);
+        assertTrue(assetRegistry.getSubscription(ASSET_ID, signer) > block.timestamp);
+        vm.stopPrank();
+    }
+
+    function test_getSubscription_withUser_unauthorized() public {
+        test_createAsset();
+
+        vm.startPrank(address(403));
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(403)));
+        assetRegistry.getSubscription(ASSET_ID, signer);
+        vm.stopPrank();
     }
 }
