@@ -39,6 +39,9 @@ contract AssetTest is BaseTest {
         
         (uint8 v, bytes32 r, bytes32 s) = getPermit(owner, spender, value, deadline);        
         
+        vm.expectEmit(true, true, true, true);
+        emit Asset.SubscriptionAdded(owner, deadline);
+
         uint256 subscription = asset.subscribe(owner, spender, value, deadline, v, r, s);
         
         assertTrue(subscription > block.timestamp);
@@ -48,11 +51,26 @@ contract AssetTest is BaseTest {
         vm.stopPrank();
     }
 
+    function test_setSubscriptionPrice() public {
+        
+        uint256 newPrice = 200;
+
+        vm.startPrank(assetOwner);
+        vm.expectEmit(true, true, true, true);
+        emit Asset.SubscriptionPriceUpdated(newPrice);
+        asset.setSubscriptionPrice(newPrice);
+        vm.stopPrank();
+
+        assertEq(asset.getSubscriptionPrice(1), newPrice);
+    }
+
     function test_revokeSubscription() public {
         
         test_subscribe();
 
         vm.startPrank(assetOwner);
+        vm.expectEmit(true, true, true, true);
+        emit Asset.SubscriptionRevoked(signer);
         bool success = asset.revokeSubscription(signer);
         vm.stopPrank();
 

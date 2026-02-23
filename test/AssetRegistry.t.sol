@@ -22,6 +22,8 @@ contract AssetRegistryTest is BaseTest {
         }
 
         vm.startPrank(registryOwner);
+        vm.expectEmit(true, false, true, true);
+        emit AssetRegistry.AssetCreated(ASSET_ID, address(0), SUBSCRIPTION_PRICE, address(testToken), assetOwner);
         asset = IAsset(assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner));
         vm.stopPrank();
         
