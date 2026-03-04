@@ -16,6 +16,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     uint256 internal registryFeeShare;
     uint256 internal totalFeeShare;
 
+    error ZeroTotalFeeShare();
     error AssetAlreadyExists();
     error AssetNotFound();
 
@@ -31,6 +32,9 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         creatorFeeShare = _creatorFeeShare;
         registryFeeShare = _registryFeeShare;
         totalFeeShare = creatorFeeShare + registryFeeShare;
+        if (totalFeeShare == 0) {
+            revert ZeroTotalFeeShare();
+        }
     }
 
     function createAsset(bytes32 _assetId, uint256 _subscriptionPrice, address _tokenAddress, address _owner) external onlyOwner returns (address)
@@ -139,12 +143,18 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     function updateCreatorFeeShare(uint256 _creatorFeeShare) external onlyOwner {
         creatorFeeShare = _creatorFeeShare;
         totalFeeShare = creatorFeeShare + registryFeeShare;
+        if (totalFeeShare == 0) {
+            revert ZeroTotalFeeShare();
+        }
         emit CreatorFeeShareUpdated(creatorFeeShare);
     }
 
     function updateRegistryFeeShare(uint256 _registryFeeShare) external onlyOwner {
         registryFeeShare = _registryFeeShare;
         totalFeeShare = creatorFeeShare + registryFeeShare;
+        if (totalFeeShare == 0) {
+            revert ZeroTotalFeeShare();
+        }
         emit RegistryFeeShareUpdated(registryFeeShare);
     }
 

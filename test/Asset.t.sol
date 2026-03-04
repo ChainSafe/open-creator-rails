@@ -173,6 +173,51 @@ contract AssetTest is BaseTest {
         assertEq(testToken.balanceOf(assetOwner), tokenBalance + claimedCreatorFee);
     }
 
+    function test_claimCreatorFee_multiple_creatorFeeShare() public {
+        
+        (uint256 creatorFeeShare, uint256 registryFeeShare, uint256 totalFeeShare) = assetRegistry.getFeeShares();
+        uint256 tokenBalance = testToken.balanceOf(assetOwner);
+
+        _subscribe(DURATION);
+
+        vm.prank(registryOwner);
+        assetRegistry.updateCreatorFeeShare(60);
+
+        uint256 endTime = _subscribe(DURATION);
+
+        uint256 value = asset.getSubscriptionPrice(DURATION);
+        uint256 creatorFee = assetRegistry.getCreatorFee(value) + (value - ((value * registryFeeShare) / totalFeeShare));
+        vm.warp(endTime);
+
+        vm.prank(assetOwner);
+        uint256 claimedCreatorFee = asset.claimCreatorFee(signer);
+
+        assertEq(claimedCreatorFee, creatorFee);
+        assertEq(testToken.balanceOf(assetOwner), tokenBalance + claimedCreatorFee);
+    }
+
+    function test_claimCreatorFee_multiple_registryFeeShare() public {
+        (uint256 creatorFeeShare, uint256 registryFeeShare, uint256 totalFeeShare) = assetRegistry.getFeeShares();
+        uint256 tokenBalance = testToken.balanceOf(assetOwner);
+
+        _subscribe(DURATION);
+
+        vm.prank(registryOwner);
+        assetRegistry.updateRegistryFeeShare(50);
+
+        uint256 endTime = _subscribe(DURATION);
+
+        uint256 value = asset.getSubscriptionPrice(DURATION);
+        uint256 creatorFee = assetRegistry.getCreatorFee(value) + (value - ((value * registryFeeShare) / totalFeeShare));
+        vm.warp(endTime);
+
+        vm.prank(assetOwner);
+        uint256 claimedCreatorFee = asset.claimCreatorFee(signer);
+
+        assertEq(claimedCreatorFee, creatorFee);
+        assertEq(testToken.balanceOf(assetOwner), tokenBalance + claimedCreatorFee);
+    }
+
     function test_claimCreatorFee_startOfNextSubscription() public {
         uint256 tokenBalance = testToken.balanceOf(assetOwner);
         

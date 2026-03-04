@@ -257,6 +257,51 @@ contract AssetRegistryTest is BaseTest {
         assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
     }
 
+    function test_claimRegistryFee_multiple_creatorFeeShare() public {
+        
+        (uint256 creatorFeeShare, uint256 registryFeeShare, uint256 totalFeeShare) = assetRegistry.getFeeShares();
+        uint256 tokenBalance = testToken.balanceOf(registryOwner);
+
+        _subscribe(DURATION);
+
+        vm.prank(registryOwner);
+        assetRegistry.updateCreatorFeeShare(60);
+
+        uint256 endTime = _subscribe(DURATION);
+
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        uint256 registryFee = assetRegistry.getRegistryFee(value) + ((value * registryFeeShare) / totalFeeShare);
+        vm.warp(endTime);
+
+        vm.prank(registryOwner);
+        uint256 claimedRegistryFee = assetRegistry.claimRegistryFee(ASSET_ID, signer);
+
+        assertEq(claimedRegistryFee, registryFee);
+        assertEq(testToken.balanceOf(registryOwner), tokenBalance + claimedRegistryFee);
+    }
+
+    function test_claimRegistryFee_multiple_registryFeeShare() public {
+        (uint256 creatorFeeShare, uint256 registryFeeShare, uint256 totalFeeShare) = assetRegistry.getFeeShares();
+        uint256 tokenBalance = testToken.balanceOf(registryOwner);
+
+        _subscribe(DURATION);
+
+        vm.prank(registryOwner);
+        assetRegistry.updateRegistryFeeShare(50);
+
+        uint256 endTime = _subscribe(DURATION);
+
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        uint256 registryFee = assetRegistry.getRegistryFee(value) + ((value * registryFeeShare) / totalFeeShare);
+        vm.warp(endTime);
+
+        vm.prank(registryOwner);
+        uint256 claimedRegistryFee = assetRegistry.claimRegistryFee(ASSET_ID, signer);
+
+        assertEq(claimedRegistryFee, registryFee);
+        assertEq(testToken.balanceOf(registryOwner), tokenBalance + claimedRegistryFee);
+    }
+
     function test_claimRegistryFee_multiple_subscriptionPrice() public {
         uint256 tokenBalance = testToken.balanceOf(registryOwner);
         _subscribe(DURATION);
