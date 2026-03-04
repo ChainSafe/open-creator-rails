@@ -175,7 +175,7 @@ contract AssetTest is BaseTest {
 
     function test_claimCreatorFee_multiple_creatorFeeShare() public {
         
-        (uint256 creatorFeeShare, uint256 registryFeeShare, uint256 totalFeeShare) = assetRegistry.getFeeShares();
+        (, uint256 registryFeeShare, uint256 totalFeeShare) = assetRegistry.getFeeShares();
         uint256 tokenBalance = testToken.balanceOf(assetOwner);
 
         _subscribe(DURATION);
@@ -197,7 +197,7 @@ contract AssetTest is BaseTest {
     }
 
     function test_claimCreatorFee_multiple_registryFeeShare() public {
-        (uint256 creatorFeeShare, uint256 registryFeeShare, uint256 totalFeeShare) = assetRegistry.getFeeShares();
+        (, uint256 registryFeeShare, uint256 totalFeeShare) = assetRegistry.getFeeShares();
         uint256 tokenBalance = testToken.balanceOf(assetOwner);
 
         _subscribe(DURATION);

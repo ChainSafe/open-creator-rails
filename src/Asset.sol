@@ -5,6 +5,7 @@ import {IAsset} from "./IAsset.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {IERC20Permit} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IAssetRegistry} from "./IAssetRegistry.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {EnumerableSet} from "lib/openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
@@ -47,10 +48,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     error InvalidTokenAddress();
     error InvalidSpender();
     error PermitFailed();
-    error SubscriptionFailed();
     error InsufficientFunds();
-    error CreatorClaimFailed();
-    error RegistryClaimFailed();
     error SubscriptionNotFound();
     error SubscriptionRevocationFailed();
     error SubscriptionCancellationFailed();
@@ -189,11 +187,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                 revert InsufficientFunds();
             }
 
-            bool success = TOKEN_CONTRACT.transferFrom(owner, address(this), value);
-
-            if (!success) {
-                revert SubscriptionFailed();
-            }
+            SafeERC20.safeTransferFrom(TOKEN_CONTRACT, owner, address(this), value);
         }
         catch {
             revert PermitFailed();
@@ -245,11 +239,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         
         creatorFee = _claimable(subscriber, creatorClaimedAt[subscriber]);
         
-        bool success = TOKEN_CONTRACT.transfer(owner(), creatorFee);
-
-        if (!success) {
-            revert CreatorClaimFailed();
-        }
+        SafeERC20.safeTransfer(TOKEN_CONTRACT, owner(), creatorFee);
 
         creatorClaimedAt[subscriber] = block.timestamp;
 
@@ -262,18 +252,14 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         
         registryFee = _claimable(subscriber, registryClaimedAt[subscriber]);
 
-        bool success = TOKEN_CONTRACT.transfer(ASSET_REGISTRY.getOwner(), registryFee);
-        
-        if (!success) {
-            revert RegistryClaimFailed();
-        }
+        SafeERC20.safeTransfer(TOKEN_CONTRACT, ASSET_REGISTRY.getOwner(), registryFee);
 
         registryClaimedAt[subscriber] = block.timestamp;
 
         return registryFee;
     }
 
-    function _removeSubscription(address user) internal nonReentrant returns (bool) {
+    function _removeSubscription(address user) internal nonReentrant {
         
         if (!subscribers.contains(user)) {
             revert SubscriptionNotFound();
@@ -319,29 +305,20 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             nonces[user] -= deleted;
         }
 
-        return returnable == 0 || TOKEN_CONTRACT.transfer(user, returnable);
+        SafeERC20.safeTransfer(TOKEN_CONTRACT, user, returnable);
     }
 
     function revokeSubscription(address user) external onlyOwner {
-        bool success = _removeSubscription(user);
-
-        if (!success) {
-            revert SubscriptionRevocationFailed();
-        }
+        _removeSubscription(user);
 
         emit SubscriptionRevoked(user);
     }
 
     function cancelSubscription() external {
-
         address user = msg.sender;
 
-        bool success = _removeSubscription(user);
-
-        if (!success) {
-            revert SubscriptionCancellationFailed();
-        }
-
+        _removeSubscription(user);
+        
         emit SubscriptionCancelled(user);
     }
 
