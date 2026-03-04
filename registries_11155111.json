@@ -1,17 +1,17 @@
 [
   {
-    "address": "0x721dF6CC049Af6fBbcC36EC4Dc076c4b06dF6673",
+    "address": "0x972097D0EDCADcd0A160637312B5380d86292332",
     "creatorFeeShare": 70,
     "registryFeeShare": 30,
-    "owner": "0xf11B7A2B2D457Bc666310BF76F859b48AcDE5F3e",
+    "owner": "0xFDA455DEff45bB92E79E705FDEc698c32a952aDE",
     "assets": [
       {
-        "address": "0xe7076e476a84548d7d6839ff5cbf54ac0d08ac14",
+        "address": "0x227c463f3ae7679bd469d53c5d7af640006a64cd",
         "assetId": "default_asset_id",
         "assetIdHash": "0x973fa65fcf47830442fffbe790bfa4161c5efc1834fb2e63c64429c74cf61805",
         "subscriptionPrice": 4,
         "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
-        "owner": "0xFDA455DEff45bB92E79E705FDEc698c32a952aDE"
+        "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
       }
     ]
   }

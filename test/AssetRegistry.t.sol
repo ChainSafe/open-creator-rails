@@ -2,11 +2,29 @@
 pragma solidity ^0.8.0;
 
 import {AssetRegistry} from "../src/AssetRegistry.sol";
+import {Asset} from "../src/Asset.sol";
 import {IAsset} from "../src/IAsset.sol";
 import {BaseTest} from "./Base.t.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract AssetRegistryTest is BaseTest {
+
+    function _subscribe(uint256 duration) internal returns (uint256 subscription) {
+        test_createAsset();
+
+        address owner = signer;
+        address spender = address(asset);
+        uint256 value = asset.getSubscriptionPrice(duration);
+        uint256 deadline = block.timestamp + duration;
+
+        (uint8 v, bytes32 r, bytes32 s) = getPermit(owner, spender, value, deadline);
+
+        vm.startPrank(signer);
+        subscription = assetRegistry.subscribe(ASSET_ID, owner, spender, value, deadline, v, r, s);
+        vm.stopPrank();
+
+        return subscription;
+    }
 
     function setUp() public override {
         super.setUp();
@@ -46,44 +64,33 @@ contract AssetRegistryTest is BaseTest {
         address spender = address(asset);
         uint256 value = asset.getSubscriptionPrice(DURATION);
         uint256 deadline = block.timestamp + DURATION;
-
-        (uint8 v, bytes32 r, bytes32 s) = getPermit(owner, spender, value, deadline);        
+        (uint8 v, bytes32 r, bytes32 s) = getPermit(owner, spender, value, deadline);
 
         uint256 subscription = assetRegistry.subscribe(ASSET_ID, owner, spender, value, deadline, v, r, s);
-        
-        assertTrue(subscription > block.timestamp);
 
-        vm.startPrank(signer);
-        assertEq(asset.getMySubscription(), subscription);
-        vm.stopPrank();
+        assertTrue(subscription > block.timestamp);
+        vm.prank(signer);
+        assertEq(assetRegistry.getMySubscription(ASSET_ID), subscription);
     }
 
     function test_viewSubscription() public {
         test_createAsset();
-        
-        vm.startPrank(signer);
-        assertEq(assetRegistry.viewSubscription(ASSET_ID), false);
-        vm.stopPrank();
-        
+        vm.prank(signer);
+        assertFalse(assetRegistry.viewMySubscription(ASSET_ID));
+
         test_subscribe();
-        
-        vm.startPrank(signer);
-        assertEq(assetRegistry.viewSubscription(ASSET_ID), true);
-        vm.stopPrank();
+        vm.prank(signer);
+        assertTrue(assetRegistry.viewMySubscription(ASSET_ID));
     }
 
     function test_getSubscription() public {
         test_createAsset();
+        vm.prank(signer);
+        assertEq(assetRegistry.getMySubscription(ASSET_ID), 0);
 
-        vm.startPrank(signer);
-        assertEq(assetRegistry.getSubscription(ASSET_ID), 0);
-        vm.stopPrank();
-        
         test_subscribe();
-        
-        vm.startPrank(signer);
-        assertTrue(assetRegistry.getSubscription(ASSET_ID) > block.timestamp);
-        vm.stopPrank();
+        vm.prank(signer);
+        assertTrue(assetRegistry.getMySubscription(ASSET_ID) > block.timestamp);
     }
 
     function test_getSubscriptionPrice() public {
@@ -98,28 +105,23 @@ contract AssetRegistryTest is BaseTest {
         assetRegistry.updateRegistryFeeShare(20);
         vm.stopPrank();
 
-        assertEq(assetRegistry.getCreatorFee(100000000), 80000000);
-        assertEq(assetRegistry.getRegistryFee(100000000), 20000000);
+        (uint256 creatorFee, uint256 registryFee) = assetRegistry.getFees(100_000_000);
+        assertEq(creatorFee, 80_000_000);
+        assertEq(registryFee, 20_000_000);
     }
 
     function test_updateCreatorFeeShare_emitsEvent() public {
-        vm.startPrank(registryOwner);
-
+        vm.prank(registryOwner);
         vm.expectEmit(true, true, true, true);
         emit AssetRegistry.CreatorFeeShareUpdated(80);
         assetRegistry.updateCreatorFeeShare(80);
-
-        vm.stopPrank();
     }
 
     function test_updateRegistryFeeShare_emitsEvent() public {
-        vm.startPrank(registryOwner);
-
+        vm.prank(registryOwner);
         vm.expectEmit(true, true, true, true);
         emit AssetRegistry.RegistryFeeShareUpdated(20);
         assetRegistry.updateRegistryFeeShare(20);
-
-        vm.stopPrank();
     }
 
     function test_getOwner() public view {
@@ -142,25 +144,51 @@ contract AssetRegistryTest is BaseTest {
         assetRegistry.getAsset(nonexistentId);
     }
 
+    function test_createAsset_invalidOwner() public {
+        vm.prank(registryOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0)));
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), address(0));
+    }
+
+    function test_createAsset_invalidTokenAddress() public {
+        vm.prank(registryOwner);
+        vm.expectRevert(Asset.InvalidTokenAddress.selector);
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(0), assetOwner);
+    }
+
+    function test_getSubscriptionPrice_assetNotFound() public {
+        bytes32 nonexistentId = keccak256("nonexistent");
+
+        vm.expectRevert(AssetRegistry.AssetNotFound.selector);
+        assetRegistry.getSubscriptionPrice(nonexistentId, 10);
+    }
+
+    function test_claimRegistryFee_unauthorized() public {
+        test_createAsset();
+        test_subscribe();
+        vm.warp(block.timestamp + DURATION);
+
+        vm.prank(UNAUTHORIZED);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, UNAUTHORIZED));
+        assetRegistry.claimRegistryFee(ASSET_ID, signer);
+    }
+
     function test_createAsset_unauthorized() public {
-        vm.startPrank(address(403));
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(403)));
+        vm.prank(UNAUTHORIZED);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, UNAUTHORIZED));
         assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner);
-        vm.stopPrank();
     }
 
     function test_updateCreatorFeeShare_unauthorized() public {
-        vm.startPrank(address(403));
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(403)));
+        vm.prank(UNAUTHORIZED);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, UNAUTHORIZED));
         assetRegistry.updateCreatorFeeShare(80);
-        vm.stopPrank();
     }
 
     function test_updateRegistryFeeShare_unauthorized() public {
-        vm.startPrank(address(403));
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(403)));
+        vm.prank(UNAUTHORIZED);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, UNAUTHORIZED));
         assetRegistry.updateRegistryFeeShare(20);
-        vm.stopPrank();
     }
 
     function test_viewSubscription_withUser_ownerCanCall() public {
@@ -174,11 +202,9 @@ contract AssetRegistryTest is BaseTest {
 
     function test_viewSubscription_withUser_unauthorized() public {
         test_createAsset();
-
-        vm.startPrank(address(403));
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(403)));
+        vm.prank(UNAUTHORIZED);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, UNAUTHORIZED));
         assetRegistry.viewSubscription(ASSET_ID, signer);
-        vm.stopPrank();
     }
 
     function test_getSubscription_withUser_ownerCanCall() public {
@@ -192,10 +218,98 @@ contract AssetRegistryTest is BaseTest {
 
     function test_getSubscription_withUser_unauthorized() public {
         test_createAsset();
-
-        vm.startPrank(address(403));
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(403)));
+        vm.prank(UNAUTHORIZED);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, UNAUTHORIZED));
         assetRegistry.getSubscription(ASSET_ID, signer);
-        vm.stopPrank();
+    }
+
+    function test_claimRegistryFee() public {
+        uint256 tokenBalance = testToken.balanceOf(registryOwner);
+        test_subscribe();
+
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        uint256 registryFee = assetRegistry.getRegistryFee(value);
+        vm.warp(block.timestamp + DURATION);
+
+        vm.prank(registryOwner);
+        vm.expectEmit(true, true, true, true);
+        emit AssetRegistry.RegistryFeeClaimed(signer, registryFee);
+        assetRegistry.claimRegistryFee(ASSET_ID, signer);
+
+        assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
+    }
+
+    function test_claimRegistryFee_multiple() public {
+        uint256 tokenBalance = testToken.balanceOf(registryOwner);
+        for (uint256 i = 0; i < 10; i++) _subscribe(DURATION);
+
+        vm.prank(signer);
+        uint256 endTime = assetRegistry.getMySubscription(ASSET_ID);
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, endTime - block.timestamp);
+        uint256 registryFee = assetRegistry.getRegistryFee(value);
+        vm.warp(endTime);
+
+        vm.prank(registryOwner);
+        vm.expectEmit(true, true, true, true);
+        emit AssetRegistry.RegistryFeeClaimed(signer, registryFee);
+        assetRegistry.claimRegistryFee(ASSET_ID, signer);
+
+        assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
+    }
+
+    function test_claimRegistryFee_multiple_subscriptionPrice() public {
+        uint256 tokenBalance = testToken.balanceOf(registryOwner);
+        _subscribe(DURATION);
+
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+
+        vm.prank(assetOwner);
+        asset.setSubscriptionPrice(SUBSCRIPTION_PRICE * 2);
+        _subscribe(DURATION);
+
+        value += assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        uint256 registryFee = assetRegistry.getRegistryFee(value);
+        vm.warp(block.timestamp + (DURATION * 2));
+
+        vm.prank(registryOwner);
+        vm.expectEmit(true, true, true, true);
+        emit AssetRegistry.RegistryFeeClaimed(signer, registryFee);
+        assetRegistry.claimRegistryFee(ASSET_ID, signer);
+
+        assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
+    }
+
+    function test_claimRegistryFee_midSubscription() public {
+        uint256 tokenBalance = testToken.balanceOf(registryOwner);
+        _subscribe(DURATION);
+
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        uint256 registryFee = assetRegistry.getRegistryFee(value) / 2;
+        vm.warp(block.timestamp + (DURATION / 2));
+
+        vm.prank(registryOwner);
+        vm.expectEmit(true, true, true, true);
+        emit AssetRegistry.RegistryFeeClaimed(signer, registryFee);
+        assetRegistry.claimRegistryFee(ASSET_ID, signer);
+
+        assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
+    }
+
+    function test_claimRegistryFee_startOfNextSubscription() public {
+        uint256 tokenBalance = testToken.balanceOf(registryOwner);
+        uint256 endTime = _subscribe(DURATION);
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+
+        _subscribe(DURATION);
+
+        vm.warp(endTime);
+
+        uint256 registryFee = assetRegistry.getRegistryFee(value);
+        vm.prank(registryOwner);
+        vm.expectEmit(true, true, true, true);
+        emit AssetRegistry.RegistryFeeClaimed(signer, registryFee);
+        assetRegistry.claimRegistryFee(ASSET_ID, signer);
+
+        assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
     }
 }

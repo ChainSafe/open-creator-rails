@@ -13,7 +13,7 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
 ### Prerequisites
 
 - [Foundry](https://book.getfoundry.sh/getting-started/installation) (forge, cast, anvil)
-- [jq](https://jqlang.org/) (optional) — for script usage (e.g. `get_address` in `script/utils.sh` reads `deployments.json` via jq)
+- [jq](https://jqlang.org/) (optional) — for script usage (e.g. `get_address` in `script/utils.sh` reads `registries_<chain_id>.json` via jq)
 
 ### Setup
 
@@ -149,37 +149,344 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ### IAssetRegistry
 
-| Function | Type | Permissions | Description | Parameters |
-|----------|------|-------------|-------------|------------|
-| `createAsset(bytes32 _assetId, uint256 _subscriptionPrice, address _tokenAddress, address _owner)(address)` | write | onlyOwner | Deploys a new Asset contract and registers it under the given id. | `_assetId` — Unique identifier for the asset.<br>`_subscriptionPrice` — Price per subscription unit for the asset.<br>`_tokenAddress` — ERC20 (with permit) used for subscription payments.<br>`_owner` — Creator/owner of the new asset. |
-| `viewAsset(bytes32 _assetId)(bool)` | read | anyone | Checks whether an asset is registered for the given id. | `_assetId` — Asset identifier to check. |
-| `getAsset(bytes32 _assetId)(address)` | read | anyone | Returns the contract address of the asset for the given id. Throws if not found. | `_assetId` — Asset identifier to look up. |
-| `viewSubscription(bytes32 _assetId)(bool)` | read | anyone | Checks whether the caller has an active subscription for the given asset. | `_assetId` — Asset identifier. |
-| `viewSubscription(bytes32 _assetId, address _user)(bool)` | read | onlyOwner | Checks whether a user has an active subscription for the given asset. | `_assetId` — Asset identifier.<br>`_user` — User address. |
-| `getSubscription(bytes32 _assetId)(uint256)` | read | anyone | Returns the caller's subscription expiry timestamp for the given asset. | `_assetId` — Asset identifier. |
-| `getSubscription(bytes32 _assetId, address _user)(uint256)` | read | onlyOwner | Returns the subscription expiry timestamp for the given user for the given asset. | `_assetId` — Asset identifier.<br>`_user` — User address. |
-| `getSubscriptionPrice(bytes32 _assetId, uint256 _duration)(uint256)` | read | anyone | Returns the subscription price for the given asset and duration. | `_assetId` — Asset identifier.<br>`_duration` — Subscription duration in seconds. |
-| `subscribe(bytes32 _assetId, address _owner, address _spender, uint256 _value, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s)(uint256)` | write | anyone | Subscribes the given owner to the asset using ERC-2612 permit; forwards to the asset contract. Returns subscription expiry in Unix timestamp. | `_assetId` — Asset identifier.<br>`_owner` — Token owner and subscription beneficiary.<br>`_spender` — Must be the asset contract address for the permit.<br>`_value` — Permit allowance / payment amount.<br>`_deadline` — Permit signature expiry.<br>`_v` — Signature v.<br>`_r` — Signature r.<br>`_s` — Signature s. |
-| `updateCreatorFeeShare(uint256 _creatorFeeShare)()` | write | onlyOwner | Updates the creator's share of subscription fees. | `_creatorFeeShare` — New creator fee share (used with totalFeeShare for percentage). |
-| `updateRegistryFeeShare(uint256 _registryFeeShare)()` | write | onlyOwner | Updates the registry's share of subscription fees. | `_registryFeeShare` — New registry fee share (used with totalFeeShare for percentage). |
-| `getCreatorFee(uint256 _value)(uint256)` | read | anyone | Computes the creator portion of a payment value based on current fee shares. | `_value` — Total payment value. |
-| `getRegistryFee(uint256 _value)(uint256)` | read | anyone | Computes the registry portion of a payment value based on current fee shares. | `_value` — Total payment value. |
-| `getOwner()(address)` | read | anyone | Returns the owner of the registry (e.g. for receiving registry fees). | — |
+---
+
+**createAsset** : Deploys a new Asset contract and registers it under the given id.
+- Type: write
+- Permission: `onlyOwner`
+- Parameters:
+  - `bytes32 _assetId` : Unique identifier for the asset.
+  - `uint256 _subscriptionPrice` : Price per subscription unit for the asset.
+  - `address _tokenAddress` : ERC20 (with permit) used for subscription payments.
+  - `address _owner` : Creator/owner of the new asset.
+- Returns:
+  - `address` : Address of the newly deployed Asset contract.
+
+
+---
+
+**viewAsset** : Checks whether an asset is registered for the given id.
+- Type: read
+- Permission: none
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier to check.
+- Returns:
+  - `bool` : True if an asset exists for the id.
+
+
+---
+
+**getAsset** : Returns the contract address of the asset for the given id. Throws if not found.
+- Type: read
+- Permission: none
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier to look up.
+- Returns:
+  - `address` : Address of the Asset contract.
+
+
+---
+
+**viewMySubscription** : Checks whether the caller has an active subscription for the given asset.
+- Type: read
+- Permission: none
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier.
+- Returns:
+  - `bool` : True if the caller's subscription is active.
+
+
+---
+
+**viewSubscription** : Checks whether a user has an active subscription for the given asset.
+- Type: read
+- Permission: `onlyOwner`
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier.
+  - `address _user` : User address.
+- Returns:
+  - `bool` : True if the user's subscription is active.
+
+
+---
+
+**getMySubscription** : Returns the caller's subscription expiry timestamp for the given asset.
+- Type: read
+- Permission: none
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier.
+- Returns:
+  - `uint256` : Expiry timestamp; 0 if no subscription.
+
+
+---
+
+**getSubscription** : Returns the subscription expiry timestamp for the given user for the given asset.
+- Type: read
+- Permission: `onlyOwner`
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier.
+  - `address _user` : User address.
+- Returns:
+  - `uint256` : Expiry timestamp in seconds; 0 if no subscription.
+
+
+---
+
+**getSubscriptionPrice** : Returns the subscription price for the given asset and duration.
+- Type: read
+- Permission: none
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier.
+  - `uint256 _duration` : Subscription duration in seconds.
+- Returns:
+  - `uint256` : Total price for the duration.
+
+
+---
+
+**subscribe** : Subscribes the given owner to the asset using ERC-2612 permit; forwards to the asset contract.
+- Type: write
+- Permission: none
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier.
+  - `address _owner` : Token owner and subscription beneficiary.
+  - `address _spender` : Must be the asset contract address for the permit.
+  - `uint256 _value` : Permit allowance / payment amount.
+  - `uint256 _deadline` : Permit signature expiry.
+  - `uint8 _v` : Signature v.
+  - `bytes32 _r` : Signature r.
+  - `bytes32 _s` : Signature s.
+- Returns:
+  - `uint256` : Subscription expiry in Unix timestamp.
+
+
+---
+
+**updateCreatorFeeShare** : Updates the creator's share of subscription fees.
+- Type: write
+- Permission: `onlyOwner`
+- Parameters:
+  - `uint256 _creatorFeeShare` : New creator fee share (used with totalFeeShare for percentage).
+- Returns: void
+
+
+---
+
+**updateRegistryFeeShare** : Updates the registry's share of subscription fees.
+- Type: write
+- Permission: `onlyOwner`
+- Parameters:
+  - `uint256 _registryFeeShare` : New registry fee share (used with totalFeeShare for percentage).
+- Returns: void
+
+
+---
+
+**getCreatorFee** : Returns the creator fee for a given payment value.
+- Type: read
+- Permission: none
+- Parameters:
+  - `uint256 _value` : Total payment value.
+- Returns:
+  - `uint256` : Creator fee amount.
+
+
+---
+
+**getRegistryFee** : Returns the registry fee for a given payment value.
+- Type: read
+- Permission: none
+- Parameters:
+  - `uint256 _value` : Total payment value.
+- Returns:
+  - `uint256` : Registry fee amount.
+
+
+---
+
+**getFees** : Returns the creator and registry fees for a given payment value.
+- Type: read
+- Permission: none
+- Parameters:
+  - `uint256 _value` : Total payment value.
+- Returns:
+  - `uint256 creatorFee` : Creator portion.
+  - `uint256 registryFee` : Registry portion.
+
+
+---
+
+**claimRegistryFee** : Claims the registry fee for a subscriber.
+- Type: write
+- Permission: `onlyOwner`
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier.
+  - `address _subscriber` : Address whose registry fee to claim.
+- Returns:
+  - `uint256` : Amount of registry fee claimed.
+
+
+---
+
+**getOwner** : Returns the owner of the registry (e.g. for receiving registry fees).
+- Type: read
+- Permission: none
+- Parameters: none
+- Returns:
+  - `address` : Registry owner address.
+
 
 ---
 
 ### IAsset
 
-| Function | Type | Permissions | Description | Parameters |
-|----------|------|-------------|-------------|------------|
-| `getAssetId()(bytes32)` | read | anyone | Returns the unique identifier for this asset. | — |
-| `getRegistryAddress()(address)` | read | anyone | Returns the address of the registry that deployed this asset. | — |
-| `getTokenAddress()(address)` | read | anyone | Returns the address of the token contract used for subscription payments. Must be an ERC20 with permit. | — |
-| `getSubscriptionPrice(uint256 duration)(uint256)` | read | anyone | Returns the total price for a subscription of the given duration. | `duration` — Length of the subscription in seconds. |
-| `setSubscriptionPrice(uint256 newSubscriptionPrice)()` | write | onlyOwner | Sets the subscription price for the asset. | `newSubscriptionPrice` — New subscription price. |
-| `getMySubscription()(uint256)` | read | anyone | Returns the caller's current subscription expiry timestamp. | — |
-| `getSubscription(address user)(uint256)` | read | onlyRegistryOrOwner | Returns a user's subscription expiry timestamp. | `user` — Address to query. |
-| `viewMySubscription()(bool)` | read | anyone | Checks whether the caller has an active subscription (expiry > block.timestamp). | — |
-| `viewSubscription(address user)(bool)` | read | onlyRegistryOrOwner | Checks whether a user has an active subscription. | `user` — Address to check. |
-| `subscribe(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)(uint256)` | write | anyone | Subscribes an owner using ERC-2612 permit: owner signs permit, then payment is pulled and subscription extended. Returns subscription expiry in Unix timestamp. | `owner` — Token owner and subscription beneficiary.<br>`spender` — Must be this asset contract for the permit to be accepted.<br>`value` — Permit allowance / payment amount (will be rounded down to subscription price units).<br>`deadline` — Permit signature expiry.<br>`v` — Signature recovery id.<br>`r` — Signature r.<br>`s` — Signature s. |
-| `revokeSubscription(address user)(bool)` | write | onlyOwner | Revokes a user's subscription. | `user` — Address whose subscription to revoke. |
+---
+
+**getAssetId** : Returns the unique identifier for this asset.
+- Type: read
+- Permission: none
+- Parameters: none
+- Returns:
+  - `bytes32` : Asset id.
+
+
+---
+
+**getRegistryAddress** : Returns the address of the registry that deployed this asset.
+- Type: read
+- Permission: none
+- Parameters: none
+- Returns:
+  - `address` : Registry address.
+
+
+---
+
+**getTokenAddress** : Returns the address of the token contract used for subscription payments.
+- Type: read
+- Permission: none
+- Parameters: none
+- Returns:
+  - `address` : Token contract address (ERC20 with permit).
+
+
+---
+
+**getSubscriptionPrice** : Returns the total price for a subscription of the given duration.
+- Type: read
+- Permission: none
+- Parameters:
+  - `uint256 duration` : Length of the subscription in seconds.
+- Returns:
+  - `uint256` : Total price for the duration.
+
+
+---
+
+**setSubscriptionPrice** : Sets the subscription price for the asset.
+- Type: write
+- Permission: `onlyOwner`
+- Parameters:
+  - `uint256 newSubscriptionPrice` : New subscription price.
+- Returns: void
+
+
+---
+
+**getMySubscription** : Returns the caller's current subscription expiry timestamp.
+- Type: read
+- Permission: none
+- Parameters: none
+- Returns:
+  - `uint256` : Expiry timestamp in seconds; 0 if no active subscription.
+
+
+---
+
+**getSubscription** : Returns a user's subscription expiry timestamp.
+- Type: read
+- Permission: `onlyRegistryOrOwner`
+- Parameters:
+  - `address user` : Address to query.
+- Returns:
+  - `uint256` : Expiry timestamp; 0 if no subscription.
+
+
+---
+
+**viewMySubscription** : Checks whether the caller has an active subscription (expiry > block.timestamp).
+- Type: read
+- Permission: none
+- Parameters: none
+- Returns:
+  - `bool` : True if the caller's subscription is active.
+
+
+---
+
+**viewSubscription** : Checks whether a user has an active subscription.
+- Type: read
+- Permission: `onlyRegistryOrOwner`
+- Parameters:
+  - `address user` : Address to check.
+- Returns:
+  - `bool` : True if the user's subscription is active.
+
+
+---
+
+**subscribe** : Subscribes an owner using ERC-2612 permit: owner signs permit, then payment is pulled and subscription extended.
+- Type: write
+- Permission: none
+- Parameters:
+  - `address owner` : Token owner and subscription beneficiary.
+  - `address spender` : Must be this asset contract for the permit to be accepted.
+  - `uint256 value` : Permit allowance / payment amount (will be rounded down to subscription price units).
+  - `uint256 deadline` : Permit signature expiry.
+  - `uint8 v` : Signature recovery id.
+  - `bytes32 r` : Signature r.
+  - `bytes32 s` : Signature s.
+- Returns:
+  - `uint256` : Subscription expiry in Unix timestamp.
+
+
+---
+
+**claimCreatorFee** : Claims the creator fee for a user.
+- Type: write
+- Permission: `onlyOwner`
+- Parameters:
+  - `address user` : Address whose creator fee to claim.
+- Returns:
+  - `uint256` : Amount of creator fee claimed.
+
+
+---
+
+**claimRegistryFee** : Claims the registry fee for a user.
+- Type: write
+- Permission: `onlyRegistryOwner`
+- Parameters:
+  - `address user` : Address whose registry fee to claim.
+- Returns:
+  - `uint256` : Amount of registry fee claimed.
+
+
+---
+
+**revokeSubscription** : Revokes a user's subscription.
+- Type: write
+- Permission: `onlyOwner`
+- Parameters:
+  - `address user` : Address whose subscription to revoke.
+- Returns: void
+
+
+---
+
+**cancelSubscription** : Cancels the caller's subscription.
+- Type: write
+- Permission: none
+- Parameters: none
+- Returns: void

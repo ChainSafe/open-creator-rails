@@ -22,6 +22,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     event AssetCreated(bytes32 indexed assetId, address indexed asset, uint256 subscriptionPrice, address tokenAddress, address indexed owner);
     event CreatorFeeShareUpdated(uint256 newCreatorFeeShare);
     event RegistryFeeShareUpdated(uint256 newRegistryFeeShare);
+    event RegistryFeeClaimed(address indexed user, uint256 amount);
 
     /// @notice Initializes the registry with fee shares. Caller becomes owner.
     /// @param _creatorFeeShare Share of subscription payments allocated to asset creators.
@@ -74,7 +75,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return IAsset(asset).viewSubscription(_user);
     }
     
-    function viewSubscription(bytes32 _assetId) external view returns (bool)
+    function viewMySubscription(bytes32 _assetId) external view returns (bool)
     {
         return _viewSubscription(_assetId, msg.sender);
     }
@@ -95,7 +96,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return IAsset(asset).getSubscription(_user);
     }
 
-    function getSubscription(bytes32 _assetId) external view returns (uint256)
+    function getMySubscription(bytes32 _assetId) external view returns (uint256)
     {
         return _getSubscription(_assetId, msg.sender);
     }
@@ -132,11 +133,32 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     }
 
     function getCreatorFee(uint256 _value) external view returns (uint256) {
-        return (_value * creatorFeeShare) / totalFeeShare;
+        return _value - getRegistryFee(_value);
     }
 
-    function getRegistryFee(uint256 _value) external view returns (uint256) {
+    function getRegistryFee(uint256 _value) public view returns (uint256) {
         return (_value * registryFeeShare) / totalFeeShare;
+    }
+
+    function getFees(uint256 _value) external view returns (uint256 creatorFee, uint256 registryFee) {
+        
+
+        registryFee = getRegistryFee(_value);
+        
+        creatorFee = _value - registryFee;
+
+        return (creatorFee, registryFee);
+    }
+
+    function claimRegistryFee(bytes32 _assetId, address _subscriber) external onlyOwner returns (uint256 registryFee) {
+        
+        address asset = getAsset(_assetId);
+        
+        registryFee = IAsset(asset).claimRegistryFee(_subscriber);
+
+        emit RegistryFeeClaimed(_subscriber, registryFee);
+
+        return registryFee;
     }
 
     function getOwner() external view returns (address) {

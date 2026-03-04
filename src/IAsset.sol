@@ -63,8 +63,21 @@ interface IAsset {
         bytes32 s
     ) external returns (uint256);
 
+
+    /// @notice Claims the creator fee for a user. Callable only by the asset owner.
+    /// @param user Address whose creator fee to claim.
+    /// @return The amount of creator fee claimed.
+    function claimCreatorFee(address user) external returns (uint256);
+
+    /// @notice Claims the registry fee for a user. Callable only by the Registry owner.
+    /// @param user Address whose registry fee to claim.
+    /// @return The amount of registry fee claimed.
+    function claimRegistryFee(address user) external returns (uint256);
+
     /// @notice Revokes a user's subscription. Callable only by the asset owner.
     /// @param user Address whose subscription to revoke.
-    /// @return True if a subscription existed and was revoked.
-    function revokeSubscription(address user) external returns (bool);
+    function revokeSubscription(address user) external;
+
+    /// @notice Cancels the caller's subscription. Callable only by the subscription owner.
+    function cancelSubscription() external;
 }

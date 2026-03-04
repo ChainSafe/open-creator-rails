@@ -22,6 +22,8 @@ contract BaseTest is Test {
     uint256 internal constant SUBSCRIPTION_PRICE = 100000000;
     uint256 internal constant DURATION = 3600;
 
+    address internal constant UNAUTHORIZED = address(403);
+
     address internal assetOwner;
     address internal registryOwner;
 
