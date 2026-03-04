@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {AssetRegistry} from "../src/AssetRegistry.sol";
+import {Asset} from "../src/Asset.sol";
 import {IAsset} from "../src/IAsset.sol";
 import {BaseTest} from "./Base.t.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
@@ -141,6 +142,35 @@ contract AssetRegistryTest is BaseTest {
 
         vm.expectRevert(AssetRegistry.AssetNotFound.selector);
         assetRegistry.getAsset(nonexistentId);
+    }
+
+    function test_createAsset_invalidOwner() public {
+        vm.prank(registryOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0)));
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), address(0));
+    }
+
+    function test_createAsset_invalidTokenAddress() public {
+        vm.prank(registryOwner);
+        vm.expectRevert(Asset.InvalidTokenAddress.selector);
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(0), assetOwner);
+    }
+
+    function test_getSubscriptionPrice_assetNotFound() public {
+        bytes32 nonexistentId = keccak256("nonexistent");
+
+        vm.expectRevert(AssetRegistry.AssetNotFound.selector);
+        assetRegistry.getSubscriptionPrice(nonexistentId, 10);
+    }
+
+    function test_claimRegistryFee_unauthorized() public {
+        test_createAsset();
+        test_subscribe();
+        vm.warp(block.timestamp + DURATION);
+
+        vm.prank(UNAUTHORIZED);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, UNAUTHORIZED));
+        assetRegistry.claimRegistryFee(ASSET_ID, signer);
     }
 
     function test_createAsset_unauthorized() public {

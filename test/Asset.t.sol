@@ -451,6 +451,15 @@ contract AssetTest is BaseTest {
         asset.cancelSubscription();
     }
 
+    function test_claimRegistryFee_unauthorized() public {
+        test_subscribe();
+        vm.warp(block.timestamp + DURATION);
+
+        vm.prank(registryOwner);
+        vm.expectRevert(Asset.OnlyRegistryUnauthorizedAccount.selector);
+        asset.claimRegistryFee(signer);
+    }
+
     function test_feeSplit() public {
         uint256 creatorBalance = testToken.balanceOf(assetOwner);
         uint256 registryBalance = testToken.balanceOf(registryOwner);
