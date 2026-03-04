@@ -1,12 +1,12 @@
 [
   {
-    "address": "0x443E08Ac2ba7A9AB74c8d93e0088f5902fBa50cD",
+    "address": "0x0AbB309b1eAC4e7d2A3c33b36a89EC57EC628098",
     "creatorFeeShare": 70,
     "registryFeeShare": 30,
     "owner": "0xFDA455DEff45bB92E79E705FDEc698c32a952aDE",
     "assets": [
       {
-        "address": "0xcb91ba6b922aba07474dcdf93c01219a7a2bc4ea",
+        "address": "0x22523bd0e874e82a27908eba07e5a83f20df1947",
         "assetId": "default_asset_id",
         "assetIdHash": "0x973fa65fcf47830442fffbe790bfa4161c5efc1834fb2e63c64429c74cf61805",
         "subscriptionPrice": 4,
