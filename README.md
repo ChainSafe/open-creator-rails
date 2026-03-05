@@ -532,3 +532,95 @@ All external functions for the registry and asset contracts, for use with JSON-R
 - Permission: none
 - Parameters: none
 - Returns: void
+
+---
+
+## Event Schema
+
+All events emitted by the registry and asset contracts. Use for indexing, logging, or listening via `eth_subscribe` (logs).
+
+### AssetRegistry
+
+---
+
+**AssetCreated** : Emitted when a new Asset contract is deployed and registered.
+- Contract: `AssetRegistry`
+- Parameters:
+  - `bytes32 indexed assetId` : Unique identifier for the asset.
+  - `address indexed asset` : Address of the newly deployed Asset contract.
+  - `uint256 subscriptionPrice` : Price per subscription unit for the asset.
+  - `address tokenAddress` : ERC20 (with permit) used for subscription payments.
+  - `address indexed owner` : Creator/owner of the new asset.
+
+
+---
+
+**CreatorFeeShareUpdated** : Emitted when the creator fee share is updated.
+- Contract: `AssetRegistry`
+- Parameters:
+  - `uint256 newCreatorFeeShare` : New creator fee share.
+
+
+---
+
+**RegistryFeeShareUpdated** : Emitted when the registry fee share is updated.
+- Contract: `AssetRegistry`
+- Parameters:
+  - `uint256 newRegistryFeeShare` : New registry fee share.
+
+
+---
+
+**RegistryFeeClaimed** : Emitted when the registry fee for a subscriber is claimed.
+- Contract: `AssetRegistry`
+- Parameters:
+  - `address indexed user` : Subscriber whose registry fee was claimed.
+  - `uint256 amount` : Amount of registry fee claimed.
+
+
+---
+
+### Asset
+
+---
+
+**SubscriptionAdded** : Emitted when a user subscribes or extends their subscription.
+- Contract: `Asset`
+- Parameters:
+  - `address indexed user` : Subscriber address.
+  - `uint256 indexed startTime` : Subscription start time (Unix timestamp).
+  - `uint256 indexed endTime` : Subscription expiry time (Unix timestamp).
+  - `uint256 nonce` : Subscription nonce.
+
+
+---
+
+**CreatorFeeClaimed** : Emitted when the creator fee for a user is claimed.
+- Contract: `Asset`
+- Parameters:
+  - `address indexed user` : User whose creator fee was claimed.
+  - `uint256 amount` : Amount of creator fee claimed.
+
+
+---
+
+**SubscriptionPriceUpdated** : Emitted when the subscription price is updated.
+- Contract: `Asset`
+- Parameters:
+  - `uint256 newSubscriptionPrice` : New subscription price per unit.
+
+
+---
+
+**SubscriptionRevoked** : Emitted when a user's subscription is revoked by the asset owner.
+- Contract: `Asset`
+- Parameters:
+  - `address indexed user` : User whose subscription was revoked.
+
+
+---
+
+**SubscriptionCancelled** : Emitted when a user cancels their own subscription.
+- Contract: `Asset`
+- Parameters:
+  - `address indexed user` : User who cancelled their subscription.
