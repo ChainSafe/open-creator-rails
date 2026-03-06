@@ -18,6 +18,9 @@ if [ $EXIT_CODE -ne 0 ]; then
     return $EXIT_CODE 2>/dev/null || exit $EXIT_CODE
 fi
 
+transaction_hash=$(echo $result | jq -r '.transactionHash')
+
 echo "Address: $token_address
 To: $to
-Amount: $amount"
+Amount: $amount
+Transaction Hash: $transaction_hash"

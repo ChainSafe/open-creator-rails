@@ -49,7 +49,7 @@
         "address": "0x043887c55b378bead8cda17b1498fca5146f7e2e",
         "assetId": "the_seedstore",
         "assetIdHash": "0x4078dd732cab3e99d6d0ad4e199338cec64ae148d2d56c439e1ea59e4fe34c00",
-        "subscriptionPrice": 2,
+        "subscriptionPrice": 1,
         "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
         "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
       },
@@ -57,7 +57,7 @@
         "address": "0x5b0c3f7c3bd95efdbf913c50be935c9ab969fcd1",
         "assetId": "avesta_health",
         "assetIdHash": "0x1323ab971a62bb04dbbbf97d1c8f48a7247606d986b98a343f9d6286d17f5764",
-        "subscriptionPrice": 2,
+        "subscriptionPrice": 1,
         "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
         "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
       },
@@ -65,7 +65,7 @@
         "address": "0x827a062637c52be85c3e7b79fd171d3ac21b9bad",
         "assetId": "spaling_spa_and_relax",
         "assetIdHash": "0xf29271aee8c7a8aca9952f73067cc82777a4934d0100bb141c73b925baf19ed9",
-        "subscriptionPrice": 2,
+        "subscriptionPrice": 1,
         "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
         "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
       }
