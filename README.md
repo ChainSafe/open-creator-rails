@@ -118,6 +118,52 @@ Example:
 ./script/subscribe.sh 0 "default_asset_id" 10368000 0x1b97...
 ```
 
+### Set Subscription Price
+
+Update the subscription price for an asset (asset owner only):
+
+```bash
+./script/setSubscriptionPrice.sh <registry_index> <asset_id> <new_subscription_price> <asset_owner_private_key>
+```
+
+| Input | Description |
+|-------|--------------|
+| `registry_index` | Zero-based index of the registry in `registries_<chain_id>.json`. |
+| `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
+| `new_subscription_price` | New price per subscription unit (e.g. per second) in the token's smallest unit. |
+| `asset_owner_private_key` | Private key of the asset owner. Used to send the transaction. |
+
+Example:
+
+```bash
+./script/setSubscriptionPrice.sh 0 "default_asset_id" 8 0x1b97...
+```
+
+The script updates the `subscriptionPrice` for the asset in `registries_<chain_id>.json`.
+
+### Transfer Asset Ownership
+
+Transfer ownership of an asset to a new address (asset owner only). The asset owner is the address that can claim the creator fee share of subscription payments.
+
+```bash
+./script/transferAssetOwnership.sh <registry_index> <asset_id> <asset_owner_private_key> <new_owner>
+```
+
+| Input | Description |
+|-------|--------------|
+| `registry_index` | Zero-based index of the registry in `registries_<chain_id>.json`. |
+| `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
+| `asset_owner_private_key` | Private key of the current asset owner. Used to send the transaction. |
+| `new_owner` | Address of the new owner; can claim creator share of subscription fees going forward. |
+
+Example:
+
+```bash
+./script/transferAssetOwnership.sh 0 "default_asset_id" 0x1b97... 0xabcd...
+```
+
+The script updates the `owner` for the asset in `registries_<chain_id>.json`.
+
 ---
 
 > ### Test Tokens

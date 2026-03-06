@@ -11,7 +11,7 @@
         "assetIdHash": "0x973fa65fcf47830442fffbe790bfa4161c5efc1834fb2e63c64429c74cf61805",
         "subscriptionPrice": 4,
         "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
-        "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
+        "owner": "0x0d7E157a4ebFfB0148bCC122dBea972EbABB31BC"
       },
       {
         "address": "0xcdd88d9f65a79de88b512dd72276620ea0641aad",
@@ -19,7 +19,7 @@
         "assetIdHash": "0xcf0a24a29198470cf6446732272b52d19e7889a8a80a1394ddb3933497db3e22",
         "subscriptionPrice": 4,
         "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
-        "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
+        "owner": "0x0d7E157a4ebFfB0148bCC122dBea972EbABB31BC"
       },
       {
         "address": "0xffb9bf5c3e811288c5b63acffaa8fd9a0f705227",
@@ -27,7 +27,7 @@
         "assetIdHash": "0x9b22f7d5d312ab91a91b7ee0c7ce62db13d16f99df532c3c905b725d6d57713b",
         "subscriptionPrice": 4,
         "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
-        "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
+        "owner": "0x0d7E157a4ebFfB0148bCC122dBea972EbABB31BC"
       },
       {
         "address": "0xc01ca58aebdf0ae085b9f229dc4b25d4386e3504",
@@ -35,7 +35,7 @@
         "assetIdHash": "0x21983b0cc4b2769467d00926042e9cf8ccea3b9bb3b94975f725619d7f4d5e23",
         "subscriptionPrice": 4,
         "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
-        "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
+        "owner": "0x0d7E157a4ebFfB0148bCC122dBea972EbABB31BC"
       },
       {
         "address": "0x427a32acc5a1ebf3956df80d454c1184814170cf",
@@ -43,31 +43,31 @@
         "assetIdHash": "0x8b5cf930c87d83e425bd9e351fdb954c70ab8d39efdaf8c6265ece28b0034bcb",
         "subscriptionPrice": 4,
         "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
-        "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
+        "owner": "0x0d7E157a4ebFfB0148bCC122dBea972EbABB31BC"
       },
       {
         "address": "0x043887c55b378bead8cda17b1498fca5146f7e2e",
         "assetId": "the_seedstore",
         "assetIdHash": "0x4078dd732cab3e99d6d0ad4e199338cec64ae148d2d56c439e1ea59e4fe34c00",
-        "subscriptionPrice": 2,
+        "subscriptionPrice": 1,
         "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
-        "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
+        "owner": "0x0d7E157a4ebFfB0148bCC122dBea972EbABB31BC"
       },
       {
         "address": "0x5b0c3f7c3bd95efdbf913c50be935c9ab969fcd1",
         "assetId": "avesta_health",
         "assetIdHash": "0x1323ab971a62bb04dbbbf97d1c8f48a7247606d986b98a343f9d6286d17f5764",
-        "subscriptionPrice": 2,
+        "subscriptionPrice": 1,
         "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
-        "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
+        "owner": "0x0d7E157a4ebFfB0148bCC122dBea972EbABB31BC"
       },
       {
         "address": "0x827a062637c52be85c3e7b79fd171d3ac21b9bad",
         "assetId": "spaling_spa_and_relax",
         "assetIdHash": "0xf29271aee8c7a8aca9952f73067cc82777a4934d0100bb141c73b925baf19ed9",
-        "subscriptionPrice": 2,
+        "subscriptionPrice": 1,
         "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
-        "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
+        "owner": "0x0d7E157a4ebFfB0148bCC122dBea972EbABB31BC"
       }
     ]
   }
