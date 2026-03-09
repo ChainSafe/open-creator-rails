@@ -135,7 +135,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
     function subscribe(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external nonReentrant returns (uint256) {
 
-        _valiatePermit(owner, spender, value, deadline, v, r, s);
+        _validatePermit(owner, spender, value, deadline, v, r, s);
 
         return _subscribe(owner, value);
     }
@@ -174,7 +174,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return endTime;
     }
 
-    function _valiatePermit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) internal {
+    function _validatePermit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) internal {
         if (spender != address(this)) {
             revert InvalidSpender();
         }
