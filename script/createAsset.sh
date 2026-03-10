@@ -8,7 +8,7 @@ source ./script/utils.sh
 
 registry_index=$1
 
-asset_id=$(cast keccak $2)
+asset_id=$(cast keccak "$2")
 subscription_price=$3
 token_address=$4
 owner=$5
