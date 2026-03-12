@@ -1,0 +1,790 @@
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+scalar BigInt
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type ViewPageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type Meta {
+  status: JSON
+}
+
+type Query {
+  assetEntity(id: String!): AssetEntity
+  assetEntitys(where: AssetEntityFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int, offset: Int): AssetEntityPage!
+  assetIdToAddress(id: String!): AssetIdToAddress
+  assetIdToAddresss(where: AssetIdToAddressFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int, offset: Int): AssetIdToAddressPage!
+  subscription(id: String!): Subscription
+  subscriptions(where: SubscriptionFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int, offset: Int): SubscriptionPage!
+  assetRegistry_AssetCreated(id: String!): AssetRegistry_AssetCreated
+  assetRegistry_AssetCreateds(where: AssetRegistry_AssetCreatedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int, offset: Int): AssetRegistry_AssetCreatedPage!
+  assetRegistry_OwnershipTransferred(id: String!): AssetRegistry_OwnershipTransferred
+  assetRegistry_OwnershipTransferreds(where: AssetRegistry_OwnershipTransferredFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int, offset: Int): AssetRegistry_OwnershipTransferredPage!
+  assetRegistry_CreatorFeeShareUpdated(id: String!): AssetRegistry_CreatorFeeShareUpdated
+  assetRegistry_CreatorFeeShareUpdateds(where: AssetRegistry_CreatorFeeShareUpdatedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int, offset: Int): AssetRegistry_CreatorFeeShareUpdatedPage!
+  assetRegistry_RegistryFeeShareUpdated(id: String!): AssetRegistry_RegistryFeeShareUpdated
+  assetRegistry_RegistryFeeShareUpdateds(where: AssetRegistry_RegistryFeeShareUpdatedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int, offset: Int): AssetRegistry_RegistryFeeShareUpdatedPage!
+  asset_SubscriptionAdded(id: String!): Asset_SubscriptionAdded
+  asset_SubscriptionAddeds(where: Asset_SubscriptionAddedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int, offset: Int): Asset_SubscriptionAddedPage!
+  asset_SubscriptionPriceUpdated(id: String!): Asset_SubscriptionPriceUpdated
+  asset_SubscriptionPriceUpdateds(where: Asset_SubscriptionPriceUpdatedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int, offset: Int): Asset_SubscriptionPriceUpdatedPage!
+  asset_SubscriptionRevoked(id: String!): Asset_SubscriptionRevoked
+  asset_SubscriptionRevokeds(where: Asset_SubscriptionRevokedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int, offset: Int): Asset_SubscriptionRevokedPage!
+  asset_OwnershipTransferred(id: String!): Asset_OwnershipTransferred
+  asset_OwnershipTransferreds(where: Asset_OwnershipTransferredFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int, offset: Int): Asset_OwnershipTransferredPage!
+  _meta: Meta
+}
+
+type AssetEntity {
+  id: String!
+  assetId: String!
+  registryAddress: String!
+  owner: String!
+}
+
+type AssetEntityPage {
+  items: [AssetEntity!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input AssetEntityFilter {
+  AND: [AssetEntityFilter]
+  OR: [AssetEntityFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  assetId: String
+  assetId_not: String
+  assetId_in: [String]
+  assetId_not_in: [String]
+  assetId_contains: String
+  assetId_not_contains: String
+  assetId_starts_with: String
+  assetId_ends_with: String
+  assetId_not_starts_with: String
+  assetId_not_ends_with: String
+  registryAddress: String
+  registryAddress_not: String
+  registryAddress_in: [String]
+  registryAddress_not_in: [String]
+  registryAddress_contains: String
+  registryAddress_not_contains: String
+  registryAddress_starts_with: String
+  registryAddress_ends_with: String
+  registryAddress_not_starts_with: String
+  registryAddress_not_ends_with: String
+  owner: String
+  owner_not: String
+  owner_in: [String]
+  owner_not_in: [String]
+  owner_contains: String
+  owner_not_contains: String
+  owner_starts_with: String
+  owner_ends_with: String
+  owner_not_starts_with: String
+  owner_not_ends_with: String
+}
+
+type AssetIdToAddress {
+  id: String!
+  assetAddress: String!
+}
+
+type AssetIdToAddressPage {
+  items: [AssetIdToAddress!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input AssetIdToAddressFilter {
+  AND: [AssetIdToAddressFilter]
+  OR: [AssetIdToAddressFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  assetAddress: String
+  assetAddress_not: String
+  assetAddress_in: [String]
+  assetAddress_not_in: [String]
+  assetAddress_contains: String
+  assetAddress_not_contains: String
+  assetAddress_starts_with: String
+  assetAddress_ends_with: String
+  assetAddress_not_starts_with: String
+  assetAddress_not_ends_with: String
+}
+
+type Subscription {
+  id: String!
+  asset_id: String!
+  user: String!
+  expiresAt: BigInt!
+  isActive: Boolean!
+}
+
+type SubscriptionPage {
+  items: [Subscription!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input SubscriptionFilter {
+  AND: [SubscriptionFilter]
+  OR: [SubscriptionFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  asset_id: String
+  asset_id_not: String
+  asset_id_in: [String]
+  asset_id_not_in: [String]
+  asset_id_contains: String
+  asset_id_not_contains: String
+  asset_id_starts_with: String
+  asset_id_ends_with: String
+  asset_id_not_starts_with: String
+  asset_id_not_ends_with: String
+  user: String
+  user_not: String
+  user_in: [String]
+  user_not_in: [String]
+  user_contains: String
+  user_not_contains: String
+  user_starts_with: String
+  user_ends_with: String
+  user_not_starts_with: String
+  user_not_ends_with: String
+  expiresAt: BigInt
+  expiresAt_not: BigInt
+  expiresAt_in: [BigInt]
+  expiresAt_not_in: [BigInt]
+  expiresAt_gt: BigInt
+  expiresAt_lt: BigInt
+  expiresAt_gte: BigInt
+  expiresAt_lte: BigInt
+  isActive: Boolean
+  isActive_not: Boolean
+  isActive_in: [Boolean]
+  isActive_not_in: [Boolean]
+}
+
+type AssetRegistry_AssetCreated {
+  id: String!
+  assetId: String!
+  asset: String!
+  subscriptionPrice: BigInt!
+  tokenAddress: String!
+  owner: String!
+  registryAddress: String!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+}
+
+type AssetRegistry_AssetCreatedPage {
+  items: [AssetRegistry_AssetCreated!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input AssetRegistry_AssetCreatedFilter {
+  AND: [AssetRegistry_AssetCreatedFilter]
+  OR: [AssetRegistry_AssetCreatedFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  assetId: String
+  assetId_not: String
+  assetId_in: [String]
+  assetId_not_in: [String]
+  assetId_contains: String
+  assetId_not_contains: String
+  assetId_starts_with: String
+  assetId_ends_with: String
+  assetId_not_starts_with: String
+  assetId_not_ends_with: String
+  asset: String
+  asset_not: String
+  asset_in: [String]
+  asset_not_in: [String]
+  asset_contains: String
+  asset_not_contains: String
+  asset_starts_with: String
+  asset_ends_with: String
+  asset_not_starts_with: String
+  asset_not_ends_with: String
+  subscriptionPrice: BigInt
+  subscriptionPrice_not: BigInt
+  subscriptionPrice_in: [BigInt]
+  subscriptionPrice_not_in: [BigInt]
+  subscriptionPrice_gt: BigInt
+  subscriptionPrice_lt: BigInt
+  subscriptionPrice_gte: BigInt
+  subscriptionPrice_lte: BigInt
+  tokenAddress: String
+  tokenAddress_not: String
+  tokenAddress_in: [String]
+  tokenAddress_not_in: [String]
+  tokenAddress_contains: String
+  tokenAddress_not_contains: String
+  tokenAddress_starts_with: String
+  tokenAddress_ends_with: String
+  tokenAddress_not_starts_with: String
+  tokenAddress_not_ends_with: String
+  owner: String
+  owner_not: String
+  owner_in: [String]
+  owner_not_in: [String]
+  owner_contains: String
+  owner_not_contains: String
+  owner_starts_with: String
+  owner_ends_with: String
+  owner_not_starts_with: String
+  owner_not_ends_with: String
+  registryAddress: String
+  registryAddress_not: String
+  registryAddress_in: [String]
+  registryAddress_not_in: [String]
+  registryAddress_contains: String
+  registryAddress_not_contains: String
+  registryAddress_starts_with: String
+  registryAddress_ends_with: String
+  registryAddress_not_starts_with: String
+  registryAddress_not_ends_with: String
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
+  blockTimestamp: BigInt
+  blockTimestamp_not: BigInt
+  blockTimestamp_in: [BigInt]
+  blockTimestamp_not_in: [BigInt]
+  blockTimestamp_gt: BigInt
+  blockTimestamp_lt: BigInt
+  blockTimestamp_gte: BigInt
+  blockTimestamp_lte: BigInt
+}
+
+type AssetRegistry_OwnershipTransferred {
+  id: String!
+  previousOwner: String!
+  newOwner: String!
+  registryAddress: String!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+}
+
+type AssetRegistry_OwnershipTransferredPage {
+  items: [AssetRegistry_OwnershipTransferred!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input AssetRegistry_OwnershipTransferredFilter {
+  AND: [AssetRegistry_OwnershipTransferredFilter]
+  OR: [AssetRegistry_OwnershipTransferredFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  previousOwner: String
+  previousOwner_not: String
+  previousOwner_in: [String]
+  previousOwner_not_in: [String]
+  previousOwner_contains: String
+  previousOwner_not_contains: String
+  previousOwner_starts_with: String
+  previousOwner_ends_with: String
+  previousOwner_not_starts_with: String
+  previousOwner_not_ends_with: String
+  newOwner: String
+  newOwner_not: String
+  newOwner_in: [String]
+  newOwner_not_in: [String]
+  newOwner_contains: String
+  newOwner_not_contains: String
+  newOwner_starts_with: String
+  newOwner_ends_with: String
+  newOwner_not_starts_with: String
+  newOwner_not_ends_with: String
+  registryAddress: String
+  registryAddress_not: String
+  registryAddress_in: [String]
+  registryAddress_not_in: [String]
+  registryAddress_contains: String
+  registryAddress_not_contains: String
+  registryAddress_starts_with: String
+  registryAddress_ends_with: String
+  registryAddress_not_starts_with: String
+  registryAddress_not_ends_with: String
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
+  blockTimestamp: BigInt
+  blockTimestamp_not: BigInt
+  blockTimestamp_in: [BigInt]
+  blockTimestamp_not_in: [BigInt]
+  blockTimestamp_gt: BigInt
+  blockTimestamp_lt: BigInt
+  blockTimestamp_gte: BigInt
+  blockTimestamp_lte: BigInt
+}
+
+type AssetRegistry_CreatorFeeShareUpdated {
+  id: String!
+  newCreatorFeeShare: BigInt!
+  registryAddress: String!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+}
+
+type AssetRegistry_CreatorFeeShareUpdatedPage {
+  items: [AssetRegistry_CreatorFeeShareUpdated!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input AssetRegistry_CreatorFeeShareUpdatedFilter {
+  AND: [AssetRegistry_CreatorFeeShareUpdatedFilter]
+  OR: [AssetRegistry_CreatorFeeShareUpdatedFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  newCreatorFeeShare: BigInt
+  newCreatorFeeShare_not: BigInt
+  newCreatorFeeShare_in: [BigInt]
+  newCreatorFeeShare_not_in: [BigInt]
+  newCreatorFeeShare_gt: BigInt
+  newCreatorFeeShare_lt: BigInt
+  newCreatorFeeShare_gte: BigInt
+  newCreatorFeeShare_lte: BigInt
+  registryAddress: String
+  registryAddress_not: String
+  registryAddress_in: [String]
+  registryAddress_not_in: [String]
+  registryAddress_contains: String
+  registryAddress_not_contains: String
+  registryAddress_starts_with: String
+  registryAddress_ends_with: String
+  registryAddress_not_starts_with: String
+  registryAddress_not_ends_with: String
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
+  blockTimestamp: BigInt
+  blockTimestamp_not: BigInt
+  blockTimestamp_in: [BigInt]
+  blockTimestamp_not_in: [BigInt]
+  blockTimestamp_gt: BigInt
+  blockTimestamp_lt: BigInt
+  blockTimestamp_gte: BigInt
+  blockTimestamp_lte: BigInt
+}
+
+type AssetRegistry_RegistryFeeShareUpdated {
+  id: String!
+  newRegistryFeeShare: BigInt!
+  registryAddress: String!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+}
+
+type AssetRegistry_RegistryFeeShareUpdatedPage {
+  items: [AssetRegistry_RegistryFeeShareUpdated!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input AssetRegistry_RegistryFeeShareUpdatedFilter {
+  AND: [AssetRegistry_RegistryFeeShareUpdatedFilter]
+  OR: [AssetRegistry_RegistryFeeShareUpdatedFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  newRegistryFeeShare: BigInt
+  newRegistryFeeShare_not: BigInt
+  newRegistryFeeShare_in: [BigInt]
+  newRegistryFeeShare_not_in: [BigInt]
+  newRegistryFeeShare_gt: BigInt
+  newRegistryFeeShare_lt: BigInt
+  newRegistryFeeShare_gte: BigInt
+  newRegistryFeeShare_lte: BigInt
+  registryAddress: String
+  registryAddress_not: String
+  registryAddress_in: [String]
+  registryAddress_not_in: [String]
+  registryAddress_contains: String
+  registryAddress_not_contains: String
+  registryAddress_starts_with: String
+  registryAddress_ends_with: String
+  registryAddress_not_starts_with: String
+  registryAddress_not_ends_with: String
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
+  blockTimestamp: BigInt
+  blockTimestamp_not: BigInt
+  blockTimestamp_in: [BigInt]
+  blockTimestamp_not_in: [BigInt]
+  blockTimestamp_gt: BigInt
+  blockTimestamp_lt: BigInt
+  blockTimestamp_gte: BigInt
+  blockTimestamp_lte: BigInt
+}
+
+type Asset_SubscriptionAdded {
+  id: String!
+  user: String!
+  expiresAt: BigInt!
+  assetAddress: String!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+}
+
+type Asset_SubscriptionAddedPage {
+  items: [Asset_SubscriptionAdded!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input Asset_SubscriptionAddedFilter {
+  AND: [Asset_SubscriptionAddedFilter]
+  OR: [Asset_SubscriptionAddedFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  user: String
+  user_not: String
+  user_in: [String]
+  user_not_in: [String]
+  user_contains: String
+  user_not_contains: String
+  user_starts_with: String
+  user_ends_with: String
+  user_not_starts_with: String
+  user_not_ends_with: String
+  expiresAt: BigInt
+  expiresAt_not: BigInt
+  expiresAt_in: [BigInt]
+  expiresAt_not_in: [BigInt]
+  expiresAt_gt: BigInt
+  expiresAt_lt: BigInt
+  expiresAt_gte: BigInt
+  expiresAt_lte: BigInt
+  assetAddress: String
+  assetAddress_not: String
+  assetAddress_in: [String]
+  assetAddress_not_in: [String]
+  assetAddress_contains: String
+  assetAddress_not_contains: String
+  assetAddress_starts_with: String
+  assetAddress_ends_with: String
+  assetAddress_not_starts_with: String
+  assetAddress_not_ends_with: String
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
+  blockTimestamp: BigInt
+  blockTimestamp_not: BigInt
+  blockTimestamp_in: [BigInt]
+  blockTimestamp_not_in: [BigInt]
+  blockTimestamp_gt: BigInt
+  blockTimestamp_lt: BigInt
+  blockTimestamp_gte: BigInt
+  blockTimestamp_lte: BigInt
+}
+
+type Asset_SubscriptionPriceUpdated {
+  id: String!
+  newSubscriptionPrice: BigInt!
+  assetAddress: String!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+}
+
+type Asset_SubscriptionPriceUpdatedPage {
+  items: [Asset_SubscriptionPriceUpdated!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input Asset_SubscriptionPriceUpdatedFilter {
+  AND: [Asset_SubscriptionPriceUpdatedFilter]
+  OR: [Asset_SubscriptionPriceUpdatedFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  newSubscriptionPrice: BigInt
+  newSubscriptionPrice_not: BigInt
+  newSubscriptionPrice_in: [BigInt]
+  newSubscriptionPrice_not_in: [BigInt]
+  newSubscriptionPrice_gt: BigInt
+  newSubscriptionPrice_lt: BigInt
+  newSubscriptionPrice_gte: BigInt
+  newSubscriptionPrice_lte: BigInt
+  assetAddress: String
+  assetAddress_not: String
+  assetAddress_in: [String]
+  assetAddress_not_in: [String]
+  assetAddress_contains: String
+  assetAddress_not_contains: String
+  assetAddress_starts_with: String
+  assetAddress_ends_with: String
+  assetAddress_not_starts_with: String
+  assetAddress_not_ends_with: String
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
+  blockTimestamp: BigInt
+  blockTimestamp_not: BigInt
+  blockTimestamp_in: [BigInt]
+  blockTimestamp_not_in: [BigInt]
+  blockTimestamp_gt: BigInt
+  blockTimestamp_lt: BigInt
+  blockTimestamp_gte: BigInt
+  blockTimestamp_lte: BigInt
+}
+
+type Asset_SubscriptionRevoked {
+  id: String!
+  user: String!
+  assetAddress: String!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+}
+
+type Asset_SubscriptionRevokedPage {
+  items: [Asset_SubscriptionRevoked!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input Asset_SubscriptionRevokedFilter {
+  AND: [Asset_SubscriptionRevokedFilter]
+  OR: [Asset_SubscriptionRevokedFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  user: String
+  user_not: String
+  user_in: [String]
+  user_not_in: [String]
+  user_contains: String
+  user_not_contains: String
+  user_starts_with: String
+  user_ends_with: String
+  user_not_starts_with: String
+  user_not_ends_with: String
+  assetAddress: String
+  assetAddress_not: String
+  assetAddress_in: [String]
+  assetAddress_not_in: [String]
+  assetAddress_contains: String
+  assetAddress_not_contains: String
+  assetAddress_starts_with: String
+  assetAddress_ends_with: String
+  assetAddress_not_starts_with: String
+  assetAddress_not_ends_with: String
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
+  blockTimestamp: BigInt
+  blockTimestamp_not: BigInt
+  blockTimestamp_in: [BigInt]
+  blockTimestamp_not_in: [BigInt]
+  blockTimestamp_gt: BigInt
+  blockTimestamp_lt: BigInt
+  blockTimestamp_gte: BigInt
+  blockTimestamp_lte: BigInt
+}
+
+type Asset_OwnershipTransferred {
+  id: String!
+  previousOwner: String!
+  newOwner: String!
+  assetAddress: String!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+}
+
+type Asset_OwnershipTransferredPage {
+  items: [Asset_OwnershipTransferred!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input Asset_OwnershipTransferredFilter {
+  AND: [Asset_OwnershipTransferredFilter]
+  OR: [Asset_OwnershipTransferredFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  previousOwner: String
+  previousOwner_not: String
+  previousOwner_in: [String]
+  previousOwner_not_in: [String]
+  previousOwner_contains: String
+  previousOwner_not_contains: String
+  previousOwner_starts_with: String
+  previousOwner_ends_with: String
+  previousOwner_not_starts_with: String
+  previousOwner_not_ends_with: String
+  newOwner: String
+  newOwner_not: String
+  newOwner_in: [String]
+  newOwner_not_in: [String]
+  newOwner_contains: String
+  newOwner_not_contains: String
+  newOwner_starts_with: String
+  newOwner_ends_with: String
+  newOwner_not_starts_with: String
+  newOwner_not_ends_with: String
+  assetAddress: String
+  assetAddress_not: String
+  assetAddress_in: [String]
+  assetAddress_not_in: [String]
+  assetAddress_contains: String
+  assetAddress_not_contains: String
+  assetAddress_starts_with: String
+  assetAddress_ends_with: String
+  assetAddress_not_starts_with: String
+  assetAddress_not_ends_with: String
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
+  blockTimestamp: BigInt
+  blockTimestamp_not: BigInt
+  blockTimestamp_in: [BigInt]
+  blockTimestamp_not_in: [BigInt]
+  blockTimestamp_gt: BigInt
+  blockTimestamp_lt: BigInt
+  blockTimestamp_gte: BigInt
+  blockTimestamp_lte: BigInt
+}

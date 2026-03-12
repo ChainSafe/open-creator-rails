@@ -1,0 +1,42 @@
+services:
+  # 1. Real Database for Ponder (required in production mode)
+  postgres:
+    image: postgres:15-alpine
+    container_name: ocr_ponder_db
+    environment:
+      POSTGRES_USER: ponder
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ponder_db
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ponder -d ponder_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Your Ponder Indexer
+  ponder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ocr_ponder_app
+    ports:
+      - "42069:42069"
+    environment:
+      # Connect to the postgres service defined above
+      DATABASE_URL: postgres://ponder:password@postgres:5432/ponder_db
+      DATABASE_SCHEMA: public
+      # !!! REPLACE THIS WITH YOUR REAL RPC URL !!!
+      # Without this, indexing will fail immediately
+      PONDER_RPC_URL_11155111: ${PONDER_RPC_URL_11155111}
+      
+      PORT: 42069
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+
+# Persist DB data so you don't re-index every restart
+volumes:
+  postgres_data:
