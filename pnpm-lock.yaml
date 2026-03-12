@@ -12,6 +12,9 @@ importers:
 
   apps/indexer:
     dependencies:
+      '@open-creator-rails/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       abitype:
         specifier: ^0.10.2
         version: 0.10.3(typescript@5.9.3)
