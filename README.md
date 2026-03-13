@@ -12,6 +12,8 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
 
 ### Prerequisites
 
+- [Node.js](https://nodejs.org/) (v22+)
+- [pnpm](https://pnpm.io/)
 - [Foundry](https://book.getfoundry.sh/getting-started/installation) (forge, cast, anvil)
 - [jq](https://jqlang.org/) (optional) — for script usage (e.g. `get_address` in `script/utils.sh` reads `registries_<chain_id>.json` via jq)
 
@@ -22,7 +24,7 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
    ```bash
    git clone <repo-url>
    cd open-creator-rails
-   forge install
+   pnpm install
    ```
 
 2. **Environment variables**
@@ -34,16 +36,23 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
    | `PRIVATE_KEY` | Private key used to deploy and send transactions (e.g. `0x...`). |
    | `RPC_URL`     | JSON-RPC URL of the network (e.g. `https://sepolia.infura.io/v3/YOUR_KEY` or `http://127.0.0.1:8545` for local). |
 
-3. **Build**
+3. **Build Contracts & Sync ABIs**
 
    ```bash
-   forge build
+   pnpm --filter @open-creator-rails/contracts build
+   pnpm --filter @open-creator-rails/config sync
    ```
 
-4. **Run tests**
+4. **Run Indexer (Local)**
 
    ```bash
-   forge test
+   pnpm indexer:dev
+   ```
+
+5. **Run tests**
+
+   ```bash
+   pnpm --filter @open-creator-rails/contracts test
    ```
 
 ---

@@ -16,7 +16,7 @@ if [ $# -gt 0 ]; then
     constructor_args="--constructor-args $@"
 fi
 
-forge create --rpc-url $RPC_URL --private-key $PRIVATE_KEY src/$contract_name.sol:$contract_name --broadcast --json $constructor_args
+forge create --rpc-url $RPC_URL --private-key $PRIVATE_KEY apps/contracts/src/$contract_name.sol:$contract_name --broadcast --json $constructor_args
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then

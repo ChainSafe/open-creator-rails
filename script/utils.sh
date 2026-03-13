@@ -4,8 +4,12 @@ fi
 
 function get_deployments_file() {
     chain_id=$(cast chain-id --rpc-url $RPC_URL)
-
-    file_name="registries_$chain_id.json"
+    
+    # Point to the config package from the root folder
+    target_dir="packages/config/src/deployments"
+    mkdir -p $target_dir
+    
+    file_name="$target_dir/registries_$chain_id.json"
 
     if [ ! -f $file_name ]; then
         echo "[]" > $file_name
@@ -30,7 +34,9 @@ function get_address() {
 
 function get_token_address() {
     chain_id=$(cast chain-id --rpc-url $RPC_URL)
-    file_name="token_addresses.json"
+    
+    target_dir="packages/config/src/deployments"
+    file_name="$target_dir/token_addresses.json"
 
     result=$(jq -r ".[\"$chain_id\"]" "$file_name")
     echo $result
