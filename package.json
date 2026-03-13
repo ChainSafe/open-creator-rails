@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "setup": "pnpm install && pnpm --filter @open-creator-rails/contracts build && pnpm --filter @open-creator-rails/config sync",
+    "test": "pnpm --filter @open-creator-rails/contracts test && pnpm --filter @open-creator-rails/indexer typecheck",
+    "indexer:dev": "pnpm --filter @open-creator-rails/indexer dev",
+    "indexer:start": "pnpm --filter @open-creator-rails/indexer start"
   },
   "keywords": [],
   "author": "",

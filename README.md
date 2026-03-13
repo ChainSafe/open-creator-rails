@@ -46,7 +46,7 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
 4. **Run Indexer (Local)**
 
    ```bash
-   pnpm --filter @open-creator-rails/indexer dev
+   pnpm indexer:dev
    ```
 
 5. **Run tests**
