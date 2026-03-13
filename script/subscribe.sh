@@ -21,7 +21,7 @@ duration=1800
 
 token_address=$(cast call $spender "getTokenAddress()(address)" --rpc-url $RPC_URL --private-key $PRIVATE_KEY)
 
-signed_permit=$(forge script script/Utils.s.sol:UtilsScript --sig "signPermit(uint256,address,uint256,address,uint256)" $value $spender $duration $token_address $subscriber_private_key --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
+signed_permit=$(forge script apps/contracts/script/Utils.s.sol:UtilsScript --sig "signPermit(uint256,address,uint256,address,uint256)" $value $spender $duration $token_address $subscriber_private_key --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
@@ -46,7 +46,7 @@ transaction_hash=$(echo $result | jq -r '.transactionHash')
 subscription=$(cast call $registry_address "getSubscription(bytes32,address)(uint256)" $asset_id $owner --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
 
 # Convert subscription (Unix timestamp) to human readable date
-subscription_date=$(date -d @$(echo $subscription | jq -r '.[0]'))
+subscription_date=$(date -r $(echo $subscription | jq -r '.[0]'))
 
 echo "Asset Registry: $registry_address
 Asset ID: $2
