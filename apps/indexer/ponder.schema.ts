@@ -20,12 +20,14 @@ export const AssetIdToAddress = onchainTable("asset_id_to_address", (t) => ({
 
 export const Subscription = onchainTable("subscription", (t) => ({
   id: t.text().primaryKey(),    // Composite: `${asset}_${user}`
-  asset_id: t.text().notNull(),  // Links to AssetEntity.id (Renamed from assetId to match Envio)
+  assetId: t.text().notNull(),  // Links to AssetEntity.id (Renamed from assetId to match Envio)
   user: t.text().notNull(),
-  expiresAt: t.bigint().notNull(),
+  startTime: t.bigint().notNull(),
+  endTime: t.bigint().notNull(),
+  nonce: t.bigint().notNull(),
   isActive: t.boolean().notNull(),
 }), (table) => ({
-  assetIdIdx: index().on(table.asset_id),
+  assetIdIdx: index().on(table.assetId),
   userIdx: index().on(table.user),
 }));
 
@@ -83,7 +85,9 @@ export const AssetRegistry_RegistryFeeShareUpdated = onchainTable("asset_registr
 export const Asset_SubscriptionAdded = onchainTable("asset_subscription_added", (t) => ({
   id: t.text().primaryKey(),
   user: t.text().notNull(),
-  expiresAt: t.bigint().notNull(),
+  startTime: t.bigint().notNull(),
+  endTime: t.bigint().notNull(),
+  nonce: t.bigint().notNull(),
   assetAddress: t.text().notNull(),
   blockNumber: t.bigint().notNull(),
   blockTimestamp: t.bigint().notNull(),

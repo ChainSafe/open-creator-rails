@@ -59,11 +59,6 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
 
 ## Usage
 
-> **Note:** All script commands below should be run from within the `apps/contracts` directory.
-> ```bash
-> cd apps/contracts
-> ```
-
 ### Deploying Registries
 
 Deploy an AssetRegistry with the specified fee shares:

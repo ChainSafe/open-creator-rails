@@ -17,7 +17,7 @@ address=$(echo "$result" | jq -r '.deployedTo')
 
 chain_id=$(cast chain-id --rpc-url $RPC_URL)
 
-target_dir="../../packages/config/src/deployments"
+target_dir="packages/config/src/deployments"
 mkdir -p $target_dir
 
 file_name="$target_dir/token_addresses.json"

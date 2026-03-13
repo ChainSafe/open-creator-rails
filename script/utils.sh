@@ -5,8 +5,8 @@ fi
 function get_deployments_file() {
     chain_id=$(cast chain-id --rpc-url $RPC_URL)
     
-    # Point directly to the config package from the contracts folder
-    target_dir="../../packages/config/src/deployments"
+    # Point to the config package from the root folder
+    target_dir="packages/config/src/deployments"
     mkdir -p $target_dir
     
     file_name="$target_dir/registries_$chain_id.json"
@@ -35,7 +35,7 @@ function get_address() {
 function get_token_address() {
     chain_id=$(cast chain-id --rpc-url $RPC_URL)
     
-    target_dir="../../packages/config/src/deployments"
+    target_dir="packages/config/src/deployments"
     file_name="$target_dir/token_addresses.json"
 
     result=$(jq -r ".[\"$chain_id\"]" "$file_name")

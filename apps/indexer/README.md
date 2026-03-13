@@ -25,12 +25,16 @@ The entities are defined in `ponder.schema.ts` and mirror the original Envio imp
   - `owner`: current `Asset` owner (creator or transferee), always lowercased.
 
 - **`Subscription`**  
-  One row per `(asset, user)` pair.
+  One row per `(asset, user)` pair, representing their **current contiguous active state**.
   - `id`: `${assetAddress}_${user}` (both lowercased).
   - `assetId`: foreign key to `AssetEntity.id`.
   - `user`: subscriber address (lowercased).
-  - `expiresAt`: subscription expiry timestamp (BigInt).
-  - `isActive`: whether the subscription is currently active.
+  - `startTime`: The initial start time of their unbroken subscription block (BigInt).
+  - `endTime`: The final expiry timestamp of their subscription block (BigInt).
+  - `nonce`: The latest subscription iteration counter for that user.
+  - `isActive`: whether the subscription is currently active (forced false if revoked).
+
+  > **Note on Subscription Time Tracking**: When a user tops up an actively running subscription, the smart contract seamlessly extends their access by setting the new event's `startTime` equal to the old `endTime`. The indexer handles this cleanly: it identifies if `existingSub.endTime === event.args.startTime` and conditionally stitches the time blocks together. This way, the mutable `Subscription` table always elegantly presents a user's *continuous* timeline of access (maintaining their ancient `startTime`), whereas the historical `Asset_SubscriptionAdded` log table tracks the isolated iterations individually via nonces.
 
 - **Event entities**  
   These mirror contract events for history and debugging:

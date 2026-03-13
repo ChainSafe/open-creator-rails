@@ -88,15 +88,33 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
   const assetAddress = event.log.address.toLowerCase(); 
   const user = event.args.user.toLowerCase();
 
+  const id = `${assetAddress}_${user}`;
+  
+  // Fetch existing subscription to accurately conditionally update startTime
+  const existingSub = await context.db.find(Subscription, { id });
+
+  let computedStartTime = event.args.startTime;
+
+  // If the user previously had a subscription, and they topped up while it was still active,
+  // the contract rigidly sets the new event's startTime to equal the previous subscription's endTime.
+  // We check for this exact match to safely preserve their original unbroken start time.
+  if (existingSub && existingSub.endTime === event.args.startTime) {
+    computedStartTime = existingSub.startTime;
+  }
+
   // 1. Upsert Subscription using correct Drizzle syntax
   await context.db.insert(Subscription).values({
-    id: `${assetAddress}_${user}`,
+    id: id,
     assetId: assetAddress,
     user: user,
-    expiresAt: event.args.expiresAt,
+    startTime: event.args.startTime,
+    endTime: event.args.endTime,
+    nonce: event.args.nonce,
     isActive: true,
   }).onConflictDoUpdate({
-    expiresAt: event.args.expiresAt,
+    startTime: computedStartTime,
+    endTime: event.args.endTime,
+    nonce: event.args.nonce,
     isActive: true,
   });
 
@@ -104,7 +122,9 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
   await context.db.insert(Asset_SubscriptionAdded).values({
     id: getEventId(event),
     user: user,
-    expiresAt: event.args.expiresAt,
+    startTime: event.args.startTime,
+    endTime: event.args.endTime,
+    nonce: event.args.nonce,
     assetAddress: assetAddress,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
