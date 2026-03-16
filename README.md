@@ -108,7 +108,7 @@ New assets are appended to the `assets` array of the corresponding registry in `
 
 ### Subscribe
 
-Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs the permit and pays with tokens; the subscription is associated with a **subscriber** identity (a `bytes32` hash, e.g. `keccak256(abi.encodePacked(subscriber_id))`). The payer and the subscriber can be the same or different (e.g. "pay for someone else").
+Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs the permit and pays with tokens; the subscription is associated with a **subscriber** identity (a `bytes32` hash, e.g. `keccak256(abi.encodePacked(subscriber_id))`). The payer and the subscriber can be the same or different (e.g. "pay for someone else"). The **payer** is the address entitled to refunds if the subscription is later cancelled or revoked (unearned time is refunded to the payer).
 
 ```bash
 ./scripts/subscribe.sh <registry_index> <asset_id> <subscriber_id> <value> <payer_private_key>
@@ -120,7 +120,7 @@ Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs 
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). The script hashes it with keccak256 for the on-chain call. |
 | `subscriber_id` | Human-readable subscriber identity (e.g. user id, wallet-derived id). The script hashes it with keccak256 to get the `bytes32` subscriber used on-chain. Access and subscription queries use this identity. |
 | `value` | Payment amount in the token's smallest unit. Must be a multiple of the asset's subscription price; excess is rounded down. |
-| `payer_private_key` | Private key of the token owner. Used to sign the permit and send the transaction; this address pays gas and provides tokens. Can be the same as or different from the subscriber identity. |
+| `payer_private_key` | Private key of the token owner. Used only to sign the ERC-2612 permit (this address’s tokens are spent). The subscribe transaction is sent using `PRIVATE_KEY` from `.env`. |
 
 Example:
 
@@ -533,7 +533,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**revokeSubscription** : Revokes a subscriber's subscription (e.g. all entries for that subscriber). Refunds unearned portion to each subscription's payer.
+**revokeSubscription** : Revokes a subscriber's subscription (e.g. all entries for that subscriber). The payer of each subscription is entitled to a refund of the unearned portion (tokens are returned to the payer address).
 - Type: write
 - Permission: `onlyOwner`
 - Parameters:
@@ -543,7 +543,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**cancelSubscription** : Cancels subscription(s) for the given subscriber. Caller must be the asset owner or the payer (owner) of each subscription being cancelled; refunds unearned portion to the payer.
+**cancelSubscription** : Cancels subscription(s) for the given subscriber. Caller must be the asset owner or the payer (owner) of each subscription being cancelled. The payer is entitled to a refund of the unearned portion (tokens are returned to the payer address).
 - Type: write
 - Permission: none
 - Parameters:
