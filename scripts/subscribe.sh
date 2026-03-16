@@ -22,7 +22,7 @@ duration=1800
 
 token_address=$(cast call $spender "getTokenAddress()(address)" --rpc-url $RPC_URL --private-key $PRIVATE_KEY)
 
-signed_permit=$(forge script apps/contracts/script/Utils.s.sol:UtilsScript --sig "signPermit(uint256,address,uint256,address,uint256)" $value $spender $duration $token_address $payer_private_key --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
+signed_permit=$(forge script --root apps/contracts apps/contracts/script/Utils.s.sol:UtilsScript --sig "signPermit(uint256,address,uint256,address,uint256)" $value $spender $duration $token_address $payer_private_key --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
