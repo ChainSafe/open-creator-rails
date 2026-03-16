@@ -478,6 +478,19 @@ contract AssetTest is BaseTest {
         asset.cancelSubscription(SUBSCRIBER);
     }
 
+    function test_cancelSubscription_unauthorized() public {
+        uint256 tokenBalance = testToken.balanceOf(signer);
+        uint256 tokenBalanceUnauthorized = testToken.balanceOf(UNAUTHORIZED);
+        
+        test_subscribe();
+        
+        vm.prank(UNAUTHORIZED);
+        asset.cancelSubscription(SUBSCRIBER);
+
+        assertEq(testToken.balanceOf(signer), tokenBalance - asset.getSubscriptionPrice(DURATION));
+        assertEq(testToken.balanceOf(UNAUTHORIZED), tokenBalanceUnauthorized);
+    }
+
     function test_claimCreatorFee_unauthorized() public {
         test_subscribe();
         vm.warp(block.timestamp + DURATION);
