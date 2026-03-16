@@ -530,4 +530,69 @@ contract AssetTest is BaseTest {
         assertEq(testToken.balanceOf(assetOwner), creatorBalance + creatorFee);
         assertEq(testToken.balanceOf(registryOwner), registryBalance + registryFee);
     }
+
+    function test_getSubscription_nonexistentSubscriber() public view {
+        bytes32 unknownSubscriber = keccak256("unknown");
+        assertEq(asset.getSubscription(unknownSubscriber), 0);
+    }
+
+    function test_isSubscriptionActive_nonexistentSubscriber() public view {
+        bytes32 unknownSubscriber = keccak256("unknown");
+        assertFalse(asset.isSubscriptionActive(unknownSubscriber));
+    }
+
+    function test_subscribe_expiredDeadline() public {
+        address owner = signer;
+        address spender = address(asset);
+        uint256 value = asset.getSubscriptionPrice(DURATION);
+        uint256 deadline = block.timestamp - 1;
+        (uint8 v, bytes32 r, bytes32 s) = getPermit(owner, spender, value, deadline);
+
+        vm.expectRevert(Asset.PermitFailed.selector);
+        asset.subscribe(SUBSCRIBER, owner, spender, value, deadline, v, r, s);
+    }
+
+    function test_claimCreatorFee_zeroClaimable() public {
+        _subscribe(DURATION);
+        uint256 assetOwnerBalanceBefore = testToken.balanceOf(assetOwner);
+
+        vm.prank(assetOwner);
+        uint256 claimed = asset.claimCreatorFee(SUBSCRIBER);
+
+        assertEq(claimed, 0);
+        assertEq(testToken.balanceOf(assetOwner), assetOwnerBalanceBefore);
+    }
+
+    function test_claimRegistryFee_zeroClaimable() public {
+        _subscribe(DURATION);
+        uint256 registryOwnerBalanceBefore = testToken.balanceOf(registryOwner);
+
+        vm.prank(address(assetRegistry));
+        uint256 claimed = asset.claimRegistryFee(SUBSCRIBER);
+
+        assertEq(claimed, 0);
+        assertEq(testToken.balanceOf(registryOwner), registryOwnerBalanceBefore);
+    }
+
+    function test_claimCreatorFee_subscriberWithNoSubscription() public {
+        bytes32 neverSubscribed = keccak256("never_subscribed");
+        uint256 assetOwnerBalanceBefore = testToken.balanceOf(assetOwner);
+
+        vm.prank(assetOwner);
+        uint256 claimed = asset.claimCreatorFee(neverSubscribed);
+
+        assertEq(claimed, 0);
+        assertEq(testToken.balanceOf(assetOwner), assetOwnerBalanceBefore);
+    }
+
+    function test_claimRegistryFee_subscriberWithNoSubscription() public {
+        bytes32 neverSubscribed = keccak256("never_subscribed");
+        uint256 registryOwnerBalanceBefore = testToken.balanceOf(registryOwner);
+
+        vm.prank(address(assetRegistry));
+        uint256 claimed = asset.claimRegistryFee(neverSubscribed);
+
+        assertEq(claimed, 0);
+        assertEq(testToken.balanceOf(registryOwner), registryOwnerBalanceBefore);
+    }
 }

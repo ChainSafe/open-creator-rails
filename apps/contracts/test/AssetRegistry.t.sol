@@ -358,4 +358,70 @@ contract AssetRegistryTest is BaseTest {
 
         assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
     }
+
+    function test_viewAsset_nonexistent() public view {
+        bytes32 nonexistentId = keccak256("nonexistent");
+        assertFalse(assetRegistry.viewAsset(nonexistentId));
+    }
+
+    function test_viewAsset_existent() public {
+        test_createAsset();
+        assertTrue(assetRegistry.viewAsset(ASSET_ID));
+    }
+
+    function test_getCreatorFeeShare() public view {
+        assertEq(assetRegistry.getCreatorFeeShare(), 70);
+    }
+
+    function test_getRegistryFeeShare() public view {
+        assertEq(assetRegistry.getRegistryFeeShare(), 30);
+    }
+
+    function test_getTotalFeeShare() public view {
+        assertEq(assetRegistry.getTotalFeeShare(), 100);
+    }
+
+    function test_getCreatorFee() public view {
+        uint256 value = 100_000_000;
+        uint256 creatorFee = assetRegistry.getCreatorFee(value);
+        uint256 registryFee = assetRegistry.getRegistryFee(value);
+        assertEq(creatorFee + registryFee, value);
+        assertEq(creatorFee, 70_000_000);
+    }
+
+    function test_getRegistryFee() public view {
+        uint256 value = 100_000_000;
+        assertEq(assetRegistry.getRegistryFee(value), 30_000_000);
+    }
+
+    function test_subscribe_assetNotFound() public {
+        bytes32 nonexistentId = keccak256("nonexistent");
+        address owner = signer;
+        address spender = address(asset);
+        uint256 value = asset.getSubscriptionPrice(DURATION);
+        uint256 deadline = block.timestamp + DURATION;
+        (uint8 v, bytes32 r, bytes32 s) = getPermit(owner, spender, value, deadline);
+
+        vm.expectRevert(AssetRegistry.AssetNotFound.selector);
+        assetRegistry.subscribe(nonexistentId, SUBSCRIBER, owner, spender, value, deadline, v, r, s);
+    }
+
+    function test_isSubscriptionActive_assetNotFound() public {
+        bytes32 nonexistentId = keccak256("nonexistent");
+        vm.expectRevert(AssetRegistry.AssetNotFound.selector);
+        assetRegistry.isSubscriptionActive(nonexistentId, SUBSCRIBER);
+    }
+
+    function test_getSubscription_assetNotFound() public {
+        bytes32 nonexistentId = keccak256("nonexistent");
+        vm.expectRevert(AssetRegistry.AssetNotFound.selector);
+        assetRegistry.getSubscription(nonexistentId, SUBSCRIBER);
+    }
+
+    function test_claimRegistryFee_assetNotFound() public {
+        bytes32 nonexistentId = keccak256("nonexistent");
+        vm.prank(registryOwner);
+        vm.expectRevert(AssetRegistry.AssetNotFound.selector);
+        assetRegistry.claimRegistryFee(nonexistentId, SUBSCRIBER);
+    }
 }
