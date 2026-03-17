@@ -19,6 +19,7 @@ contract BaseTest is Test {
     string internal constant MNEMONIC = "test test test test test test test test test test test junk";
 
     bytes32 internal constant ASSET_ID = keccak256(abi.encodePacked("asset_id"));
+    bytes32 internal constant SUBSCRIBER = keccak256(abi.encodePacked("subscriber_id"));
     uint256 internal constant SUBSCRIPTION_PRICE = 100000000;
     uint256 internal constant DURATION = 3600;
 

@@ -4,14 +4,14 @@ if [ -f .env ]; then
     source .env
 fi
 
-source ./script/utils.sh
+source ./scripts/utils.sh
 
 creator_fee_share=$1
 registry_fee_share=$2
 
 shift 2
 
-result=$(./script/deploy.sh "AssetRegistry" $creator_fee_share $registry_fee_share)
+result=$(./scripts/deploy.sh "AssetRegistry" $creator_fee_share $registry_fee_share)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then

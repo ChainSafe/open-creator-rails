@@ -4,7 +4,7 @@ if [ -f .env ]; then
     source .env
 fi
 
-source ./script/utils.sh
+source ./scripts/utils.sh
 
 token_address=$(get_token_address)
 

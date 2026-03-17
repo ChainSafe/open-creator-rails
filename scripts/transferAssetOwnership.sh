@@ -4,7 +4,7 @@ if [ -f .env ]; then
     source .env
 fi
 
-source ./script/utils.sh
+source ./scripts/utils.sh
 
 registry_index=$1
 asset_id=$(cast keccak $2)

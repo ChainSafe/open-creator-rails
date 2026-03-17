@@ -31,7 +31,7 @@ The three flows below are described in detail in [klang-integration-flows.md](kl
 **Flow**: A society owner gates a society; a backend (acting as registry owner) creates an asset on-chain; the indexer ingests the event; the client can share a join link.
 
 - **In Unity**: The "Society Owner" may be represented by your game backend. The actual **registry deployment** and **asset creation** are typically done **outside Unity** (e.g. via scripts or your backend), because only the registry owner can call `createAsset`.
-- **References**: [script/deployRegistry.sh](../script/deployRegistry.sh), [script/createAsset.sh](../script/createAsset.sh). The indexer records `AssetCreated`; after that, clients resolve the asset via the indexer (see Join Society).
+- **References**: [scripts/deployRegistry.sh](../scripts/deployRegistry.sh), [scripts/createAsset.sh](../scripts/createAsset.sh). The indexer records `AssetCreated`; after that, clients resolve the asset via the indexer (see Join Society).
 
 ### Join Society (subscribe)
 
@@ -44,7 +44,7 @@ The three flows below are described in detail in [klang-integration-flows.md](kl
    `AssetRegistry.subscribe(assetId, owner, spender, value, deadline, v, r, s)`.  
    The indexer will ingest `SubscriptionAdded` from the Asset contract.
 
-**References**: [script/subscribe.sh](../script/subscribe.sh) (full flow), [script/Utils.s.sol](../script/Utils.s.sol) (permit signing: PERMIT_TYPEHASH, nonce, DOMAIN_SEPARATOR, EIP-712 digest).
+**References**: [scripts/subscribe.sh](../scripts/subscribe.sh) (full flow), [scripts/Utils.s.sol](../scripts/Utils.s.sol) (permit signing: PERMIT_TYPEHASH, nonce, DOMAIN_SEPARATOR, EIP-712 digest).
 
 ### Access Society (check entitlement)
 
@@ -75,8 +75,8 @@ Deployments are stored in **`registries_<chain_id>.json`** at the repo root (e.g
 
 Test ERC-20 tokens that support ERC-2612 (permit) are listed in [token_addresses.json](../token_addresses.json), keyed by **chain ID** (e.g. `11155111` for Sepolia, `84532` for Base Sepolia). Anyone can mint them for testing.
 
-- **Mint**: See README section "Test Tokens" and [script/mintTestToken.sh](../script/mintTestToken.sh).
-- **Deploy a new test token**: [script/deployTestToken.sh](../script/deployTestToken.sh) (writes the new address into `token_addresses.json` for the current chain).
+- **Mint**: See README section "Test Tokens" and [scripts/mintTestToken.sh](../scripts/mintTestToken.sh).
+- **Deploy a new test token**: [scripts/deployTestToken.sh](../scripts/deployTestToken.sh) (writes the new address into `token_addresses.json` for the current chain).
 
 ---
 
@@ -138,7 +138,7 @@ Encode the call data (function selector + ABI-encoded arguments) and send via `e
 
 ### Permit (ERC-2612) in Unity
 
-Replicate the logic in [script/Utils.s.sol](../script/Utils.s.sol):
+Replicate the logic in [scripts/Utils.s.sol](../scripts/Utils.s.sol):
 
 - **PERMIT_TYPEHASH**: `keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")`.
 - **Nonce**: Read from the token contract via `eth_call`: `nonces(address owner)`.
@@ -163,10 +163,10 @@ For **Access Society**, always compare the indexer’s `expiryDate` with **trust
 
 | Script | Purpose |
 |--------|--------|
-| [script/deployRegistry.sh](../script/deployRegistry.sh) | Deploy a new AssetRegistry (creator/registry fee shares). |
-| [script/createAsset.sh](../script/createAsset.sh) | Create an asset in a registry (registry owner only). |
-| [script/subscribe.sh](../script/subscribe.sh) | Full subscribe flow: get asset, get token, sign permit, send subscribe. |
-| [script/utils.sh](../script/utils.sh) | `get_address`, `get_deployments_file`, `get_token_address` – logic you can mirror in Unity using `registries_<chain_id>.json` and `token_addresses.json`. |
+| [scripts/deployRegistry.sh](../scripts/deployRegistry.sh) | Deploy a new AssetRegistry (creator/registry fee shares). |
+| [scripts/createAsset.sh](../scripts/createAsset.sh) | Create an asset in a registry (registry owner only). |
+| [scripts/subscribe.sh](../scripts/subscribe.sh) | Full subscribe flow: get asset, get token, sign permit, send subscribe. |
+| [scripts/utils.sh](../scripts/utils.sh) | `get_address`, `get_deployments_file`, `get_token_address` – logic you can mirror in Unity using `registries_<chain_id>.json` and `token_addresses.json`. |
 
 Use these to verify behavior (e.g. run subscribe from CLI) and to see exact argument order and hashing for asset id and permit.
 

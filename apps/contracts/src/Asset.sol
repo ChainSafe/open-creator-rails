@@ -15,7 +15,7 @@ import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 /// @notice Implementation of IAsset: a subscription-gated asset with permit-based ERC20 payment.
 ///         Deployed by the asset registry; subscription revenue is split between creator (owner) and registry.
 contract Asset is Ownable, ReentrancyGuard, IAsset {
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSet for EnumerableSet.Bytes32Set;
     bytes32 internal immutable ASSET_ID;
     address internal immutable REGISTRY_ADDRESS;
 
@@ -26,12 +26,12 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     IERC20Permit internal immutable TOKEN_PERMIT_CONTRACT;
 
     mapping(bytes32 => Subscription) internal subscriptions;
-    mapping(address => uint256) internal nonces;
+    mapping(bytes32 => uint256) internal nonces;
 
-    mapping(address => uint256) internal creatorClaimedAt;
-    mapping(address => uint256) internal registryClaimedAt;
+    mapping(bytes32 => uint256) internal creatorClaimedAt;
+    mapping(bytes32 => uint256) internal registryClaimedAt;
 
-    EnumerableSet.AddressSet internal subscribers;
+    EnumerableSet.Bytes32Set internal subscribers;
 
     uint256 internal subscriptionPrice;
 
@@ -42,6 +42,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         uint256 creatorFeeShare;
         uint256 registryFeeShare;
         uint256 totalFeeShare;
+        address payer;
     }
 
     error InvalidOwner();
@@ -53,13 +54,12 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     error SubscriptionRevocationFailed();
     error SubscriptionCancellationFailed();
     error OnlyRegistryUnauthorizedAccount();
-    error OnlyRegistryOrOwnerUnauthorizedAccount();
 
-    event SubscriptionAdded(address indexed user, uint256 indexed startTime, uint256 indexed endTime, uint256 nonce);
-    event CreatorFeeClaimed(address indexed user, uint256 amount);
+    event SubscriptionAdded(bytes32 indexed subscriber, uint256 indexed startTime, uint256 indexed endTime, uint256 nonce, address payer);
+    event CreatorFeeClaimed(bytes32 indexed subscriber, uint256 amount);
     event SubscriptionPriceUpdated(uint256 newSubscriptionPrice);
-    event SubscriptionRevoked(address indexed user);
-    event SubscriptionCancelled(address indexed user);
+    event SubscriptionRevoked(bytes32 indexed subscriber);
+    event SubscriptionCancelled(bytes32 indexed subscriber);
     
     /// @notice Initializes the asset with id, price, payment token, and owner. Callable only by the registry (msg.sender).
     /// @param _assetId Unique identifier for this asset.
@@ -108,68 +108,56 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return subscriptionPrice * duration;
     }
 
-    function _getSubscription(address user) internal view returns (uint256) {
+    function _getSubscription(bytes32 subscriber) internal view returns (uint256) {
         
-        return subscriptions[_hash(user, nonces[user])].endTime;
+        return subscriptions[_hash(subscriber, nonces[subscriber])].endTime;
     }
 
-    function getSubscription(address user) external onlyRegistryOrOwner view returns (uint256) {
-        return _getSubscription(user);
+    function getSubscription(bytes32 subscriber) external view returns (uint256) {
+        return _getSubscription(subscriber);
     }
 
-    function getMySubscription() external view returns (uint256) {
-        return _getSubscription(msg.sender);
+    function isSubscriptionActive(bytes32 subscriber) external view returns (bool) {
+        return _getSubscription(subscriber) > block.timestamp;
     }
 
-    function _isSubscriptionActive(address user) internal view returns (bool) {
-        return _getSubscription(user) > block.timestamp;
+    function subscribe(bytes32 subscriber, address payer, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external nonReentrant returns (uint256) {
+
+        _validatePermit(payer, spender, value, deadline, v, r, s);
+
+        return _subscribe(subscriber, payer, value);
     }
 
-    function isMySubscriptionActive() external view returns (bool) {
-        return _isSubscriptionActive(msg.sender);
-    }
-
-    function isSubscriptionActive(address user) external onlyRegistryOrOwner view returns (bool) {
-        return _isSubscriptionActive(user);
-    }
-
-    function subscribe(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external nonReentrant returns (uint256) {
-
-        _validatePermit(owner, spender, value, deadline, v, r, s);
-
-        return _subscribe(owner, value);
-    }
-
-    function _subscribe(address owner, uint256 value) internal returns (uint256) {
+    function _subscribe(bytes32 subscriber, address payer, uint256 value) internal returns (uint256) {
         uint256 duration = value / subscriptionPrice;
 
         uint256 startTime = block.timestamp;
 
-        uint256 nonce = nonces[owner];
+        uint256 nonce = nonces[subscriber];
 
-        bytes32 id = _hash(owner, nonce);
+        bytes32 id = _hash(subscriber, nonce);
 
-        if (subscribers.contains(owner)) {
+        if (subscribers.contains(subscriber)) {
             
             Subscription memory subscription = subscriptions[id];
 
             // If the previous subscription is still active, use the end time of the previous subscription's Expiry as the new Subscription's start time
             startTime = Math.max(startTime, subscription.endTime);
 
-            nonce = ++nonces[owner];
+            nonce = ++nonces[subscriber];
 
-            id = _hash(owner, nonce);
+            id = _hash(subscriber, nonce);
         }
 
         uint256 endTime = startTime + duration;
 
         (uint256 creatorFeeShare, uint256 registryFeeShare, uint256 totalFeeShare) = ASSET_REGISTRY.getFeeShares();
 
-        subscriptions[id] = Subscription({startTime: startTime, endTime: endTime, subscriptionPrice: subscriptionPrice, creatorFeeShare: creatorFeeShare, registryFeeShare: registryFeeShare, totalFeeShare: totalFeeShare});
+        subscriptions[id] = Subscription({startTime: startTime, endTime: endTime, subscriptionPrice: subscriptionPrice, creatorFeeShare: creatorFeeShare, registryFeeShare: registryFeeShare, totalFeeShare: totalFeeShare, payer: payer});
 
-        subscribers.add(owner);
+        subscribers.add(subscriber);
 
-        emit SubscriptionAdded(owner, startTime, endTime, nonce);
+        emit SubscriptionAdded(subscriber, startTime, endTime, nonce, payer);
 
         return endTime;
     }
@@ -194,7 +182,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         }
     }
 
-    function _claimable(address subscriber, uint256 claimedAt) internal view returns (uint256) {
+    function _claimable(bytes32 subscriber, uint256 claimedAt) internal view returns (uint256) {
         
         uint256 nonce = nonces[subscriber];
         
@@ -235,7 +223,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return claimable;
     }
 
-    function claimCreatorFee(address subscriber) onlyOwner external nonReentrant returns (uint256 creatorFee) {
+    function claimCreatorFee(bytes32 subscriber) onlyOwner external nonReentrant returns (uint256 creatorFee) {
         
         creatorFee = _claimable(subscriber, creatorClaimedAt[subscriber]);
         
@@ -248,7 +236,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return creatorFee;
     }
 
-    function claimRegistryFee(address subscriber) onlyRegistry external nonReentrant returns (uint256 registryFee) {
+    function claimRegistryFee(bytes32 subscriber) onlyRegistry external nonReentrant returns (uint256 registryFee) {
         
         registryFee = _claimable(subscriber, registryClaimedAt[subscriber]);
 
@@ -259,28 +247,33 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return registryFee;
     }
 
-    function _removeSubscription(address user) internal nonReentrant {
+    function _removeSubscription(bytes32 subscriber) internal nonReentrant {
         
-        if (!subscribers.contains(user)) {
+        if (!subscribers.contains(subscriber)) {
             revert SubscriptionNotFound();
         }
         
-        uint256 nonce = nonces[user];
-
-        uint256 returnable = 0;
+        uint256 nonce = nonces[subscriber];
 
         uint256 deleted = 0;
 
         for (uint256 i = 0; i < nonce + 1; i++) {
             
-            bytes32 id = _hash(user, i);
+            bytes32 id = _hash(subscriber, i);
             
             Subscription memory subscription = subscriptions[id];
+
+            // If caller isn't the assetowner or subscription payer, continue to the next subscription
+            if (!_isOwner() && subscription.payer != msg.sender) {
+                continue;
+            }
+
+            uint256 returnable = 0;
 
             // If the subscription has not started yet, delete it, add the returnable amount to the returnable total and update the nonce
             if (subscription.startTime >= block.timestamp) {
                 
-                returnable += (subscription.endTime - subscription.startTime) * subscription.subscriptionPrice;
+                returnable = (subscription.endTime - subscription.startTime) * subscription.subscriptionPrice;
 
                 delete subscriptions[id];
 
@@ -289,45 +282,42 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
             // If the subscription is active, add the returnable amount to the returnable total and update the subscription
             else if (subscription.endTime > block.timestamp) {
-               returnable += (subscription.endTime - block.timestamp) * subscription.subscriptionPrice;
+               returnable = (subscription.endTime - block.timestamp) * subscription.subscriptionPrice;
 
                subscriptions[id].endTime = block.timestamp;
+            }
+
+            if (returnable != 0) {
+                SafeERC20.safeTransfer(TOKEN_CONTRACT, subscription.payer, returnable);
             }
         }
 
         // If the user has deleted all of their subscriptions, delete the nonce and remove the user from the subscribers set
         if (deleted == nonce + 1) {
-            delete nonces[user];    
-            subscribers.remove(user);
+            delete nonces[subscriber];    
+            subscribers.remove(subscriber);
         }
         // If the user has subscriptions left, decrement the nonce by the number of deleted subscriptions
         else{
-            nonces[user] -= deleted;
+            nonces[subscriber] -= deleted;
         }
-
-        SafeERC20.safeTransfer(TOKEN_CONTRACT, user, returnable);
     }
 
-    function revokeSubscription(address user) external onlyOwner {
-        _removeSubscription(user);
+    function revokeSubscription(bytes32 subscriber) external onlyOwner {
+        _removeSubscription(subscriber);
 
-        emit SubscriptionRevoked(user);
+        emit SubscriptionRevoked(subscriber);
     }
 
-    function cancelSubscription() external {
-        address user = msg.sender;
-
-        _removeSubscription(user);
+    function cancelSubscription(bytes32 subscriber) external {
+        _removeSubscription(subscriber);
         
-        emit SubscriptionCancelled(user);
+        emit SubscriptionCancelled(subscriber);
     }
 
-    function _hash(address a, uint256 b) internal pure returns (bytes32 result) {
-        assembly {
-            mstore(0x00, a)
-            mstore(0x20, b)
-            result := keccak256(0x00, 0x40)
-        }
+    function _hash(bytes32 a, uint256 b) internal pure returns (bytes32 result) {
+        result = keccak256(abi.encode(a, b));
+        return result;
     }
 
     function _isOwner() internal view returns (bool) {
@@ -348,15 +338,4 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             revert OnlyRegistryUnauthorizedAccount();
         }
     }
-
-    modifier onlyRegistryOrOwner() {
-        _onlyRegistryOrOwner();
-        _;
-    }
-    
-    function _onlyRegistryOrOwner() internal view {
-         if (msg.sender != REGISTRY_ADDRESS && msg.sender != owner()) {
-             revert OnlyRegistryOrOwnerUnauthorizedAccount();
-         }
-     }
 }

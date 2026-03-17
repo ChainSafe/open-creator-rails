@@ -26,26 +26,19 @@ interface IAsset {
     /// @param newSubscriptionPrice New subscription price.
     function setSubscriptionPrice(uint256 newSubscriptionPrice) external;
 
-    /// @notice Returns the caller's current subscription expiry timestamp.
-    /// @return Expiry timestamp in seconds; 0 if no active subscription.
-    function getMySubscription() external view returns (uint256);
-
-    /// @notice Returns a user's subscription expiry timestamp. Restricted to registry or asset owner.
-    /// @param user Address to query.
+    /// @notice Returns a user's subscription expiry timestamp.
+    /// @param subscriber Hash of the subscriber identity to query.
     /// @return Expiry timestamp; 0 if no subscription.
-    function getSubscription(address user) external view returns (uint256);
+    function getSubscription(bytes32 subscriber) external view returns (uint256);
 
-    /// @notice Checks whether the caller has an active subscription (expiry > block.timestamp).
-    /// @return True if the caller's subscription is active.
-    function isMySubscriptionActive() external view returns (bool);
-
-    /// @notice Checks whether a user has an active subscription. Restricted to registry or asset owner.
-    /// @param user Address to check.
-    /// @return True if the user's subscription is active.
-    function isSubscriptionActive(address user) external view returns (bool);
+    /// @notice Checks whether a user has an active subscription.
+    /// @param subscriber Hash of the subscriber identity to check.
+    /// @return True if the subscriber's subscription is active.
+    function isSubscriptionActive(bytes32 subscriber) external view returns (bool);
 
     /// @notice Subscribes an owner using ERC-2612 permit: owner signs permit, then payment is pulled and subscription extended.
-    /// @param owner Token owner and subscription beneficiary.
+    /// @param subscriber Hash of the subscriber identity to subscribe.
+    /// @param payer Subscription payer and subscription refund beneficiary.
     /// @param spender Must be this asset contract for the permit to be accepted.
     /// @param value Permit allowance / payment amount (will be rounded down to subscription price units).
     /// @param deadline Permit signature expiry.
@@ -54,7 +47,8 @@ interface IAsset {
     /// @param s Signature s.
     /// @return Subscription expiry in Unix timestamp.
     function subscribe(
-        address owner,
+        bytes32 subscriber,
+        address payer,
         address spender,
         uint256 value,
         uint256 deadline,
@@ -65,19 +59,20 @@ interface IAsset {
 
 
     /// @notice Claims the creator fee for a user. Callable only by the asset owner.
-    /// @param user Address whose creator fee to claim.
+    /// @param subscriber Hash of the subscriber identity whose creator fee to claim.
     /// @return The amount of creator fee claimed.
-    function claimCreatorFee(address user) external returns (uint256);
+    function claimCreatorFee(bytes32 subscriber) external returns (uint256);
 
     /// @notice Claims the registry fee for a user. Callable only by the Registry owner.
-    /// @param user Address whose registry fee to claim.
+    /// @param subscriber Hash of the subscriber identity whose registry fee to claim.
     /// @return The amount of registry fee claimed.
-    function claimRegistryFee(address user) external returns (uint256);
+    function claimRegistryFee(bytes32 subscriber) external returns (uint256);
 
-    /// @notice Revokes a user's subscription. Callable only by the asset owner.
-    /// @param user Address whose subscription to revoke.
-    function revokeSubscription(address user) external;
+    /// @notice Revokes a subscriber's subscription. Callable only by the asset owner.
+    /// @param subscriber Subscriber whose subscription to revoke.
+    function revokeSubscription(bytes32 subscriber) external;
 
-    /// @notice Cancels the caller's subscription. Callable only by the subscription owner.
-    function cancelSubscription() external;
+    /// @notice Cancels a subscriber's subscription. Callable by the asset owner or the subscription payer.
+    /// @param subscriber Subscriber whose subscription to cancel.
+    function cancelSubscription(bytes32 subscriber) external;
 }

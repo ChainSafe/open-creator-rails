@@ -23,7 +23,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     event AssetCreated(bytes32 indexed assetId, address indexed asset, uint256 subscriptionPrice, address tokenAddress, address indexed owner);
     event CreatorFeeShareUpdated(uint256 newCreatorFeeShare);
     event RegistryFeeShareUpdated(uint256 newRegistryFeeShare);
-    event RegistryFeeClaimed(address indexed user, uint256 amount);
+    event RegistryFeeClaimed(bytes32 indexed subscriber, uint256 amount);
 
     /// @notice Initializes the registry with fee shares. Caller becomes owner.
     /// @param _creatorFeeShare Share of subscription payments allocated to asset creators.
@@ -68,46 +68,18 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return asset;
     }
 
-    /// @notice Checks whether a user has an active subscription for the given asset.
-    /// @param _assetId Asset identifier.
-    /// @param _user User address.
-    /// @return True if the user's subscription for that asset is active.
-    function _isSubscriptionActive(bytes32 _assetId, address _user) internal view returns (bool)
+    function isSubscriptionActive(bytes32 _assetId, bytes32 _subscriber) external view returns (bool)
     {
         address asset = getAsset(_assetId);
 
-        return IAsset(asset).isSubscriptionActive(_user);
+        return IAsset(asset).isSubscriptionActive(_subscriber);
     }
     
-    function isMySubscriptionActive(bytes32 _assetId) external view returns (bool)
-    {
-        return _isSubscriptionActive(_assetId, msg.sender);
-    }
-
-    function isSubscriptionActive(bytes32 _assetId, address _user) external onlyOwner view returns (bool)
-    {
-        return _isSubscriptionActive(_assetId, _user);
-    }
-
-    /// @notice Returns the subscription expiry timestamp for the given user for the given asset.
-    /// @param _assetId Asset identifier.
-    /// @param _user User address.
-    /// @return Expiry timestamp in seconds; 0 if no subscription.
-    function _getSubscription(bytes32 _assetId, address _user) internal view returns (uint256)
+    function getSubscription(bytes32 _assetId, bytes32 _subscriber) external view returns (uint256)
     {
         address asset = getAsset(_assetId);
         
-        return IAsset(asset).getSubscription(_user);
-    }
-
-    function getMySubscription(bytes32 _assetId) external view returns (uint256)
-    {
-        return _getSubscription(_assetId, msg.sender);
-    }
-
-    function getSubscription(bytes32 _assetId, address _user) external onlyOwner view returns (uint256)
-    {
-        return _getSubscription(_assetId, _user);
+        return IAsset(asset).getSubscription(_subscriber);
     }
 
     function getSubscriptionPrice(bytes32 _assetId, uint256 _duration) external view returns (uint256)
@@ -117,11 +89,11 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return IAsset(asset).getSubscriptionPrice(_duration);
     }
 
-    function subscribe(bytes32 _assetId, address _owner, address _spender, uint256 _value, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external returns (uint256)
+    function subscribe(bytes32 _assetId, bytes32 _subscriber, address _payer, address _spender, uint256 _value, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external returns (uint256)
     {
         address asset = getAsset(_assetId);
         
-        return IAsset(asset).subscribe(_owner, _spender, _value, _deadline, _v, _r, _s);
+        return IAsset(asset).subscribe(_subscriber, _payer, _spender, _value, _deadline, _v, _r, _s);
     }
 
     function getCreatorFeeShare() external view returns (uint256) {
@@ -176,7 +148,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return (creatorFee, registryFee);
     }
 
-    function claimRegistryFee(bytes32 _assetId, address _subscriber) external onlyOwner returns (uint256 registryFee) {
+    function claimRegistryFee(bytes32 _assetId, bytes32 _subscriber) external onlyOwner returns (uint256 registryFee) {
         
         address asset = getAsset(_assetId);
         

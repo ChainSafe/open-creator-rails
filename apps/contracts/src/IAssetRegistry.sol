@@ -23,27 +23,17 @@ interface IAssetRegistry {
     /// @return The address of the Asset contract. Throws if not found.
     function getAsset(bytes32 _assetId) external view returns (address);
 
-    /// @notice Checks whether the caller has an active subscription for the given asset.
+    /// @notice Checks whether a subscriber has an active subscription for the given asset.
     /// @param _assetId Asset identifier.
-    /// @return True if the caller's subscription for that asset is active.
-    function isMySubscriptionActive(bytes32 _assetId) external view returns (bool);
+    /// @param _subscriber Hash of the subscriber identity.
+    /// @return True if the subscriber's subscription for that asset is active.
+    function isSubscriptionActive(bytes32 _assetId, bytes32 _subscriber) external view returns (bool);
 
-    /// @notice Checks whether a user has an active subscription for the given asset, restricted to registry owner.
+    /// @notice Returns the subscription expiry timestamp for the given subscriber for the given asset.
     /// @param _assetId Asset identifier.
-    /// @param _user User address.
-    /// @return True if the user's subscription for that asset is active.
-    function isSubscriptionActive(bytes32 _assetId, address _user) external view returns (bool);
-
-    /// @notice Returns the caller's subscription expiry timestamp for the given asset.
-    /// @param _assetId Asset identifier.
-    /// @return Expiry timestamp; 0 if no subscription.
-    function getMySubscription(bytes32 _assetId) external view returns (uint256);
-
-    /// @notice Returns the subscription expiry timestamp for the given user for the given asset, restricted to registry owner.
-    /// @param _assetId Asset identifier.
-    /// @param _user User address.
+    /// @param _subscriber Hash of the subscriber identity.
     /// @return Expiry timestamp in seconds; 0 if no subscription.
-    function getSubscription(bytes32 _assetId, address _user) external view returns (uint256);
+    function getSubscription(bytes32 _assetId, bytes32 _subscriber) external view returns (uint256);
 
     /// @notice Returns the subscription price for the given asset and duration.
     /// @param _assetId Asset identifier.
@@ -51,9 +41,10 @@ interface IAssetRegistry {
     /// @return Total price for the duration.
     function getSubscriptionPrice(bytes32 _assetId, uint256 _duration) external view returns (uint256);
 
-    /// @notice Subscribes the given owner to the asset using ERC-2612 permit; forwards to the asset contract.
+    /// @notice Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract. The payer signs the permit and is the refund beneficiary on cancel/revoke.
     /// @param _assetId Asset identifier.
-    /// @param _owner Token owner and subscription beneficiary.
+    /// @param _subscriber Hash of the subscriber identity.
+    /// @param _payer Payer; signs the permit and receives refunds on cancel/revoke.
     /// @param _spender Must be the asset contract address for the permit.
     /// @param _value Permit allowance / payment amount.
     /// @param _deadline Permit signature expiry.
@@ -61,7 +52,7 @@ interface IAssetRegistry {
     /// @param _r Signature r.
     /// @param _s Signature s.
     /// @return Subscription expiry in Unix timestamp.
-    function subscribe(bytes32 _assetId, address _owner, address _spender, uint256 _value, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external returns (uint256);
+    function subscribe(bytes32 _assetId, bytes32 _subscriber, address _payer, address _spender, uint256 _value, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external returns (uint256);
 
     /// @notice Returns the creator fee share.
     /// @return creatorFeeShare The creator fee share.
@@ -107,9 +98,9 @@ interface IAssetRegistry {
 
     /// @notice Claims the registry fee for a subscriber. Callable only by the Registry owner.
     /// @param _assetId Asset identifier.
-    /// @param _subscriber Address whose registry fee to claim.
+    /// @param _subscriber Hash of the subscriber identity.
     /// @return The amount of registry fee claimed.
-    function claimRegistryFee(bytes32 _assetId, address _subscriber) external returns (uint256);
+    function claimRegistryFee(bytes32 _assetId, bytes32 _subscriber) external returns (uint256);
 
     /// @notice Returns the owner of the registry (e.g. for receiving registry fees).
     /// @return The registry owner address.
