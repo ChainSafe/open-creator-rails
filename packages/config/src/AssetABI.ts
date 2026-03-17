@@ -28,7 +28,13 @@ export const AssetABI = [
   {
     "type": "function",
     "name": "cancelSubscription",
-    "inputs": [],
+    "inputs": [
+      {
+        "name": "subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
     "outputs": [],
     "stateMutability": "nonpayable"
   },
@@ -38,8 +44,8 @@ export const AssetABI = [
     "inputs": [
       {
         "name": "subscriber",
-        "type": "address",
-        "internalType": "address"
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [
@@ -57,8 +63,8 @@ export const AssetABI = [
     "inputs": [
       {
         "name": "subscriber",
-        "type": "address",
-        "internalType": "address"
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [
@@ -85,19 +91,6 @@ export const AssetABI = [
   },
   {
     "type": "function",
-    "name": "getMySubscription",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getRegistryAddress",
     "inputs": [],
     "outputs": [
@@ -114,9 +107,9 @@ export const AssetABI = [
     "name": "getSubscription",
     "inputs": [
       {
-        "name": "user",
-        "type": "address",
-        "internalType": "address"
+        "name": "subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [
@@ -162,25 +155,12 @@ export const AssetABI = [
   },
   {
     "type": "function",
-    "name": "isMySubscriptionActive",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "isSubscriptionActive",
     "inputs": [
       {
-        "name": "user",
-        "type": "address",
-        "internalType": "address"
+        "name": "subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [
@@ -217,9 +197,9 @@ export const AssetABI = [
     "name": "revokeSubscription",
     "inputs": [
       {
-        "name": "user",
-        "type": "address",
-        "internalType": "address"
+        "name": "subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [],
@@ -243,7 +223,12 @@ export const AssetABI = [
     "name": "subscribe",
     "inputs": [
       {
-        "name": "owner",
+        "name": "subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "payer",
         "type": "address",
         "internalType": "address"
       },
@@ -305,10 +290,10 @@ export const AssetABI = [
     "name": "CreatorFeeClaimed",
     "inputs": [
       {
-        "name": "user",
-        "type": "address",
+        "name": "subscriber",
+        "type": "bytes32",
         "indexed": true,
-        "internalType": "address"
+        "internalType": "bytes32"
       },
       {
         "name": "amount",
@@ -343,10 +328,10 @@ export const AssetABI = [
     "name": "SubscriptionAdded",
     "inputs": [
       {
-        "name": "user",
-        "type": "address",
+        "name": "subscriber",
+        "type": "bytes32",
         "indexed": true,
-        "internalType": "address"
+        "internalType": "bytes32"
       },
       {
         "name": "startTime",
@@ -365,6 +350,12 @@ export const AssetABI = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      },
+      {
+        "name": "payer",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -374,10 +365,10 @@ export const AssetABI = [
     "name": "SubscriptionCancelled",
     "inputs": [
       {
-        "name": "user",
-        "type": "address",
+        "name": "subscriber",
+        "type": "bytes32",
         "indexed": true,
-        "internalType": "address"
+        "internalType": "bytes32"
       }
     ],
     "anonymous": false
@@ -400,10 +391,10 @@ export const AssetABI = [
     "name": "SubscriptionRevoked",
     "inputs": [
       {
-        "name": "user",
-        "type": "address",
+        "name": "subscriber",
+        "type": "bytes32",
         "indexed": true,
-        "internalType": "address"
+        "internalType": "bytes32"
       }
     ],
     "anonymous": false
@@ -426,11 +417,6 @@ export const AssetABI = [
   {
     "type": "error",
     "name": "InvalidTokenAddress",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "OnlyRegistryOrOwnerUnauthorizedAccount",
     "inputs": []
   },
   {

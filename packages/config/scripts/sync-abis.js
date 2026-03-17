@@ -33,4 +33,26 @@ targets.forEach(target => {
   }
 });
 
-fs.writeFileSync(path.join(destDir, 'index.ts'), indexExports);
+// Update index.ts: only replace the auto-generated ABI section, preserve the rest
+const indexPath = path.join(destDir, 'index.ts');
+const START_MARKER = '// --- AUTO-GENERATED ABI EXPORTS (do not edit) ---';
+const END_MARKER = '// --- END AUTO-GENERATED ABI EXPORTS ---';
+const generatedBlock = `${START_MARKER}\n${indexExports}${END_MARKER}`;
+
+if (fs.existsSync(indexPath)) {
+  const existing = fs.readFileSync(indexPath, 'utf8');
+  const startIdx = existing.indexOf(START_MARKER);
+  const endIdx = existing.indexOf(END_MARKER);
+
+  if (startIdx !== -1 && endIdx !== -1) {
+    // Replace only the auto-generated section
+    const before = existing.substring(0, startIdx);
+    const after = existing.substring(endIdx + END_MARKER.length);
+    fs.writeFileSync(indexPath, before + generatedBlock + after);
+  } else {
+    // Markers not found — prepend the generated block
+    fs.writeFileSync(indexPath, generatedBlock + '\n' + existing);
+  }
+} else {
+  fs.writeFileSync(indexPath, generatedBlock + '\n');
+}
