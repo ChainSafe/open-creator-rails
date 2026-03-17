@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "setup": "pnpm install && pnpm --filter @open-creator-rails/contracts build && pnpm --filter @open-creator-rails/config sync",
-    "test": "pnpm --filter @open-creator-rails/contracts test && pnpm --filter @open-creator-rails/indexer typecheck",
-    "indexer:dev": "pnpm --filter @open-creator-rails/indexer dev",
-    "indexer:start": "pnpm --filter @open-creator-rails/indexer start"
+    "contract:build": "pnpm -C apps/contracts build",
+    "setup": "pnpm install && pnpm contract:build && pnpm -C packages/config sync",
+    "test": "pnpm -C apps/contracts test && pnpm -C apps/indexer typecheck",
+    "indexer:dev": "pnpm -C apps/indexer dev",
+    "indexer:start": "pnpm -C apps/indexer start"
   },
   "keywords": [],
   "author": "",

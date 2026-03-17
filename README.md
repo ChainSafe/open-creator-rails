@@ -39,8 +39,14 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
 3. **Build Contracts & Sync ABIs**
 
    ```bash
-   pnpm --filter @open-creator-rails/contracts build
-   pnpm --filter @open-creator-rails/config sync
+   pnpm setup
+   ```
+
+   Or individually:
+
+   ```bash
+   pnpm contract:build
+   pnpm -C packages/config sync
    ```
 
 4. **Run Indexer (Local)**
@@ -52,7 +58,7 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
 5. **Run tests**
 
    ```bash
-   pnpm --filter @open-creator-rails/contracts test
+   pnpm test
    ```
 
 ---
