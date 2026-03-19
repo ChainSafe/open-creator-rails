@@ -7,7 +7,7 @@ import {
   sepoliaDeployments
 } from "@open-creator-rails/config";
 
-// 2. Extract the event strictly
+// Extract the event strictly
 const AssetCreatedEvent = getAbiItem({ 
   abi: AssetRegistryABI, 
   name: "AssetCreated" 

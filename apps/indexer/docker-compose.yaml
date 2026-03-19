@@ -1,5 +1,5 @@
 services:
-  # 1. Real Database for Ponder (required in production mode)
+  # 1. Postgres database (shared by worker + API)
   postgres:
     image: postgres:15-alpine
     container_name: ocr_ponder_db
@@ -9,33 +9,61 @@ services:
       POSTGRES_DB: ponder_db
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ponder -d ponder_db"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # 2. Your Ponder Indexer
-  ponder:
+  # 2. Worker — indexes chain data and creates/updates views when caught up
+  worker:
     build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: ocr_ponder_app
+      context: ../..  # monorepo root (workspace deps live here)
+      dockerfile: apps/indexer/Dockerfile
+    container_name: ocr_indexer_worker
     ports:
-      - "42069:42069"
+      - "42070:42070"  # worker HTTP (for health checks)
     environment:
-      # Connect to the postgres service defined above
+      PONDER_ROLE: worker
       DATABASE_URL: postgres://ponder:password@postgres:5432/ponder_db
-      DATABASE_SCHEMA: public
-      # !!! REPLACE THIS WITH YOUR REAL RPC URL !!!
-      # Without this, indexing will fail immediately
       PONDER_RPC_URL_11155111: ${PONDER_RPC_URL_11155111}
-      
+      DEPLOYMENT_MODE: blue-green
+      DEPLOY_TAG: local-test
+      VIEWS_SCHEMA: ocr_indexer
+      STABLE_SCHEMA: ocr_indexer_live
+      PORT: 42070
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:42070/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 300s  # allow 5 min for backfill before first check
+      retries: 120
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+  # 3. API — serves GraphQL/SQL from the views schema (zero downtime)
+  #    On first run: restarts until the worker creates the views schema.
+  #    After that: always up, independent of worker lifecycle.
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/indexer/Dockerfile
+    container_name: ocr_indexer_api
+    ports:
+      - "42069:42069"  # public GraphQL endpoint
+    environment:
+      PONDER_ROLE: api
+      DATABASE_URL: postgres://ponder:password@postgres:5432/ponder_db
+      VIEWS_SCHEMA: ocr_indexer
       PORT: 42069
     depends_on:
       postgres:
         condition: service_healthy
-    restart: always
+    restart: on-failure
 
 # Persist DB data so you don't re-index every restart
 volumes:

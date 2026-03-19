@@ -19,16 +19,18 @@ export const AssetIdToAddress = onchainTable("asset_id_to_address", (t) => ({
 }));
 
 export const Subscription = onchainTable("subscription", (t) => ({
-  id: t.text().primaryKey(),    // Composite: `${asset}_${user}`
-  assetId: t.text().notNull(),  // Links to AssetEntity.id (Renamed from assetId to match Envio)
-  user: t.text().notNull(),
+  id: t.text().primaryKey(),    // Composite: `${asset}_${subscriber}`
+  assetId: t.text().notNull(),  // Links to AssetEntity.id
+  subscriber: t.text().notNull(), // bytes32 subscriber identity hash
+  payer: t.text().notNull(),       // address that paid for the subscription
   startTime: t.bigint().notNull(),
   endTime: t.bigint().notNull(),
   nonce: t.bigint().notNull(),
   isActive: t.boolean().notNull(),
 }), (table) => ({
   assetIdIdx: index().on(table.assetId),
-  userIdx: index().on(table.user),
+  subscriberIdx: index().on(table.subscriber),
+  payerIdx: index().on(table.payer),
 }));
 
 // --- Events (Immutable History) ---
@@ -84,7 +86,8 @@ export const AssetRegistry_RegistryFeeShareUpdated = onchainTable("asset_registr
 
 export const Asset_SubscriptionAdded = onchainTable("asset_subscription_added", (t) => ({
   id: t.text().primaryKey(),
-  user: t.text().notNull(),
+  subscriber: t.text().notNull(),
+  payer: t.text().notNull(),
   startTime: t.bigint().notNull(),
   endTime: t.bigint().notNull(),
   nonce: t.bigint().notNull(),
@@ -92,7 +95,8 @@ export const Asset_SubscriptionAdded = onchainTable("asset_subscription_added", 
   blockNumber: t.bigint().notNull(),
   blockTimestamp: t.bigint().notNull(),
 }), (table) => ({
-  userIdx: index().on(table.user),
+  subscriberIdx: index().on(table.subscriber),
+  payerIdx: index().on(table.payer),
   assetAddressIdx: index().on(table.assetAddress),
 }));
 
@@ -108,12 +112,23 @@ export const Asset_SubscriptionPriceUpdated = onchainTable("asset_subscription_p
 
 export const Asset_SubscriptionRevoked = onchainTable("asset_subscription_revoked", (t) => ({
   id: t.text().primaryKey(),
-  user: t.text().notNull(),
+  subscriber: t.text().notNull(),
   assetAddress: t.text().notNull(),
   blockNumber: t.bigint().notNull(),
   blockTimestamp: t.bigint().notNull(),
 }), (table) => ({
-  userIdx: index().on(table.user),
+  subscriberIdx: index().on(table.subscriber),
+  assetAddressIdx: index().on(table.assetAddress),
+}));
+
+export const Asset_SubscriptionCancelled = onchainTable("asset_subscription_cancelled", (t) => ({
+  id: t.text().primaryKey(),
+  subscriber: t.text().notNull(),
+  assetAddress: t.text().notNull(),
+  blockNumber: t.bigint().notNull(),
+  blockTimestamp: t.bigint().notNull(),
+}), (table) => ({
+  subscriberIdx: index().on(table.subscriber),
   assetAddressIdx: index().on(table.assetAddress),
 }));
 

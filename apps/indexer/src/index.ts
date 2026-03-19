@@ -8,6 +8,7 @@ import {
   AssetRegistry_RegistryFeeShareUpdated,
   Asset_SubscriptionAdded,
   Asset_SubscriptionRevoked,
+  Asset_SubscriptionCancelled,
   Asset_SubscriptionPriceUpdated,
   Asset_OwnershipTransferred
 } from "../ponder.schema";
@@ -86,16 +87,17 @@ ponder.on("AssetRegistry:RegistryFeeShareUpdated", async ({ event, context }) =>
 
 ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
   const assetAddress = event.log.address.toLowerCase(); 
-  const user = event.args.user.toLowerCase();
+  const subscriber = event.args.subscriber;
+  const payer = event.args.payer.toLowerCase();
 
-  const id = `${assetAddress}_${user}`;
+  const id = `${assetAddress}_${subscriber}`;
   
   // Fetch existing subscription to accurately conditionally update startTime
   const existingSub = await context.db.find(Subscription, { id });
 
   let computedStartTime = event.args.startTime;
 
-  // If the user previously had a subscription, and they topped up while it was still active,
+  // If the subscriber previously had a subscription, and they topped up while it was still active,
   // the contract rigidly sets the new event's startTime to equal the previous subscription's endTime.
   // We check for this exact match to safely preserve their original unbroken start time.
   if (existingSub && existingSub.endTime === event.args.startTime) {
@@ -106,7 +108,8 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
   await context.db.insert(Subscription).values({
     id: id,
     assetId: assetAddress,
-    user: user,
+    subscriber: subscriber,
+    payer: payer,
     startTime: event.args.startTime,
     endTime: event.args.endTime,
     nonce: event.args.nonce,
@@ -115,13 +118,15 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
     startTime: computedStartTime,
     endTime: event.args.endTime,
     nonce: event.args.nonce,
+    payer: payer,
     isActive: true,
   });
 
   // 2. Log History
   await context.db.insert(Asset_SubscriptionAdded).values({
     id: getEventId(event),
-    user: user,
+    subscriber: subscriber,
+    payer: payer,
     startTime: event.args.startTime,
     endTime: event.args.endTime,
     nonce: event.args.nonce,
@@ -133,17 +138,36 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
 
 ponder.on("Asset:SubscriptionRevoked", async ({ event, context }) => {
   const assetAddress = event.log.address.toLowerCase();
-  const user = event.args.user.toLowerCase();
+  const subscriber = event.args.subscriber;
 
   // 1. Update State: Mark as inactive
-  await context.db.update(Subscription, { id: `${assetAddress}_${user}` }).set({
+  await context.db.update(Subscription, { id: `${assetAddress}_${subscriber}` }).set({
     isActive: false,
   });
 
   // 2. Log History
   await context.db.insert(Asset_SubscriptionRevoked).values({
     id: getEventId(event),
-    user: user,
+    subscriber: subscriber,
+    assetAddress: assetAddress,
+    blockNumber: event.block.number,
+    blockTimestamp: event.block.timestamp,
+  });
+});
+
+ponder.on("Asset:SubscriptionCancelled", async ({ event, context }) => {
+  const assetAddress = event.log.address.toLowerCase();
+  const subscriber = event.args.subscriber;
+
+  // 1. Update State: Mark as inactive
+  await context.db.update(Subscription, { id: `${assetAddress}_${subscriber}` }).set({
+    isActive: false,
+  });
+
+  // 2. Log History
+  await context.db.insert(Asset_SubscriptionCancelled).values({
+    id: getEventId(event),
+    subscriber: subscriber,
     assetAddress: assetAddress,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,

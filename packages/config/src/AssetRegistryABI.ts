@@ -45,8 +45,8 @@ export const AssetRegistryABI = [
       },
       {
         "name": "_subscriber",
-        "type": "address",
-        "internalType": "address"
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [
@@ -192,25 +192,6 @@ export const AssetRegistryABI = [
   },
   {
     "type": "function",
-    "name": "getMySubscription",
-    "inputs": [
-      {
-        "name": "_assetId",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getOwner",
     "inputs": [],
     "outputs": [
@@ -264,9 +245,9 @@ export const AssetRegistryABI = [
         "internalType": "bytes32"
       },
       {
-        "name": "_user",
-        "type": "address",
-        "internalType": "address"
+        "name": "_subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [
@@ -317,25 +298,6 @@ export const AssetRegistryABI = [
   },
   {
     "type": "function",
-    "name": "isMySubscriptionActive",
-    "inputs": [
-      {
-        "name": "_assetId",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "isSubscriptionActive",
     "inputs": [
       {
@@ -344,9 +306,9 @@ export const AssetRegistryABI = [
         "internalType": "bytes32"
       },
       {
-        "name": "_user",
-        "type": "address",
-        "internalType": "address"
+        "name": "_subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [
@@ -388,7 +350,12 @@ export const AssetRegistryABI = [
         "internalType": "bytes32"
       },
       {
-        "name": "_owner",
+        "name": "_subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_payer",
         "type": "address",
         "internalType": "address"
       },
@@ -564,10 +531,10 @@ export const AssetRegistryABI = [
     "name": "RegistryFeeClaimed",
     "inputs": [
       {
-        "name": "user",
-        "type": "address",
+        "name": "subscriber",
+        "type": "bytes32",
         "indexed": true,
-        "internalType": "address"
+        "internalType": "bytes32"
       },
       {
         "name": "amount",

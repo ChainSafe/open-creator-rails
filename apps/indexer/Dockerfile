@@ -1,22 +1,39 @@
 FROM node:22-alpine AS base
 
-# 1. Install dependencies
+# =============================================================================
+# Monorepo-aware Dockerfile for the Ponder indexer
+# Build context must be the REPO ROOT (not apps/indexer) so that pnpm can
+# resolve workspace:* dependencies like @open-creator-rails/config.
+# =============================================================================
+
+# 1. Install dependencies (from monorepo root)
 FROM base AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-COPY package.json pnpm-lock.yaml* ./
 RUN corepack enable && corepack prepare pnpm@latest --activate
-RUN pnpm i --frozen-lockfile
 
-# 2. Setup source code
+# Copy workspace root manifests
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy package.json for each workspace package (needed for pnpm install)
+COPY apps/indexer/package.json ./apps/indexer/package.json
+COPY packages/config/package.json ./packages/config/package.json
+
+RUN pnpm install --frozen-lockfile
+
+# 2. Build / codegen
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
 RUN corepack enable && corepack prepare pnpm@latest --activate
-# Run codegen here to generate ponder-env.d.ts and others
-RUN pnpm run codegen
+
+COPY --from=deps /app/ ./
+
+# Copy full source for all packages the indexer depends on
+COPY packages/config/ ./packages/config/
+COPY apps/indexer/ ./apps/indexer/
+
+# Run codegen to generate ponder-env.d.ts and types
+RUN cd apps/indexer && pnpm run codegen
 
 # 3. Production runner
 FROM base AS runner
@@ -26,29 +43,31 @@ ENV NODE_ENV=production
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 ponder
-
-# --- FIX START ---
-# Ensure the non-root user has ownership of the working directory
-# keeping the structure simple by chowning the whole /app directory
-# This allows Ponder to write .ponder/ cache or update files if needed
+RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN chown -R ponder:nodejs /app
-# --- FIX END ---
 
-# Copy artifacts
+# Copy the installed node_modules (includes hoisted deps + workspace links)
 COPY --from=builder --chown=ponder:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=ponder:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=ponder:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
-# Copy source files (Required for ponder start)
-COPY --from=builder --chown=ponder:nodejs /app/ponder.config.ts ./ponder.config.ts
-COPY --from=builder --chown=ponder:nodejs /app/ponder.schema.ts ./ponder.schema.ts
-COPY --from=builder --chown=ponder:nodejs /app/src ./src
-COPY --from=builder --chown=ponder:nodejs /app/abis ./abis
-# Also copy the generated type definition from codegen step
-COPY --from=builder --chown=ponder:nodejs /app/ponder-env.d.ts ./ponder-env.d.ts
+# Copy the config workspace package (runtime dependency)
+COPY --from=builder --chown=ponder:nodejs /app/packages/config ./packages/config
+
+# Copy the indexer workspace package
+COPY --from=builder --chown=ponder:nodejs /app/apps/indexer/node_modules ./apps/indexer/node_modules
+COPY --from=builder --chown=ponder:nodejs /app/apps/indexer/package.json ./apps/indexer/package.json
+COPY --from=builder --chown=ponder:nodejs /app/apps/indexer/ponder.config.ts ./apps/indexer/ponder.config.ts
+COPY --from=builder --chown=ponder:nodejs /app/apps/indexer/ponder.schema.ts ./apps/indexer/ponder.schema.ts
+COPY --from=builder --chown=ponder:nodejs /app/apps/indexer/ponder-env.d.ts ./apps/indexer/ponder-env.d.ts
+COPY --from=builder --chown=ponder:nodejs /app/apps/indexer/src ./apps/indexer/src
+COPY --from=builder --chown=ponder:nodejs /app/apps/indexer/scripts ./apps/indexer/scripts
+
+RUN chmod +x ./apps/indexer/scripts/start.sh
 
 USER ponder
+WORKDIR /app/apps/indexer
 
 EXPOSE 42069
 
-# Use npm run start which executes "ponder start"
-CMD ["npm", "run", "start"]
+CMD ["./scripts/start.sh"]
