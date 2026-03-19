@@ -1,0 +1,302 @@
+name: Deploy Indexer
+
+# =============================================================================
+# Blue-Green Deployment for the Ponder Indexer on Railway
+#
+# Architecture (3 Railway services, 1 shared Postgres):
+#   indexer-api          — `ponder serve`  (always up, reads from views schema)
+#   indexer-worker-blue  — `ponder start`  (blue slot)
+#   indexer-worker-green — `ponder start`  (green slot)
+#
+# Blue-green flow:
+#   1. Detect which worker slot is active (stored as ACTIVE_SLOT on API service)
+#   2. Deploy new code to the INACTIVE worker slot
+#   3. New worker backfills into its own DB schema
+#   4. Once /ready → 200, Ponder auto-swaps views to new worker's tables
+#   5. CI updates ACTIVE_SLOT, stops old worker
+#   6. API keeps serving — zero downtime, zero staleness gap
+#
+# Refresh flow:
+#   1. Deploy to the ACTIVE worker (same schema, crash recovery resumes)
+# =============================================================================
+
+on:
+  push:
+    tags:
+      - "indexer@v*"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Deployment mode"
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - blue-green
+          - refresh
+
+env:
+  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  # Files whose changes indicate a breaking (blue-green) deployment
+  SCHEMA_FILES: |
+    apps/indexer/ponder.schema.ts
+    apps/indexer/ponder.config.ts
+
+jobs:
+  deploy:
+    name: Deploy Indexer
+    runs-on: ubuntu-latest
+    timeout-minutes: 180 # 3 hour max for long backfills
+
+    env:
+      PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+      API_SERVICE_ID: ${{ secrets.RAILWAY_API_SERVICE_ID }}
+      WORKER_BLUE_SERVICE_ID: ${{ secrets.RAILWAY_WORKER_BLUE_SERVICE_ID }}
+      WORKER_GREEN_SERVICE_ID: ${{ secrets.RAILWAY_WORKER_GREEN_SERVICE_ID }}
+
+    steps:
+      # ----------------------------------------------------------------
+      # 1. Checkout
+      # ----------------------------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      # ----------------------------------------------------------------
+      # 2. Detect deployment mode (auto / manual override)
+      # ----------------------------------------------------------------
+      - name: Detect deployment mode
+        id: detect
+        run: |
+          MANUAL_MODE="${{ github.event.inputs.mode }}"
+          if [[ "$MANUAL_MODE" != "" && "$MANUAL_MODE" != "auto" ]]; then
+            echo "mode=$MANUAL_MODE" >> "$GITHUB_OUTPUT"
+            echo "✅ Mode set manually: $MANUAL_MODE"
+            exit 0
+          fi
+
+          CURRENT_TAG="${GITHUB_REF_NAME}"
+          echo "Current tag: $CURRENT_TAG"
+
+          PREVIOUS_TAG=$(
+            git tag --list 'indexer@v*' --sort=-version:refname \
+              | grep -v "^${CURRENT_TAG}$" \
+              | head -n 1
+          ) || true
+
+          if [[ -z "$PREVIOUS_TAG" ]]; then
+            echo "⚠️  No previous tag — first deployment → blue-green"
+            echo "mode=blue-green" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Previous tag: $PREVIOUS_TAG"
+
+          SCHEMA_CHANGED=false
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            if ! git diff --quiet "$PREVIOUS_TAG" "$CURRENT_TAG" -- "$file" 2>/dev/null; then
+              echo "📝 Changed: $file"
+              SCHEMA_CHANGED=true
+            fi
+          done <<< "${{ env.SCHEMA_FILES }}"
+
+          if [[ "$SCHEMA_CHANGED" == "true" ]]; then
+            echo "mode=blue-green" >> "$GITHUB_OUTPUT"
+            echo "🔵🟢 Schema changed → blue-green"
+          else
+            echo "mode=refresh" >> "$GITHUB_OUTPUT"
+            echo "♻️  No schema changes → refresh"
+          fi
+
+      # ----------------------------------------------------------------
+      # 3. Install Railway CLI
+      # ----------------------------------------------------------------
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      # ----------------------------------------------------------------
+      # 4. Determine which worker slot to target
+      # ----------------------------------------------------------------
+      - name: Determine target slot
+        id: slots
+        run: |
+          MODE="${{ steps.detect.outputs.mode }}"
+
+          # Read active slot from API service
+          ACTIVE_SLOT=$(
+            railway variable list --service "$API_SERVICE_ID" -k 2>/dev/null \
+              | grep "^ACTIVE_SLOT=" | cut -d= -f2
+          ) || true
+          ACTIVE_SLOT="${ACTIVE_SLOT:-none}"
+          echo "Active slot: $ACTIVE_SLOT"
+
+          if [ "$MODE" = "refresh" ]; then
+            if [ "$ACTIVE_SLOT" = "green" ]; then
+              TARGET_SLOT="green"
+              TARGET_SERVICE_ID="$WORKER_GREEN_SERVICE_ID"
+            else
+              TARGET_SLOT="blue"
+              TARGET_SERVICE_ID="$WORKER_BLUE_SERVICE_ID"
+            fi
+            OLD_SERVICE_ID=""
+          else
+            if [ "$ACTIVE_SLOT" = "blue" ]; then
+              TARGET_SLOT="green"
+              TARGET_SERVICE_ID="$WORKER_GREEN_SERVICE_ID"
+              OLD_SERVICE_ID="$WORKER_BLUE_SERVICE_ID"
+            else
+              TARGET_SLOT="blue"
+              TARGET_SERVICE_ID="$WORKER_BLUE_SERVICE_ID"
+              OLD_SERVICE_ID="$WORKER_GREEN_SERVICE_ID"
+            fi
+          fi
+
+          echo "target_slot=$TARGET_SLOT" >> "$GITHUB_OUTPUT"
+          echo "target_service_id=$TARGET_SERVICE_ID" >> "$GITHUB_OUTPUT"
+          echo "old_service_id=$OLD_SERVICE_ID" >> "$GITHUB_OUTPUT"
+          echo "active_slot=$ACTIVE_SLOT" >> "$GITHUB_OUTPUT"
+
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Tag:    ${GITHUB_REF_NAME}"
+          echo "  Mode:   ${MODE}"
+          echo "  Active: ${ACTIVE_SLOT}"
+          echo "  Target: ${TARGET_SLOT}"
+          echo "  SHA:    ${GITHUB_SHA::8}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      # ----------------------------------------------------------------
+      # 5. Configure and deploy the target worker
+      # ----------------------------------------------------------------
+      - name: Deploy to target worker
+        run: |
+          TARGET_SERVICE_ID="${{ steps.slots.outputs.target_service_id }}"
+          MODE="${{ steps.detect.outputs.mode }}"
+          TAG="${GITHUB_REF_NAME:-manual-$(date +%s)}"
+
+          # Set env vars on the target worker service (--skip-deploys to avoid
+          # triggering a redeploy before `railway up` uploads the new code)
+          railway variable set \
+            --service "$TARGET_SERVICE_ID" \
+            --skip-deploys \
+            DEPLOYMENT_MODE="$MODE" \
+            DEPLOY_TAG="$TAG" \
+            PONDER_ROLE="worker"
+
+          # Deploy (uploads source, Railway builds Dockerfile remotely)
+          railway up --service "$TARGET_SERVICE_ID" --detach
+
+          echo "🚀 Deployment triggered on ${{ steps.slots.outputs.target_slot }} slot"
+
+      # ----------------------------------------------------------------
+      # 6. Resolve worker domain (generated by Railway after deploy)
+      # ----------------------------------------------------------------
+      - name: Resolve worker domain
+        id: domain
+        if: steps.detect.outputs.mode == 'blue-green'
+        run: |
+          TARGET_SLOT="${{ steps.slots.outputs.target_slot }}"
+
+          # railway domain --service requires the service NAME, not UUID
+          TARGET_SERVICE_NAME="indexer-worker-${TARGET_SLOT}"
+
+          # Wait a bit for Railway to provision the deployment
+          sleep 10
+
+          # Fetch the auto-generated domain; create one if missing
+          DOMAIN=$(railway domain --service "$TARGET_SERVICE_NAME" 2>/dev/null | grep -oE 'https://[^ ]+') || true
+
+          if [ -z "$DOMAIN" ]; then
+            echo "❌ Could not resolve domain for service $TARGET_SERVICE_NAME"
+            echo "   Make sure the service has a public domain in Railway settings."
+            exit 1
+          fi
+
+          # Strip https:// prefix if present
+          DOMAIN="${DOMAIN#https://}"
+          DOMAIN="${DOMAIN#http://}"
+
+          echo "target_domain=$DOMAIN" >> "$GITHUB_OUTPUT"
+          echo "✅ Resolved domain: $DOMAIN"
+
+      # ----------------------------------------------------------------
+      # 7. Wait for new worker to be ready (blue-green only)
+      # ----------------------------------------------------------------
+      - name: Wait for worker to be ready
+        if: steps.detect.outputs.mode == 'blue-green'
+        run: |
+          DOMAIN="${{ steps.domain.outputs.target_domain }}"
+          TIMEOUT=7200  # 2 hours
+          INTERVAL=30
+          ELAPSED=0
+
+          echo "Polling https://$DOMAIN/ready ..."
+          echo ""
+
+          while [ $ELAPSED -lt $TIMEOUT ]; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$DOMAIN/ready" 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo ""
+              echo "✅ Worker is ready! (${ELAPSED}s)"
+              echo "   Views have been auto-swapped to new schema."
+              exit 0
+            fi
+            echo "  ⏳ $STATUS (${ELAPSED}s / ${TIMEOUT}s)"
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
+          echo ""
+          echo "❌ Timeout after ${TIMEOUT}s waiting for worker"
+          exit 1
+
+      # ----------------------------------------------------------------
+      # 8. Update active slot and stop old worker (blue-green only)
+      # ----------------------------------------------------------------
+      - name: Swap active slot
+        if: steps.detect.outputs.mode == 'blue-green'
+        run: |
+          TARGET_SLOT="${{ steps.slots.outputs.target_slot }}"
+          OLD_SERVICE_ID="${{ steps.slots.outputs.old_service_id }}"
+
+          # Record the new active slot on the API service
+          railway variable set --service "$API_SERVICE_ID" ACTIVE_SLOT="$TARGET_SLOT"
+          echo "✅ ACTIVE_SLOT → $TARGET_SLOT"
+
+          # Stop the old worker to free resources
+          if [ -n "$OLD_SERVICE_ID" ]; then
+            echo "Stopping old worker..."
+            railway down --service "$OLD_SERVICE_ID" -y 2>/dev/null || echo "⚠️  Could not stop old worker (may already be stopped)"
+          fi
+
+      # ----------------------------------------------------------------
+      # 9. Redeploy API (blue-green only — picks up new schema types)
+      # ----------------------------------------------------------------
+      - name: Redeploy API
+        if: steps.detect.outputs.mode == 'blue-green'
+        run: |
+          railway up --service "$API_SERVICE_ID" --detach
+
+          echo "🔄 API redeployed with new schema types"
+
+      # ----------------------------------------------------------------
+      # 10. Summary
+      # ----------------------------------------------------------------
+      - name: Summary
+        run: |
+          MODE="${{ steps.detect.outputs.mode }}"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  ✅ Deployment complete"
+          echo "  Tag:    ${GITHUB_REF_NAME}"
+          echo "  Mode:   ${MODE}"
+          echo "  Slot:   ${{ steps.slots.outputs.target_slot }}"
+          if [ "$MODE" = "blue-green" ]; then
+          echo "  Views swapped, old worker stopped, API redeployed"
+          fi
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
