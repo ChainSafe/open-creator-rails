@@ -22,6 +22,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     event AssetCreated(bytes32 indexed assetId, address indexed asset, uint256 subscriptionPrice, address tokenAddress, address indexed owner);
     event RegistryFeeShareUpdated(uint256 newRegistryFeeShare);
     event RegistryFeeClaimed(bytes32 indexed subscriber, uint256 amount);
+    event RegistryFeeClaimedBatch(bytes32 indexed assetId, bytes32[] indexed subscribers, uint256 totalAmount);
 
     /// @notice Initializes the registry with fee shares. Caller becomes owner.
     /// @param _registryFeeShare Share percentage of subscription payments allocated to the registry (0 - 100).
@@ -145,18 +146,11 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         
         address asset = getAsset(_assetId);
         
-        return IAsset(asset).claimRegistryFee(_subscribers);
-    }
+        claimed = IAsset(asset).claimRegistryFee(_subscribers);
 
-    function emitRegistryFeeClaimed(bytes32 _assetId, bytes32 _subscriber, uint256 _registryFee) external {
-        
-        address asset = getAsset(_assetId);
+        emit RegistryFeeClaimedBatch(_assetId, _subscribers, claimed);
 
-        if (msg.sender != asset) {
-            revert NotAuthorized();
-        }
-
-        emit RegistryFeeClaimed(_subscriber, _registryFee);
+        return claimed;
     }
 
     function cancelSubscription(bytes32 _assetId, bytes32 _subscriber) external onlyOwner {
@@ -167,6 +161,6 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     }
 
     function getOwner() external view returns (address) {
-        return this.owner();
+        return owner();
     }
 }
