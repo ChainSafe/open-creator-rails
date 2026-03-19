@@ -37,7 +37,7 @@ on:
           - refresh
 
 env:
-  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+  RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
 
   # Files whose changes indicate a breaking (blue-green) deployment
   SCHEMA_FILES: |
