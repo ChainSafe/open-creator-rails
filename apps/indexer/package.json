@@ -8,7 +8,7 @@
     "db": "ponder db",
     "codegen": "ponder codegen",
     "serve": "ponder serve",
-    "lint": "eslint .",
+    "lint": "eslint . --ext .ts",
     "typecheck": "tsc"
   },
   "dependencies": {
