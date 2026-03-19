@@ -93,6 +93,18 @@ interface IAssetRegistry {
     /// @return The amount of registry fee claimed.
     function claimRegistryFee(bytes32 _assetId, bytes32 _subscriber) external returns (uint256);
 
+    /// @notice Claims the registry fee for multiple subscribers. Callable only by the Registry owner.
+    /// @param _assetId Asset identifier.
+    /// @param _subscribers Array of subscriber identities.
+    /// @return The amount of registry fee claimed.
+    function claimRegistryFee(bytes32 _assetId, bytes32[] calldata _subscribers) external returns (uint256);
+
+    /// @notice Emits the RegistryFeeClaimed event for a single subscriber. Callable only by the Asset contract.
+    /// @param _assetId Asset identifier.
+    /// @param _subscriber Subscriber identity.
+    /// @param _registryFee The amount of registry fee claimed.
+    function emitRegistryFeeClaimed(bytes32 _assetId, bytes32 _subscriber, uint256 _registryFee) external;
+
     /// @notice Cancels a subscription. Callable only by the Registry owner.
     /// @param _assetId Asset identifier.
     /// @param _subscriber Hash of the subscriber identity.

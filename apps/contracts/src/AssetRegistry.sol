@@ -17,6 +17,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     error AssetAlreadyExists();
     error AssetNotFound();
     error RegistryFeeShareOutOfBounds();
+    error NotAuthorized();
 
     event AssetCreated(bytes32 indexed assetId, address indexed asset, uint256 subscriptionPrice, address tokenAddress, address indexed owner);
     event RegistryFeeShareUpdated(uint256 newRegistryFeeShare);
@@ -138,6 +139,24 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         emit RegistryFeeClaimed(_subscriber, registryFee);
 
         return registryFee;
+    }
+
+    function claimRegistryFee(bytes32 _assetId, bytes32[] calldata _subscribers) external onlyOwner returns (uint256 claimed) {
+        
+        address asset = getAsset(_assetId);
+        
+        return IAsset(asset).claimRegistryFee(_subscribers);
+    }
+
+    function emitRegistryFeeClaimed(bytes32 _assetId, bytes32 _subscriber, uint256 _registryFee) external {
+        
+        address asset = getAsset(_assetId);
+
+        if (msg.sender != asset) {
+            revert NotAuthorized();
+        }
+
+        emit RegistryFeeClaimed(_subscriber, _registryFee);
     }
 
     function cancelSubscription(bytes32 _assetId, bytes32 _subscriber) external onlyOwner {
