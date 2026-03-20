@@ -44,8 +44,8 @@ title View Subscription
     participant AssetRegistry
     participant Asset
 
-User->>+AssetRegistry: viewSubscription()
-AssetRegistry->>+Asset: viewSubscription()
+User->>+AssetRegistry: isSubscriptionActive()
+AssetRegistry->>+Asset: isSubscriptionActive()
 Asset-->>-AssetRegistry: { bool }
 AssetRegistry-->-User: { bool }
 ```
@@ -70,7 +70,7 @@ classDiagram
         -mapping~byte32, address~ assets
         +getSubscriptionPrice(assetId, duration) : uint256
         +getSubscription(assetId) : expiryDate
-        +viewSubscription(assetId) : boolean
+        +isSubscriptionActive(assetId) : boolean
         +subscribe(assetId, duration) : expiryDate
         +addAsset(address) onlyOwner
         +removeAsset(address) onlyOwner
@@ -84,7 +84,7 @@ classDiagram
         +getAssetId() : byte32
         +getSubscriptionPrice(duration) : uint256
         +getSubscription(address) : expiryDate
-        +viewSubscription(address) : boolean
+        +isSubscriptionActive(address) : boolean
         +subscribe(duration) : expiryDate
         +revokeSubscription(address) onlyOwner
     }

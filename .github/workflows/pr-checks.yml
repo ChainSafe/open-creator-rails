@@ -1,0 +1,43 @@
+name: PR Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ──────────────────────────────────────────────────────────
+  # Indexer — lint + typecheck
+  # ──────────────────────────────────────────────────────────
+  indexer:
+    name: Indexer
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Codegen
+        working-directory: apps/indexer
+        run: pnpm codegen
+
+      - name: Lint
+        working-directory: apps/indexer
+        run: pnpm lint
+
+      - name: Typecheck
+        working-directory: apps/indexer
+        run: pnpm typecheck
