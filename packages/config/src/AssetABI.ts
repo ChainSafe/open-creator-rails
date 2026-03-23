@@ -59,6 +59,25 @@ export const AssetABI = [
   },
   {
     "type": "function",
+    "name": "claimCreatorFee",
+    "inputs": [
+      {
+        "name": "_subscribers",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "claimed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "claimRegistryFee",
     "inputs": [
       {
@@ -70,6 +89,25 @@ export const AssetABI = [
     "outputs": [
       {
         "name": "registryFee",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claimRegistryFee",
+    "inputs": [
+      {
+        "name": "_subscribers",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "claimed",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -369,6 +407,25 @@ export const AssetABI = [
         "type": "bytes32",
         "indexed": true,
         "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SubscriptionExtended",
+    "inputs": [
+      {
+        "name": "subscriber",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "endTime",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false

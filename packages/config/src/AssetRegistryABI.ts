@@ -3,11 +3,6 @@ export const AssetRegistryABI = [
     "type": "constructor",
     "inputs": [
       {
-        "name": "_creatorFeeShare",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "_registryFeeShare",
         "type": "uint256",
         "internalType": "uint256"
@@ -33,6 +28,48 @@ export const AssetRegistryABI = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "cancelSubscription",
+    "inputs": [
+      {
+        "name": "_assetId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claimRegistryFee",
+    "inputs": [
+      {
+        "name": "_assetId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_subscribers",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "claimed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -148,11 +185,6 @@ export const AssetRegistryABI = [
     "name": "getFeeShares",
     "inputs": [],
     "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
       {
         "name": "",
         "type": "uint256",
@@ -285,19 +317,6 @@ export const AssetRegistryABI = [
   },
   {
     "type": "function",
-    "name": "getTotalFeeShare",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "isSubscriptionActive",
     "inputs": [
       {
@@ -414,19 +433,6 @@ export const AssetRegistryABI = [
   },
   {
     "type": "function",
-    "name": "updateCreatorFeeShare",
-    "inputs": [
-      {
-        "name": "_creatorFeeShare",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "updateRegistryFeeShare",
     "inputs": [
       {
@@ -496,19 +502,6 @@ export const AssetRegistryABI = [
   },
   {
     "type": "event",
-    "name": "CreatorFeeShareUpdated",
-    "inputs": [
-      {
-        "name": "newCreatorFeeShare",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "OwnershipTransferred",
     "inputs": [
       {
@@ -538,6 +531,31 @@ export const AssetRegistryABI = [
       },
       {
         "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RegistryFeeClaimedBatch",
+    "inputs": [
+      {
+        "name": "assetId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "subscribers",
+        "type": "bytes32[]",
+        "indexed": true,
+        "internalType": "bytes32[]"
+      },
+      {
+        "name": "totalAmount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -592,7 +610,7 @@ export const AssetRegistryABI = [
   },
   {
     "type": "error",
-    "name": "ZeroTotalFeeShare",
+    "name": "RegistryFeeShareOutOfBounds",
     "inputs": []
   }
 ] as const;

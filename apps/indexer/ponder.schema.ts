@@ -64,16 +64,6 @@ export const AssetRegistry_OwnershipTransferred = onchainTable("asset_registry_o
   registryAddressIdx: index().on(table.registryAddress),
 }));
 
-export const AssetRegistry_CreatorFeeShareUpdated = onchainTable("asset_registry_creator_fee_share_updated", (t) => ({
-  id: t.text().primaryKey(),
-  newCreatorFeeShare: t.bigint().notNull(),
-  registryAddress: t.text().notNull(),
-  blockNumber: t.bigint().notNull(),
-  blockTimestamp: t.bigint().notNull(),
-}), (table) => ({
-  registryAddressIdx: index().on(table.registryAddress),
-}));
-
 export const AssetRegistry_RegistryFeeShareUpdated = onchainTable("asset_registry_registry_fee_share_updated", (t) => ({
   id: t.text().primaryKey(),
   newRegistryFeeShare: t.bigint().notNull(),
@@ -81,6 +71,18 @@ export const AssetRegistry_RegistryFeeShareUpdated = onchainTable("asset_registr
   blockNumber: t.bigint().notNull(),
   blockTimestamp: t.bigint().notNull(),
 }), (table) => ({
+  registryAddressIdx: index().on(table.registryAddress),
+}));
+
+export const AssetRegistry_RegistryFeeClaimedBatch = onchainTable("asset_registry_registry_fee_claimed_batch", (t) => ({
+  id: t.text().primaryKey(),
+  assetId: t.text().notNull(),
+  totalAmount: t.bigint().notNull(),
+  registryAddress: t.text().notNull(),
+  blockNumber: t.bigint().notNull(),
+  blockTimestamp: t.bigint().notNull(),
+}), (table) => ({
+  assetIdIdx: index().on(table.assetId),
   registryAddressIdx: index().on(table.registryAddress),
 }));
 
@@ -97,6 +99,30 @@ export const Asset_SubscriptionAdded = onchainTable("asset_subscription_added", 
 }), (table) => ({
   subscriberIdx: index().on(table.subscriber),
   payerIdx: index().on(table.payer),
+  assetAddressIdx: index().on(table.assetAddress),
+}));
+
+export const Asset_SubscriptionExtended = onchainTable("asset_subscription_extended", (t) => ({
+  id: t.text().primaryKey(),
+  subscriber: t.text().notNull(),
+  endTime: t.bigint().notNull(),
+  assetAddress: t.text().notNull(),
+  blockNumber: t.bigint().notNull(),
+  blockTimestamp: t.bigint().notNull(),
+}), (table) => ({
+  subscriberIdx: index().on(table.subscriber),
+  assetAddressIdx: index().on(table.assetAddress),
+}));
+
+export const Asset_CreatorFeeClaimed = onchainTable("asset_creator_fee_claimed", (t) => ({
+  id: t.text().primaryKey(),
+  subscriber: t.text().notNull(),
+  amount: t.bigint().notNull(),
+  assetAddress: t.text().notNull(),
+  blockNumber: t.bigint().notNull(),
+  blockTimestamp: t.bigint().notNull(),
+}), (table) => ({
+  subscriberIdx: index().on(table.subscriber),
   assetAddressIdx: index().on(table.assetAddress),
 }));
 
