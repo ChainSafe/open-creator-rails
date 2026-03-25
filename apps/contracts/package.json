@@ -5,6 +5,10 @@
   "scripts": {
     "build": "forge build",
     "test": "forge test",
-    "clean": "forge clean"
+    "clean": "forge clean",
+    "lint": "solhint 'src/**/*.sol'"
+  },
+  "devDependencies": {
+    "solhint": "^6.1.0"
   }
 }

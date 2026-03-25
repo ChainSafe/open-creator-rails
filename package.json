@@ -4,6 +4,7 @@
   "description": "",
   "scripts": {
     "contract:build": "pnpm -C apps/contracts build",
+    "contract:lint": "pnpm -C apps/contracts lint",
     "setup": "pnpm install && pnpm contract:build && pnpm -C packages/config sync",
     "test": "pnpm -C apps/contracts test && pnpm -C apps/indexer typecheck",
     "indexer:dev": "pnpm -C apps/indexer dev",
