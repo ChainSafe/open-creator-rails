@@ -18,7 +18,13 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     error AssetNotFound();
     error RegistryFeeShareOutOfBounds();
 
-    event AssetCreated(bytes32 indexed assetId, address indexed asset, uint256 subscriptionPrice, address tokenAddress, address indexed owner);
+    event AssetCreated(
+        bytes32 indexed assetId,
+        address indexed asset,
+        uint256 subscriptionPrice,
+        address tokenAddress,
+        address indexed owner
+    );
     event RegistryFeeShareUpdated(uint256 newRegistryFeeShare);
     event RegistryFeeClaimed(bytes32 indexed subscriber, uint256 amount);
     event RegistryFeeClaimedBatch(bytes32 indexed assetId, bytes32[] indexed subscribers, uint256 totalAmount);
@@ -34,7 +40,12 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         registryFeeShare = _registryFeeShare;
     }
 
-    function createAsset(bytes32 _assetId, uint256 _subscriptionPrice, address _tokenAddress, address _owner) external onlyOwner returns (address)
+    function createAsset(
+        bytes32 _assetId,
+        uint256 _subscriptionPrice,
+        address _tokenAddress,
+        address _owner
+    ) external onlyOwner returns (address)
     {
 
         if (assets[_assetId] != address(0)) {
@@ -86,11 +97,29 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return IAsset(asset).getSubscriptionPrice(_duration);
     }
 
-    function subscribe(bytes32 _assetId, bytes32 _subscriber, address _payer, address _spender, uint256 _value, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external returns (uint256)
+    function subscribe(
+        bytes32 _assetId,
+        bytes32 _subscriber,
+        address _payer,
+        address _spender,
+        uint256 _value,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external returns (uint256)
     {
         address asset = getAsset(_assetId);
-        
-        return IAsset(asset).subscribe(_subscriber, _payer, _spender, _value, _deadline, _v, _r, _s);
+        return IAsset(asset).subscribe(
+            _subscriber,
+            _payer,
+            _spender,
+            _value,
+            _deadline,
+            _v,
+            _r,
+            _s
+        );
     }
 
     function getCreatorFeeShare() external view returns (uint256) {
@@ -141,14 +170,13 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return registryFee;
     }
 
-    function claimRegistryFee(bytes32 _assetId, bytes32[] calldata _subscribers) external onlyOwner returns (uint256 claimed) {
-        
+    function claimRegistryFee(
+        bytes32 _assetId,
+        bytes32[] calldata _subscribers
+    ) external onlyOwner returns (uint256 claimed) {
         address asset = getAsset(_assetId);
-        
         claimed = IAsset(asset).claimRegistryFee(_subscribers);
-
         emit RegistryFeeClaimedBatch(_assetId, _subscribers, claimed);
-
         return claimed;
     }
 

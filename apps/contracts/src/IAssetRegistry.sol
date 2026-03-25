@@ -11,7 +11,12 @@ interface IAssetRegistry {
     /// @param _tokenAddress ERC20 (with permit) used for subscription payments.
     /// @param _owner Creator/owner of the new asset.
     /// @return The address of the newly deployed Asset contract.
-    function createAsset(bytes32 _assetId, uint256 _subscriptionPrice, address _tokenAddress, address _owner) external returns (address);
+    function createAsset(
+        bytes32 _assetId,
+        uint256 _subscriptionPrice,
+        address _tokenAddress,
+        address _owner
+    ) external returns (address);
 
     /// @notice Checks whether an asset is registered for the given id.
     /// @param _assetId Asset identifier to check.
@@ -41,7 +46,8 @@ interface IAssetRegistry {
     /// @return Total price for the duration.
     function getSubscriptionPrice(bytes32 _assetId, uint256 _duration) external view returns (uint256);
 
-    /// @notice Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract. The payer signs the permit and is the refund beneficiary on cancel/revoke.
+    /// @notice Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract.
+    ///         The payer signs the permit and is the refund beneficiary on cancel/revoke.
     /// @param _assetId Asset identifier.
     /// @param _subscriber Hash of the subscriber identity.
     /// @param _payer Payer; signs the permit and receives refunds on cancel/revoke.
@@ -52,7 +58,17 @@ interface IAssetRegistry {
     /// @param _r Signature r.
     /// @param _s Signature s.
     /// @return Subscription expiry in Unix timestamp.
-    function subscribe(bytes32 _assetId, bytes32 _subscriber, address _payer, address _spender, uint256 _value, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external returns (uint256);
+    function subscribe(
+        bytes32 _assetId,
+        bytes32 _subscriber,
+        address _payer,
+        address _spender,
+        uint256 _value,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external returns (uint256);
 
     /// @notice Returns the creator fee share.
     /// @return creatorFeeShare The creator fee share.

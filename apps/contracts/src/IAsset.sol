@@ -36,7 +36,8 @@ interface IAsset {
     /// @return True if the subscriber's subscription is active.
     function isSubscriptionActive(bytes32 subscriber) external view returns (bool);
 
-    /// @notice Subscribes an owner using ERC-2612 permit: owner signs permit, then payment is pulled and subscription extended.
+    /// @notice Subscribes an owner using ERC-2612 permit: owner signs permit,
+    ///         then payment is pulled and subscription extended.
     /// @param subscriber Hash of the subscriber identity to subscribe.
     /// @param payer Subscription payer and subscription refund beneficiary.
     /// @param spender Must be this asset contract for the permit to be accepted.
