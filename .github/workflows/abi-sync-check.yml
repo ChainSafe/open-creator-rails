@@ -1,0 +1,43 @@
+name: ABI Sync Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/contracts/src/**"
+      - "packages/config/src/AssetABI.ts"
+      - "packages/config/src/AssetRegistryABI.ts"
+      - "packages/config/scripts/sync-abis.js"
+
+jobs:
+  abi-sync:
+    name: Check ABIs are in sync
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Build contracts
+        working-directory: apps/contracts
+        run: forge build
+
+      - name: Sync ABIs
+        working-directory: packages/config
+        run: node scripts/sync-abis.js
+
+      - name: Check for drift
+        run: |
+          if ! git diff --exit-code packages/config/src/AssetABI.ts packages/config/src/AssetRegistryABI.ts; then
+            echo ""
+            echo "❌ ABI files are out of sync with contracts."
+            echo ""
+            echo "Run this locally and commit the result:"
+            echo "  cd apps/contracts && forge build && cd ../../packages/config && pnpm sync"
+            exit 1
+          fi
+          echo "✅ ABIs are in sync."
