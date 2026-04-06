@@ -49,16 +49,20 @@ elif [ "$PONDER_ROLE" = "worker" ]; then
   echo "  Mode: ${DEPLOYMENT_MODE}"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-  if [ "$DEPLOYMENT_MODE" = "blue-green" ]; then
-    # Schema priority: DEPLOY_TAG (from CI) > RAILWAY_DEPLOYMENT_ID > timestamp
-    if [ -n "${DEPLOY_TAG:-}" ]; then
-      SCHEMA="$(sanitize_schema_name "$DEPLOY_TAG")"
-    elif [ -n "${RAILWAY_DEPLOYMENT_ID:-}" ]; then
-      SCHEMA="$RAILWAY_DEPLOYMENT_ID"
-    else
-      SCHEMA="local_$(date +%s)"
-    fi
+  # Schema priority: DEPLOY_TAG (from CI) > RAILWAY_DEPLOYMENT_ID > timestamp.
+  # In refresh mode, DEPLOY_TAG is intentionally not updated by CI so the schema
+  # name stays the same — Ponder recognises it as the same app and resumes.
+  # STABLE_SCHEMA (ocr_indexer_live) is the promoted views destination, never
+  # the worker's own schema.
+  if [ -n "${DEPLOY_TAG:-}" ]; then
+    SCHEMA="$(sanitize_schema_name "$DEPLOY_TAG")"
+  elif [ -n "${RAILWAY_DEPLOYMENT_ID:-}" ]; then
+    SCHEMA="$RAILWAY_DEPLOYMENT_ID"
+  else
+    SCHEMA="local_$(date +%s)"
+  fi
 
+  if [ "$DEPLOYMENT_MODE" = "blue-green" ]; then
     echo "  Schema:       ${SCHEMA}"
     echo "  Views Schema: ${VIEWS_SCHEMA}"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -66,11 +70,12 @@ elif [ "$PONDER_ROLE" = "worker" ]; then
     exec pnpm start --schema "$SCHEMA" --views-schema "$VIEWS_SCHEMA"
 
   elif [ "$DEPLOYMENT_MODE" = "refresh" ]; then
-    echo "  Schema:       ${STABLE_SCHEMA}"
+    echo "  Schema:       ${SCHEMA}"
+    echo "  Views Schema: ${VIEWS_SCHEMA}"
     echo "  (crash recovery / resume)"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-    exec pnpm start --schema "$STABLE_SCHEMA"
+    exec pnpm start --schema "$SCHEMA" --views-schema "$VIEWS_SCHEMA"
 
   else
     echo "ERROR: Unknown DEPLOYMENT_MODE '${DEPLOYMENT_MODE}'"
