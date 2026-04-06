@@ -188,12 +188,24 @@ jobs:
 
           # Set env vars on the target worker service (--skip-deploys to avoid
           # triggering a redeploy before `railway up` uploads the new code)
-          railway variable set \
-            --service "$TARGET_SERVICE_ID" \
-            --skip-deploys \
-            DEPLOYMENT_MODE="$MODE" \
-            DEPLOY_TAG="$TAG" \
-            PONDER_ROLE="worker"
+          #
+          # DEPLOY_TAG is only updated for blue-green — it forms part of Ponder's
+          # app identity fingerprint. Changing it in refresh mode causes Ponder to
+          # reject the existing schema ("previously used by a different Ponder app").
+          if [ "$MODE" = "blue-green" ]; then
+            railway variable set \
+              --service "$TARGET_SERVICE_ID" \
+              --skip-deploys \
+              DEPLOYMENT_MODE="$MODE" \
+              DEPLOY_TAG="$TAG" \
+              PONDER_ROLE="worker"
+          else
+            railway variable set \
+              --service "$TARGET_SERVICE_ID" \
+              --skip-deploys \
+              DEPLOYMENT_MODE="$MODE" \
+              PONDER_ROLE="worker"
+          fi
 
           # Deploy (uploads source, Railway builds Dockerfile remotely)
           railway up --service "$TARGET_SERVICE_ID" --detach
