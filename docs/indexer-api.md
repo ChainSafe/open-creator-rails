@@ -32,8 +32,31 @@ https://indexer-api-production-c33d.up.railway.app/
 ```bash
 curl -X POST https://indexer-api-production-c33d.up.railway.app/graphql \
   -H "Content-Type: application/json" \
-  -d '{"query": "{ assets { items { id address owner } } }"}'
+  -d '{"query": "{ assetEntitys { items { id address owner } } }"}'
 ```
+
+---
+
+### Available query fields
+
+Ponder generates both a singular (fetch by ID) and a plural (list) field for each table.
+
+| Singular | Plural (list) | Description |
+|---|---|---|
+| `assetEntity` | `assetEntitys` | Asset contract state |
+| `subscription` | `subscriptions` | Subscription state per asset–subscriber |
+| `assetRegistry_AssetCreated` | `assetRegistry_AssetCreateds` | Asset creation events |
+| `assetRegistry_OwnershipTransferred` | `assetRegistry_OwnershipTransferreds` | Registry ownership transfer events |
+| `assetRegistry_RegistryFeeShareUpdated` | `assetRegistry_RegistryFeeShareUpdateds` | Registry fee share update events |
+| `assetRegistry_RegistryFeeClaimedBatch` | `assetRegistry_RegistryFeeClaimedBatchs` | Registry fee claim batch events |
+| `asset_SubscriptionAdded` | `asset_SubscriptionAddeds` | New subscription events |
+| `asset_SubscriptionExtended` | `asset_SubscriptionExtendeds` | Subscription extension events |
+| `asset_SubscriptionRevoked` | `asset_SubscriptionRevokeds` | Subscription revocation events |
+| `asset_SubscriptionCancelled` | `asset_SubscriptionCancelleds` | Subscription cancellation events |
+| `asset_SubscriptionPriceUpdated` | `asset_SubscriptionPriceUpdateds` | Subscription price update events |
+| `asset_CreatorFeeClaimed` | `asset_CreatorFeeClaimeds` | Creator fee claim events |
+| `asset_OwnershipTransferred` | `asset_OwnershipTransferreds` | Asset ownership transfer events |
+| `_meta` | — | Indexer metadata (last indexed block, etc.) |
 
 ---
 
@@ -41,7 +64,7 @@ curl -X POST https://indexer-api-production-c33d.up.railway.app/graphql \
 
 ### Entities (mutable state)
 
-#### `AssetEntity`
+#### `assetEntity`
 
 Current state of each asset contract created through the registry.
 
@@ -57,7 +80,7 @@ Current state of each asset contract created through the registry.
 **Example query — fetch all assets by owner:**
 ```graphql
 {
-  assets(where: { owner: "0xYourAddress" }) {
+  assetEntitys(where: { owner: "0xYourAddress" }) {
     items {
       id
       assetId
@@ -70,15 +93,15 @@ Current state of each asset contract created through the registry.
 
 ---
 
-#### `Subscription`
+#### `subscription`
 
 Current subscription state per asset–subscriber pair. One row per unique `(asset, subscriber)` — not per nonce. Preserves the original `startTime` across mid-subscription term changes.
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | `String` | Primary key — `{AssetEntity.id}_{subscriber}` |
+| `id` | `String` | Primary key — `{assetEntity.id}_{subscriber}` |
 | `chainId` | `Int` | Chain ID |
-| `assetId` | `String` | Links to `AssetEntity.id` |
+| `assetId` | `String` | Links to `assetEntity.id` |
 | `subscriber` | `String` | `bytes32` subscriber identity hash |
 | `payer` | `String` | Address that paid (latest nonce) |
 | `startTime` | `BigInt` | Unix timestamp — original start of unbroken subscription |
@@ -120,7 +143,7 @@ Current subscription state per asset–subscriber pair. One row per unique `(ass
 
 All event tables follow the same ID format: `{chainId}-{txHash}-{logIndex}`.
 
-#### `AssetRegistry_AssetCreated`
+#### `assetRegistry_AssetCreated`
 
 Emitted when a new Asset contract is deployed through the registry.
 
@@ -137,7 +160,7 @@ Emitted when a new Asset contract is deployed through the registry.
 
 ---
 
-#### `Asset_SubscriptionAdded`
+#### `asset_SubscriptionAdded`
 
 Emitted when a new subscription is purchased.
 
@@ -154,7 +177,7 @@ Emitted when a new subscription is purchased.
 
 ---
 
-#### `Asset_SubscriptionExtended`
+#### `asset_SubscriptionExtended`
 
 Emitted when an existing subscription's end time is extended.
 
@@ -168,7 +191,7 @@ Emitted when an existing subscription's end time is extended.
 
 ---
 
-#### `Asset_SubscriptionRevoked` / `Asset_SubscriptionCancelled`
+#### `asset_SubscriptionRevoked` / `asset_SubscriptionCancelled`
 
 Emitted when a subscription ends early (revoked by owner, or cancelled by subscriber).
 
@@ -181,7 +204,7 @@ Emitted when a subscription ends early (revoked by owner, or cancelled by subscr
 
 ---
 
-#### `Asset_SubscriptionPriceUpdated`
+#### `asset_SubscriptionPriceUpdated`
 
 | Field | Type |
 |---|---|
@@ -192,7 +215,7 @@ Emitted when a subscription ends early (revoked by owner, or cancelled by subscr
 
 ---
 
-#### `Asset_CreatorFeeClaimed`
+#### `asset_CreatorFeeClaimed`
 
 | Field | Type |
 |---|---|
@@ -204,7 +227,7 @@ Emitted when a subscription ends early (revoked by owner, or cancelled by subscr
 
 ---
 
-#### `AssetRegistry_RegistryFeeClaimedBatch`
+#### `assetRegistry_RegistryFeeClaimedBatch`
 
 | Field | Type |
 |---|---|
@@ -216,7 +239,7 @@ Emitted when a subscription ends early (revoked by owner, or cancelled by subscr
 
 ---
 
-#### `AssetRegistry_RegistryFeeShareUpdated`
+#### `assetRegistry_RegistryFeeShareUpdated`
 
 | Field | Type |
 |---|---|
@@ -263,3 +286,4 @@ All GraphQL list queries support cursor-based pagination:
 - All addresses are lowercase hex strings
 - `blockTimestamp` is a Unix timestamp in seconds
 - The API serves from a stable views schema — it remains available during indexer redeploys (zero downtime)
+- Ponder pluralises list fields by appending `s` to the table name (e.g. `assetEntitys`, `asset_SubscriptionAddeds`)
