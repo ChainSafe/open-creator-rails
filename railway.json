@@ -1,23 +1,7 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
-  "services": {
-    "indexer-worker-blue": {
-      "build": {
-        "builder": "DOCKERFILE",
-        "dockerfilePath": "apps/indexer/Dockerfile"
-      }
-    },
-    "indexer-worker-green": {
-      "build": {
-        "builder": "DOCKERFILE",
-        "dockerfilePath": "apps/indexer/Dockerfile"
-      }
-    },
-    "indexer-api": {
-      "build": {
-        "builder": "DOCKERFILE",
-        "dockerfilePath": "apps/indexer/Dockerfile"
-      }
-    }
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "apps/indexer/Dockerfile"
   }
 }
