@@ -10,5 +10,10 @@
 #   indexer-worker-green → port 42070  (may be inactive — scrape errors ignored)
 #   indexer-api          → port 42069
 # =============================================================================
+# Run as root so Railway's volume mount at /prometheus is writable.
+# Railway mounts volumes owned by root; the default nobody user cannot
+# write to them without this.
 FROM prom/prometheus:latest
+USER root
 COPY prometheus.railway.yml /etc/prometheus/prometheus.yml
+EXPOSE 9090
