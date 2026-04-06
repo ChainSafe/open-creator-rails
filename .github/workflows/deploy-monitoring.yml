@@ -64,18 +64,11 @@ jobs:
         run: npm install -g @railway/cli
 
       # ----------------------------------------------------------------
-      # 3. Link Railway project
+      # 3. Deploy Prometheus
       #
-      # Runs from repo root so railway.json is picked up automatically.
-      # ----------------------------------------------------------------
-      - name: Link Railway project
-        run: railway link --project "$PROJECT_ID" --environment production
-
-      # ----------------------------------------------------------------
-      # 4. Deploy Prometheus
-      #
-      # Runs from the prometheus subdirectory so Railway uploads only that
-      # directory as the build context and auto-detects its Dockerfile.
+      # Link and deploy from the prometheus subdirectory so Railway
+      # anchors the project context there and uploads only that directory
+      # as the build context. The Dockerfile is auto-detected.
       # Copies prometheus.railway.yml into the image as the active config.
       # Static scrape targets use Railway private networking so no
       # Docker socket is needed.
@@ -83,14 +76,16 @@ jobs:
       - name: Deploy Prometheus
         working-directory: apps/indexer/monitoring/prometheus
         run: |
+          railway link --project "$PROJECT_ID" --environment production
           railway up --service "$PROMETHEUS_SERVICE_ID" --detach
           echo "🟡 Prometheus deployment triggered"
 
       # ----------------------------------------------------------------
-      # 5. Deploy Grafana
+      # 4. Deploy Grafana
       #
-      # Runs from the grafana subdirectory so Railway uploads only that
-      # directory as the build context and auto-detects its Dockerfile.
+      # Link and deploy from the grafana subdirectory so Railway
+      # anchors the project context there and uploads only that directory
+      # as the build context. The Dockerfile is auto-detected.
       # Copies provisioning/ and dashboards/ into the image.
       # Datasource URL is controlled via GF_PROMETHEUS_URL env var set on
       # the Railway service (no hardcoded hostnames in image).
@@ -98,11 +93,12 @@ jobs:
       - name: Deploy Grafana
         working-directory: apps/indexer/monitoring/grafana
         run: |
+          railway link --project "$PROJECT_ID" --environment production
           railway up --service "$GRAFANA_SERVICE_ID" --detach
           echo "📊 Grafana deployment triggered"
 
       # ----------------------------------------------------------------
-      # 6. Summary
+      # 5. Summary
       # ----------------------------------------------------------------
       - name: Summary
         run: |
