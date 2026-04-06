@@ -8,6 +8,6 @@ datasources:
   - name: Prometheus
     type: prometheus
     uid: prometheus
-    url: ${GF_PROMETHEUS_URL:http://prometheus:9090}
+    url: $GF_PROMETHEUS_URL
     isDefault: true
     editable: false
