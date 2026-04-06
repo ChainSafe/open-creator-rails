@@ -14,5 +14,5 @@
 #   GF_USERS_ALLOW_SIGN_UP     — false
 # =============================================================================
 FROM grafana/grafana:latest
-COPY grafana/provisioning /etc/grafana/provisioning
-COPY grafana/dashboards /var/lib/grafana/dashboards
+COPY provisioning /etc/grafana/provisioning
+COPY dashboards /var/lib/grafana/dashboards

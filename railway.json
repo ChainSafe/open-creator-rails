@@ -18,18 +18,6 @@
         "builder": "DOCKERFILE",
         "dockerfilePath": "apps/indexer/Dockerfile"
       }
-    },
-    "prometheus": {
-      "build": {
-        "builder": "DOCKERFILE",
-        "dockerfilePath": "apps/indexer/monitoring/Dockerfile.prometheus"
-      }
-    },
-    "grafana": {
-      "build": {
-        "builder": "DOCKERFILE",
-        "dockerfilePath": "apps/indexer/monitoring/Dockerfile.grafana"
-      }
     }
   }
 }

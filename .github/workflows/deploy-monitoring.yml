@@ -74,17 +74,15 @@ jobs:
       # ----------------------------------------------------------------
       # 4. Deploy Prometheus
       #
-      # Uploads apps/indexer/monitoring/ as the build context.
-      # Dockerfile path resolved from root railway.json:
-      #   "prometheus" → apps/indexer/monitoring/Dockerfile.prometheus
-      #
-      # That Dockerfile copies prometheus.railway.yml into the image.
+      # Uploads apps/indexer/monitoring/prometheus/ as the build context.
+      # Standard Dockerfile inside that directory is auto-detected by Railway.
+      # Copies prometheus.railway.yml into the image as the active config.
       # Static scrape targets use Railway private networking so no
       # Docker socket is needed.
       # ----------------------------------------------------------------
       - name: Deploy Prometheus
         run: |
-          railway up apps/indexer/monitoring \
+          railway up apps/indexer/monitoring/prometheus \
             --service "$PROMETHEUS_SERVICE_ID" \
             --detach
           echo "🟡 Prometheus deployment triggered"
@@ -92,17 +90,15 @@ jobs:
       # ----------------------------------------------------------------
       # 5. Deploy Grafana
       #
-      # Uploads apps/indexer/monitoring/ as the build context.
-      # Dockerfile path resolved from root railway.json:
-      #   "grafana" → apps/indexer/monitoring/Dockerfile.grafana
-      #
-      # That Dockerfile copies provisioning/ and dashboards/ into the image.
+      # Uploads apps/indexer/monitoring/grafana/ as the build context.
+      # Standard Dockerfile inside that directory is auto-detected by Railway.
+      # Copies provisioning/ and dashboards/ into the image.
       # Datasource URL is controlled via GF_PROMETHEUS_URL env var set on
       # the Railway service (no hardcoded hostnames in image).
       # ----------------------------------------------------------------
       - name: Deploy Grafana
         run: |
-          railway up apps/indexer/monitoring \
+          railway up apps/indexer/monitoring/grafana \
             --service "$GRAFANA_SERVICE_ID" \
             --detach
           echo "📊 Grafana deployment triggered"
