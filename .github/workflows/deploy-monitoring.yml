@@ -10,7 +10,8 @@ name: Deploy Monitoring
 #
 # Both services are built as Docker images (Dockerfile.prometheus /
 # Dockerfile.grafana) that bake their config files in — Railway has no
-# bind-mount support.
+# bind-mount support. Dockerfile paths are defined in railway.json under
+# the "prometheus" and "grafana" service keys.
 #
 # This workflow is intentionally separate from deploy-indexer.yml because
 # monitoring infra changes on a different cadence than indexer code.
@@ -74,30 +75,34 @@ jobs:
       # ----------------------------------------------------------------
       # 4. Deploy Prometheus
       #
-      # Builds Dockerfile.prometheus which copies prometheus.railway.yml
-      # into the image. Static scrape targets use Railway private networking
-      # so no Docker socket is needed.
+      # Dockerfile path resolved from railway.json:
+      #   "prometheus" → apps/indexer/monitoring/Dockerfile.prometheus
+      #
+      # That Dockerfile copies prometheus.railway.yml into the image.
+      # Static scrape targets use Railway private networking so no
+      # Docker socket is needed.
       # ----------------------------------------------------------------
       - name: Deploy Prometheus
         run: |
           railway up \
             --service "$PROMETHEUS_SERVICE_ID" \
-            --dockerfile Dockerfile.prometheus \
             --detach
           echo "🟡 Prometheus deployment triggered"
 
       # ----------------------------------------------------------------
       # 5. Deploy Grafana
       #
-      # Builds Dockerfile.grafana which copies provisioning/ and dashboards/
-      # into the image. Datasource URL is controlled via GF_PROMETHEUS_URL
-      # env var set on the Railway service (no hardcoded hostnames in image).
+      # Dockerfile path resolved from railway.json:
+      #   "grafana" → apps/indexer/monitoring/Dockerfile.grafana
+      #
+      # That Dockerfile copies provisioning/ and dashboards/ into the image.
+      # Datasource URL is controlled via GF_PROMETHEUS_URL env var set on
+      # the Railway service (no hardcoded hostnames in image).
       # ----------------------------------------------------------------
       - name: Deploy Grafana
         run: |
           railway up \
             --service "$GRAFANA_SERVICE_ID" \
-            --dockerfile Dockerfile.grafana \
             --detach
           echo "📊 Grafana deployment triggered"
 

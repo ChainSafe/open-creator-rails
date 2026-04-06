@@ -1,7 +1,35 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "apps/indexer/Dockerfile"
+  "services": {
+    "indexer-worker-blue": {
+      "build": {
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "apps/indexer/Dockerfile"
+      }
+    },
+    "indexer-worker-green": {
+      "build": {
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "apps/indexer/Dockerfile"
+      }
+    },
+    "indexer-api": {
+      "build": {
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "apps/indexer/Dockerfile"
+      }
+    },
+    "prometheus": {
+      "build": {
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "apps/indexer/monitoring/Dockerfile.prometheus"
+      }
+    },
+    "grafana": {
+      "build": {
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "apps/indexer/monitoring/Dockerfile.grafana"
+      }
+    }
   }
 }
