@@ -1,0 +1,18 @@
+# =============================================================================
+# Grafana — Railway deployment
+#
+# Bakes provisioning config and dashboards into the image.
+#
+# Provisioned automatically (no manual setup in UI needed):
+#   - Datasource: Prometheus at http://prometheus.railway.internal:9090
+#   - Dashboards: all JSON files from grafana/dashboards/
+#
+# Grafana env vars (set in Railway service settings):
+#   GF_SECURITY_ADMIN_USER     — admin username
+#   GF_SECURITY_ADMIN_PASSWORD — admin password (use a secret)
+#   GF_SERVER_ROOT_URL         — your public Grafana Railway URL
+#   GF_USERS_ALLOW_SIGN_UP     — false
+# =============================================================================
+FROM grafana/grafana:latest
+COPY grafana/provisioning /etc/grafana/provisioning
+COPY grafana/dashboards /var/lib/grafana/dashboards

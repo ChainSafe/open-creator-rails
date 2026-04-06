@@ -9,7 +9,10 @@
     "test": "pnpm -C apps/contracts test && pnpm -C apps/indexer typecheck",
     "indexer:dev": "pnpm -C apps/indexer dev",
     "indexer:start": "pnpm -C apps/indexer start",
-    "dev:local": "concurrently \"anvil\" \"./scripts/seed-local.sh\" \"sleep 6 && PONDER_RPC_URL_31337=http://127.0.0.1:8545 pnpm indexer:dev\""
+    "dev:local": "concurrently \"anvil\" \"./scripts/seed-local.sh\" \"sleep 6 && PONDER_RPC_URL_31337=http://127.0.0.1:8545 pnpm indexer:dev\"",
+    "indexer:docker": "docker compose -f apps/indexer/docker-compose.yaml up --build",
+    "indexer:docker:down": "docker compose -f apps/indexer/docker-compose.yaml down",
+    "indexer:docker:reset": "docker compose -f apps/indexer/docker-compose.yaml down -v"
   },
   "keywords": [],
   "author": "",

@@ -1,0 +1,54 @@
+# =============================================================================
+# Prometheus scrape config — Railway environment
+#
+# Uses Railway private networking (<service-name>.railway.internal) instead
+# of Docker socket discovery (which is unavailable on Railway).
+#
+# Both worker slots are scraped at all times. Whichever is inactive will
+# produce scrape errors that Prometheus tolerates gracefully — no data gap
+# on the active slot.
+#
+# Service name mapping (must match Railway service names exactly):
+#   indexer-worker-blue  → blue worker slot
+#   indexer-worker-green → green worker slot
+#   indexer-api          → API / serve node
+#   prometheus           → self-monitoring
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Worker slots — both scraped; inactive slot scrape errors are expected
+  - job_name: ponder-worker-blue
+    static_configs:
+      - targets: ["indexer-worker-blue.railway.internal:42070"]
+        labels:
+          role: worker
+          slot: blue
+          instance: indexer-worker-blue
+    metrics_path: /metrics
+
+  - job_name: ponder-worker-green
+    static_configs:
+      - targets: ["indexer-worker-green.railway.internal:42070"]
+        labels:
+          role: worker
+          slot: green
+          instance: indexer-worker-green
+    metrics_path: /metrics
+
+  # API node
+  - job_name: ponder-api
+    static_configs:
+      - targets: ["indexer-api.railway.internal:42069"]
+        labels:
+          role: api
+          instance: indexer-api
+    metrics_path: /metrics
+
+  # Prometheus self-monitoring
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

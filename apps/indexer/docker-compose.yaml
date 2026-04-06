@@ -25,12 +25,14 @@ services:
     container_name: ocr_indexer_worker
     ports:
       - "42070:42070"  # worker HTTP (for health checks)
+    labels:
+      ponder.role: worker
+      ponder.metrics_port: "42070"
     environment:
       PONDER_ROLE: worker
       DATABASE_URL: postgres://ponder:password@postgres:5432/ponder_db
-      PONDER_RPC_URL_11155111: ${PONDER_RPC_URL_11155111}
+      PONDER_RPC_URL_11155111: ${PONDER_RPC_URL_11155111:?PONDER_RPC_URL_11155111 is required. Set it in your shell or apps/indexer/.env}
       DEPLOYMENT_MODE: blue-green
-      DEPLOY_TAG: local-test
       VIEWS_SCHEMA: ocr_indexer
       STABLE_SCHEMA: ocr_indexer_live
       PORT: 42070
@@ -55,6 +57,9 @@ services:
     container_name: ocr_indexer_api
     ports:
       - "42069:42069"  # public GraphQL endpoint
+    labels:
+      ponder.role: api
+      ponder.metrics_port: "42069"
     environment:
       PONDER_ROLE: api
       DATABASE_URL: postgres://ponder:password@postgres:5432/ponder_db
@@ -65,6 +70,44 @@ services:
         condition: service_healthy
     restart: on-failure
 
+  # 4. Prometheus — scrapes Ponder worker metrics (/metrics on port 42070)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ocr_prometheus
+    user: root  # required to access Docker socket on macOS
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+    depends_on:
+      - worker
+    restart: unless-stopped
+
+  # 5. Grafana — dashboards for sync lag, API latency, errors
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ocr_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 # Persist DB data so you don't re-index every restart
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
