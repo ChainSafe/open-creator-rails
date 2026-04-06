@@ -49,9 +49,6 @@ jobs:
     name: Deploy Monitoring Stack
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    defaults:
-      run:
-        working-directory: apps/indexer/monitoring
 
     steps:
       # ----------------------------------------------------------------
@@ -68,6 +65,8 @@ jobs:
 
       # ----------------------------------------------------------------
       # 3. Link Railway project
+      #
+      # Runs from repo root so railway.json is picked up automatically.
       # ----------------------------------------------------------------
       - name: Link Railway project
         run: railway link --project "$PROJECT_ID" --environment production
@@ -75,7 +74,8 @@ jobs:
       # ----------------------------------------------------------------
       # 4. Deploy Prometheus
       #
-      # Dockerfile path resolved from railway.json:
+      # Uploads apps/indexer/monitoring/ as the build context.
+      # Dockerfile path resolved from root railway.json:
       #   "prometheus" → apps/indexer/monitoring/Dockerfile.prometheus
       #
       # That Dockerfile copies prometheus.railway.yml into the image.
@@ -84,7 +84,7 @@ jobs:
       # ----------------------------------------------------------------
       - name: Deploy Prometheus
         run: |
-          railway up \
+          railway up apps/indexer/monitoring \
             --service "$PROMETHEUS_SERVICE_ID" \
             --detach
           echo "🟡 Prometheus deployment triggered"
@@ -92,7 +92,8 @@ jobs:
       # ----------------------------------------------------------------
       # 5. Deploy Grafana
       #
-      # Dockerfile path resolved from railway.json:
+      # Uploads apps/indexer/monitoring/ as the build context.
+      # Dockerfile path resolved from root railway.json:
       #   "grafana" → apps/indexer/monitoring/Dockerfile.grafana
       #
       # That Dockerfile copies provisioning/ and dashboards/ into the image.
@@ -101,7 +102,7 @@ jobs:
       # ----------------------------------------------------------------
       - name: Deploy Grafana
         run: |
-          railway up \
+          railway up apps/indexer/monitoring \
             --service "$GRAFANA_SERVICE_ID" \
             --detach
           echo "📊 Grafana deployment triggered"
