@@ -1,16 +1,176 @@
 [
   {
-    "address": "0x5C586A28a97551f8f4f76c933450AC175FdC04a5",
-    "registryFeeShare": 30,
-    "owner": "0xFDA455DEff45bB92E79E705FDEc698c32a952aDE",
+    "address": "0x2BD3CAF65b9FDf1b92a7952D44A32bd736204083",
+    "registryFeeShare": 20,
+    "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E",
     "assets": [
       {
-        "address": "0x5c6b0e6170464d7460bd1925fb28720117ffdd44",
+        "address": "0x98be5379fbd81e7d037f2c455e0cd44fe79aaccd",
         "assetId": "default_asset_id",
         "assetIdHash": "0x973fa65fcf47830442fffbe790bfa4161c5efc1834fb2e63c64429c74cf61805",
         "subscriptionPrice": 4,
-        "tokenAddress": "0xc1863De12DE6b1A14a3695D48b85B692578ce8c7",
-        "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0xd4c92b88ec809356fdf514f1b2b44c788e3071db",
+        "assetId": "sapling_crook",
+        "assetIdHash": "0xcf0a24a29198470cf6446732272b52d19e7889a8a80a1394ddb3933497db3e22",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0xabbf34ae9b75ea12a42ac347915326aaca369a6f",
+        "assetId": "new_avesta_bay",
+        "assetIdHash": "0x9b22f7d5d312ab91a91b7ee0c7ce62db13d16f99df532c3c905b725d6d57713b",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0x2d5839843fc7889db89015e49b03b15cd3633674",
+        "assetId": "klangopolis",
+        "assetIdHash": "0x21983b0cc4b2769467d00926042e9cf8ccea3b9bb3b94975f725619d7f4d5e23",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0x25190f2f549c75c095f4a9b036b4616d0977690a",
+        "assetId": "spes_nova",
+        "assetIdHash": "0x8b5cf930c87d83e425bd9e351fdb954c70ab8d39efdaf8c6265ece28b0034bcb",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0xc587955acd44e5cfe035980015cdc4caabea27d0",
+        "assetId": "the_seedstore",
+        "assetIdHash": "0x4078dd732cab3e99d6d0ad4e199338cec64ae148d2d56c439e1ea59e4fe34c00",
+        "subscriptionPrice": 1,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0x37e3821d6d83ff7ceabcc854434ca3e11bb2a4ef",
+        "assetId": "avesta_health",
+        "assetIdHash": "0x1323ab971a62bb04dbbbf97d1c8f48a7247606d986b98a343f9d6286d17f5764",
+        "subscriptionPrice": 1,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0x1fa54c72449340ba36ac5fe1b1eaa04804033d65",
+        "assetId": "spaling_spa_and_relax",
+        "assetIdHash": "0xf29271aee8c7a8aca9952f73067cc82777a4934d0100bb141c73b925baf19ed9",
+        "subscriptionPrice": 1,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0x1c822bb7b356f487ec16d45c117334a41536549a",
+        "assetId": "algaeville",
+        "assetIdHash": "0xeafcd94ada5cf3683b3e07cbc583b33a12908f99a006299cd687ff8874b3c509",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0x0f42cb3e7f446cc655bc1668429b55e987684b32",
+        "assetId": "fort_quito",
+        "assetIdHash": "0x74b866fc021572e76be0c24503de56f712c85e69c6a2f86bd9ccbf47ce572bc4",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0xa8ca13b4aa3c44383050460f82292256d2dd37d7",
+        "assetId": "flaxafield",
+        "assetIdHash": "0x444b503dc101762f6041fb15d8f458f147bce0e7e2a8645e3a5208ca7195be47",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0xbaf4d2c529fb07753f9b073a5432df0ca663e87f",
+        "assetId": "shroom_flats",
+        "assetIdHash": "0x3aaef28870770828dbe775dd0ad54e3152c221c15b2084bbd1ca669aad1ce144",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0x8a9ec782621178ba6ce3860c7b36f9c51cc43a8a",
+        "assetId": "seed_city",
+        "assetIdHash": "0xe8e89e775e2b4c6ae8d1fd65d8234bc2f69873cbbbb0ecd46658a6dbee1b77e6",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0x9e88619865153876151e84e657f71658f41efef3",
+        "assetId": "klang_sap",
+        "assetIdHash": "0x3be298030fb9d6d8b72d374998de39e4ae92ae4331d33503b9d5749863930a9e",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0xfcf4d4c04862b5f6e67492b2e7608049ff098543",
+        "assetId": "haven_on_haven",
+        "assetIdHash": "0xc9db4d1d85fa5ffe103f743be7985642bc15a5ee638127ebf21e8ca130a04dc5",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0x7d851b7c96f24ce85333af9e1a2f4b77ad7b7d86",
+        "assetId": "prosperia_delta",
+        "assetIdHash": "0x0119d34df0c7947dcdce0bdb50475fb3cb08ed063553702ed58324affee91db9",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0x960eab419aab8148970bd6c4caa9eab71e66b140",
+        "assetId": "prime_nova",
+        "assetIdHash": "0x43d00c8ba26f995852c7e7e82e5b8800ab36bf982246f3392988227e09e7cbe4",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0x948ce2e64bf7491ecda5d6ce563adeae39590401",
+        "assetId": "new_leaf_bay",
+        "assetIdHash": "0xb5e81120e1f102ca66e62d6c4aa92bc9c855ca22b7e524ded1a06c68d8167264",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0xaee93b60279169a25f9af82f952d0d30d5dee3c1",
+        "assetId": "flaxa_springs",
+        "assetIdHash": "0x500368ffbc9ae688d4869174a3e4700c3d17a5cf27c180523cf2462f4184fcc8",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0xbb733cd1b799c31b76cd31229bfc92eb2aa2d9a0",
+        "assetId": "avesta_hill",
+        "assetIdHash": "0xe0aea6b32cf3bed186e33ef224f46db57ddfffdf55efab07ed4d79316363aed4",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
+      },
+      {
+        "address": "0x9ef1a88efec4cc413e9c881ad7817a36c85c51d2",
+        "assetId": "avesta_city",
+        "assetIdHash": "0xef35f0b6bc9ac27b39b89e6bbe46272db97193ca5388396a0cd2dbc2da347729",
+        "subscriptionPrice": 4,
+        "tokenAddress": "0x80436643ce2aE5F26371D7159f803935475727f0",
+        "owner": "0xc5c8A8d844e5a0d72727B2C156052454604c735E"
       }
     ]
   }

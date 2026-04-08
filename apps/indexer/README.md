@@ -52,6 +52,74 @@ The entities are defined in `ponder.schema.ts` and mirror the original Envio imp
 All GraphQL types and fields are automatically generated from `ponder.schema.ts`.
 After running `pnpm dev`, open the Playground at `http://localhost:42069`.
 
+### ID formats
+
+| Entity | ID format |
+|--------|-----------|
+| `AssetEntity` | `{chainId}_{assetAddress}` |
+| `Subscription` | `{chainId}_{assetAddress}_{subscriber}` |
+| Event tables | `{chainId}-{txHash}-{logIndex}` |
+
+### Query examples
+
+**Get a single asset:**
+```graphql
+{
+  assetEntity(id: "11155111_0xd4c92b88ec809356fdf514f1b2b44c788e3071db") {
+    id chainId assetId address owner
+  }
+}
+```
+
+**All assets by owner:**
+```graphql
+{
+  assetEntitys(where: { owner: "0xc5c8a8d844e5a0d72727b2c156052454604c735e" }) {
+    items { id chainId assetId address owner }
+    totalCount
+  }
+}
+```
+
+**Get a subscription:**
+```graphql
+{
+  subscription(id: "11155111_0xd4c92b88..._0x8e7e48dc...") {
+    id assetId subscriber payer startTime endTime nonce isActive
+  }
+}
+```
+
+**All subscriptions for a subscriber:**
+```graphql
+{
+  subscriptions(where: { subscriber: "0x8e7e48dc..." }) {
+    items { id assetId subscriber payer startTime endTime nonce isActive }
+    totalCount
+  }
+}
+```
+
+**Event history (AssetCreated):**
+```graphql
+{
+  assetRegistry_AssetCreateds(limit: 10) {
+    items { id assetId asset subscriptionPrice tokenAddress owner registryAddress blockNumber blockTimestamp }
+    totalCount
+  }
+}
+```
+
+**Event history (SubscriptionAdded):**
+```graphql
+{
+  asset_SubscriptionAddeds {
+    items { id subscriber payer startTime endTime nonce assetAddress blockNumber blockTimestamp }
+    totalCount
+  }
+}
+```
+
 ## Running the indexer
 
 ### Development
