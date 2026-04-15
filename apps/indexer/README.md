@@ -52,6 +52,12 @@ The entities are defined in `ponder.schema.ts` and mirror the original Envio imp
 All GraphQL types and fields are automatically generated from `ponder.schema.ts`.
 After running `pnpm dev`, open the Playground at `http://localhost:42069`.
 
+> **⚠️ Addresses are lowercased.** All address fields (`id`, `owner`, `registryAddress`, `payer`, `asset`, etc.) are stored in **lowercase**. If you query with a checksummed (mixed-case) address you will get no results. Lowercase the address on the client before querying:
+>
+> ```ts
+> const address = walletAddress.toLowerCase();
+> ```
+
 ## Running the indexer
 
 ### Development
