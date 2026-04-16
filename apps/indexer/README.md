@@ -80,7 +80,51 @@ To change the network or contract addresses, edit `ponder.config.ts`.
 
 ## Local Development (Anvil)
 
-To test with a local Anvil chain, update `ponder.config.ts` to point to your local RPC URL (usually `http://127.0.0.1:8545`) and ensure the contract addresses match your deployment.
+The indexer uses the Ponder convention of `PONDER_RPC_URL_<chainId>` environment variables to decide which chains to index. To run against a local Anvil node, create an `.env.local` file inside the indexer directory:
+
+```bash
+# apps/indexer/.env.local
+
+# Anvil's default JSON-RPC endpoint (chain ID 31337)
+PONDER_RPC_URL_31337=http://127.0.0.1:8545
+```
+
+> Ponder automatically loads `.env.local` in dev mode — no extra configuration needed.
+
+### Quick start
+
+From the monorepo root:
+
+```bash
+pnpm setup        # first time only — build contracts + sync ABIs
+pnpm dev:local    # starts Anvil, seeds contracts, and launches the indexer
+```
+
+`dev:local` starts Anvil, runs `seed-local.sh` (deploys registry, token, and sample assets), and launches the indexer concurrently. The RPC URL is passed inline so `.env.local` is not required for this path.
+
+The GraphQL playground will be available at `http://localhost:42069`.
+
+### Docker
+
+The root `package.json` also provides Docker-based scripts that run the indexer with Postgres (useful for testing production-like setups):
+
+```bash
+pnpm indexer:docker        # build and start the stack (Postgres + worker + API)
+pnpm indexer:docker:down   # stop all containers
+pnpm indexer:docker:reset  # stop and remove volumes (full reset)
+```
+
+> The Docker Compose file lives at `apps/indexer/docker-compose.yaml`. It requires `PONDER_RPC_URL_11155111` to be set in your shell or in `apps/indexer/.env`.
+
+### Environment variable reference
+
+| Variable | Chain | Description |
+|---|---|---|
+| `PONDER_RPC_URL_31337` | Local (Anvil) | Anvil RPC URL. Set this to enable local chain indexing. |
+| `PONDER_RPC_URL_11155111` | Sepolia | Sepolia RPC URL. Set this to enable Sepolia indexing. |
+| `DATABASE_URL` | — | Postgres connection string. Only needed for production; dev mode uses PGlite (in-memory) by default. |
+
+> **Tip:** You can set both `PONDER_RPC_URL_31337` and `PONDER_RPC_URL_11155111` at the same time to index multiple chains simultaneously.
 
 ## Prerequisites
 
