@@ -2,7 +2,7 @@ if [ -f .env ]; then
     source .env
 fi
 
-target_dir="packages/config/src/deployments"
+target_dir="deployments"
 
 function get_deployments_file() {
     chain_id=$(cast chain-id --rpc-url $RPC_URL)
