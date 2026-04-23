@@ -2,7 +2,6 @@
 out/
 cache/
 broadcast/
-lib/
 
 # Dependencies
 node_modules/
