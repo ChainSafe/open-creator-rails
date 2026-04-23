@@ -8,7 +8,6 @@ import {BaseTest} from "./Base.t.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract AssetRegistryTest is BaseTest {
-
     function _subscribe(uint256 duration) internal returns (uint256 subscription) {
         test_createAsset();
 
@@ -52,7 +51,6 @@ contract AssetRegistryTest is BaseTest {
     }
 
     function test_createAsset() public {
-        
         if (assetRegistry.viewAsset(ASSET_ID)) {
             return;
         }
@@ -62,7 +60,7 @@ contract AssetRegistryTest is BaseTest {
         emit AssetRegistry.AssetCreated(ASSET_ID, address(0), SUBSCRIPTION_PRICE, address(testToken), assetOwner);
         asset = IAsset(assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner));
         vm.stopPrank();
-        
+
         assertEq(asset.getAssetId(), ASSET_ID);
         assertEq(address(asset), assetRegistry.getAsset(ASSET_ID));
     }
@@ -234,7 +232,9 @@ contract AssetRegistryTest is BaseTest {
 
     function test_claimRegistryFee_multiple() public {
         uint256 tokenBalance = testToken.balanceOf(registryOwner);
-        for (uint256 i = 0; i < 10; i++) _subscribe(DURATION);
+        for (uint256 i = 0; i < 10; i++) {
+            _subscribe(DURATION);
+        }
 
         uint256 endTime = assetRegistry.getSubscription(ASSET_ID, SUBSCRIBER);
         uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, endTime - block.timestamp);
@@ -250,7 +250,6 @@ contract AssetRegistryTest is BaseTest {
     }
 
     function test_claimRegistryFee_multiple_creatorFeeShare() public {
-        
         uint256 registryFeeShare = assetRegistry.getRegistryFeeShare();
         uint256 tokenBalance = testToken.balanceOf(registryOwner);
 
@@ -554,5 +553,4 @@ contract AssetRegistryTest is BaseTest {
 
         assertEq(assetRegistry.getSubscription(ASSET_ID, SUBSCRIBER), newEnd);
     }
-
 }

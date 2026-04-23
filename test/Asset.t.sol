@@ -26,15 +26,15 @@ contract AssetTest is BaseTest {
     function _subscribe(uint256 duration) internal returns (uint256 subscription) {
         address payer = signer;
         address spender = address(asset);
-        
+
         uint256 value = asset.getSubscriptionPrice(duration);
 
         uint256 deadline = block.timestamp + duration;
-        
-        (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);        
+
+        (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
 
         subscription = asset.subscribe(SUBSCRIBER, payer, spender, value, deadline, v, r, s);
-        
+
         return subscription;
     }
 
@@ -63,10 +63,16 @@ contract AssetTest is BaseTest {
         uint256 subscription = _subscribe(DURATION);
 
         assertTrue(subscription > block.timestamp);
-        
+
         assertEq(asset.getSubscription(SUBSCRIBER), subscription);
-        assertEq(testToken.balanceOf(address(asset)), assetBalanceBefore + expectedFee, "Asset should receive expected fee");
-        assertEq(testToken.balanceOf(signer), signerBalanceBefore - expectedFee, "Signer balance should decrease by expected fee");
+        assertEq(
+            testToken.balanceOf(address(asset)), assetBalanceBefore + expectedFee, "Asset should receive expected fee"
+        );
+        assertEq(
+            testToken.balanceOf(signer),
+            signerBalanceBefore - expectedFee,
+            "Signer balance should decrease by expected fee"
+        );
     }
 
     function test_subscribe_multiple() public {
@@ -89,7 +95,7 @@ contract AssetTest is BaseTest {
 
     function test_subscribe_multiple_subscriptionPrice() public {
         uint256 tokenBalance = testToken.balanceOf(signer);
-        
+
         _subscribe(DURATION);
 
         uint256 value = asset.getSubscriptionPrice(DURATION);
@@ -136,18 +142,18 @@ contract AssetTest is BaseTest {
         uint256 creatorFee = assetRegistry.getCreatorFee(value);
         vm.expectEmit(true, true, true, true);
         emit Asset.CreatorFeeClaimed(SUBSCRIBER, creatorFee);
-        
+
         uint256 claimedCreatorFee = asset.claimCreatorFee(SUBSCRIBER);
-        
+
         vm.stopPrank();
-        
+
         assertEq(claimedCreatorFee, creatorFee);
         assertEq(testToken.balanceOf(assetOwner), claimedCreatorFee);
     }
 
     function test_claimCreatorFee_multiple_subscriptionPrice() public {
         uint256 tokenBalance = testToken.balanceOf(assetOwner);
-        
+
         _subscribe(DURATION);
 
         uint256 value = asset.getSubscriptionPrice(DURATION);
@@ -157,7 +163,7 @@ contract AssetTest is BaseTest {
         vm.stopPrank();
 
         _subscribe(DURATION);
-        
+
         value += asset.getSubscriptionPrice(DURATION);
 
         uint256 creatorFee = assetRegistry.getCreatorFee(value);
@@ -177,10 +183,10 @@ contract AssetTest is BaseTest {
     function test_claimCreatorFee_midSubscription() public {
         uint256 tokenBalance = testToken.balanceOf(assetOwner);
         test_subscribe();
-        
+
         uint256 value = asset.getSubscriptionPrice(DURATION);
         vm.warp(block.timestamp + (DURATION / 2));
-    
+
         vm.startPrank(assetOwner);
         uint256 creatorFee = assetRegistry.getCreatorFee(value) / 2;
         vm.expectEmit(true, true, true, true);
@@ -193,7 +199,6 @@ contract AssetTest is BaseTest {
     }
 
     function test_claimCreatorFee_multiple_creatorFeeShare() public {
-        
         uint256 registryFeeShare = assetRegistry.getRegistryFeeShare();
         uint256 tokenBalance = testToken.balanceOf(assetOwner);
 
@@ -239,15 +244,15 @@ contract AssetTest is BaseTest {
 
     function test_claimCreatorFee_startOfNextSubscription() public {
         uint256 tokenBalance = testToken.balanceOf(assetOwner);
-        
+
         uint256 endTime = _subscribe(DURATION);
-        
+
         uint256 value = asset.getSubscriptionPrice(DURATION);
-        
+
         _subscribe(DURATION);
 
         vm.warp(endTime);
-        
+
         vm.startPrank(assetOwner);
         uint256 creatorFee = assetRegistry.getCreatorFee(value);
         vm.expectEmit(true, true, true, true);
@@ -303,7 +308,9 @@ contract AssetTest is BaseTest {
 
     function test_revokeSubscription_midSubscription() public {
         uint256 tokenBalance = testToken.balanceOf(signer);
-        for (uint256 i = 0; i < 2; i++) _subscribe(DURATION);
+        for (uint256 i = 0; i < 2; i++) {
+            _subscribe(DURATION);
+        }
 
         uint256 value = asset.getSubscriptionPrice(DURATION);
         vm.warp(block.timestamp + DURATION + (DURATION / 2));
@@ -451,7 +458,9 @@ contract AssetTest is BaseTest {
 
     function test_cancelSubscription_midSubscription() public {
         uint256 tokenBalance = testToken.balanceOf(signer);
-        for (uint256 i = 0; i < 2; i++) _subscribe(DURATION);
+        for (uint256 i = 0; i < 2; i++) {
+            _subscribe(DURATION);
+        }
 
         uint256 value = asset.getSubscriptionPrice(DURATION);
         vm.warp(block.timestamp + DURATION + (DURATION / 2));
@@ -498,9 +507,9 @@ contract AssetTest is BaseTest {
 
     function test_cancelSubscription_unauthorized() public {
         uint256 tokenBalance = testToken.balanceOf(signer);
-        
+
         test_subscribe();
-        
+
         vm.prank(UNAUTHORIZED);
         vm.expectRevert(Asset.OnlyRegistryUnauthorizedAccount.selector);
         asset.cancelSubscription(SUBSCRIBER);

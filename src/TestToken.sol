@@ -8,10 +8,9 @@ import {ERC20Permit} from "lib/openzeppelin-contracts/contracts/token/ERC20/exte
 // It supports permit for testing the asset contract
 // THIS IS NOT FOR PRODUCTION USE
 contract TestToken is ERC20, ERC20Permit {
-
     string internal constant NAME = "Test Token";
     string internal constant SYMBOL = "TEST";
-    
+
     constructor() ERC20(NAME, SYMBOL) ERC20Permit(NAME) {}
 
     // Mint tokens to an address, anyone can mint

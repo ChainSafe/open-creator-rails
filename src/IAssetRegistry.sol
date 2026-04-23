@@ -11,12 +11,9 @@ interface IAssetRegistry {
     /// @param _tokenAddress ERC20 (with permit) used for subscription payments.
     /// @param _owner Creator/owner of the new asset.
     /// @return The address of the newly deployed Asset contract.
-    function createAsset(
-        bytes32 _assetId,
-        uint256 _subscriptionPrice,
-        address _tokenAddress,
-        address _owner
-    ) external returns (address);
+    function createAsset(bytes32 _assetId, uint256 _subscriptionPrice, address _tokenAddress, address _owner)
+        external
+        returns (address);
 
     /// @notice Checks whether an asset is registered for the given id.
     /// @param _assetId Asset identifier to check.
