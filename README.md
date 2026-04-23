@@ -12,10 +12,8 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v22+)
-- [pnpm](https://pnpm.io/)
 - [Foundry](https://book.getfoundry.sh/getting-started/installation) (forge, cast, anvil)
-- [jq](https://jqlang.org/) (optional) — for script usage (e.g. `get_address` in `./scripts/utils.sh` reads `packages/config/src/deployments/registries_<chain_id>.json` via jq)
+- [jq](https://jqlang.org/) (optional) — for script usage (e.g. `get_address` in `script/utils.sh` reads `registries_<chain_id>.json` via jq)
 
 ### Setup
 
@@ -24,7 +22,7 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
    ```bash
    git clone <repo-url>
    cd open-creator-rails
-   pnpm install
+   forge install
    ```
 
 2. **Environment variables**
@@ -36,29 +34,16 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
    | `PRIVATE_KEY` | Private key used to deploy and send transactions (e.g. `0x...`). |
    | `RPC_URL`     | JSON-RPC URL of the network (e.g. `https://sepolia.infura.io/v3/YOUR_KEY` or `http://127.0.0.1:8545` for local). |
 
-3. **Build Contracts & Sync ABIs**
+3. **Build**
 
    ```bash
-   pnpm setup
+   forge build
    ```
 
-   Or individually:
+4. **Run tests**
 
    ```bash
-   pnpm contract:build
-   pnpm -C packages/config sync
-   ```
-
-4. **Run Indexer (Local)**
-
-   ```bash
-   pnpm indexer:dev
-   ```
-
-5. **Run tests**
-
-   ```bash
-   pnpm test
+   forge test
    ```
 
 ---
@@ -83,7 +68,7 @@ Example:
 ./scripts/deployRegistry.sh 20
 ```
 
-Deployments are recorded in `packages/config/src/deployments/registries_<chain_id>.json`, where `chain_id` is the chain ID of the network from `RPC_URL` (e.g. `registries_11155111.json` for Sepolia, `registries_84532.json` for Base Sepolia). The file is an array of registry objects with `address`, `registryFeeShare`, `owner`, and `assets`.
+Deployments are recorded in `deployments/registries_<chain_id>.json`, where `chain_id` is the chain ID of the network from `RPC_URL` (e.g. `registries_11155111.json` for Sepolia, `registries_84532.json` for Base Sepolia). The file is an array of registry objects with `address`, `registryFeeShare`, `owner`, and `assets`.
 
 ### Creating Assets
 
@@ -95,7 +80,7 @@ Create an asset in a registry (registry owner only):
 
 | Input | Description |
 |-------|--------------|
-| `registry_index` | Zero-based index of the registry in `packages/config/src/deployments/registries_<chain_id>.json` (e.g. `0` for the first registry). |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json` (e.g. `0` for the first registry). |
 | `asset_id` | Human-readable identifier for the asset. The script hashes it with keccak256 to get the bytes32 used on-chain. |
 | `subscription_price` | Price per subscription unit per second in the token's smallest unit. |
 | `token_address` | Address of the ERC20 contract used for subscription payments. Must implement ERC-2612 (Permits), as subscription payments use gasless permit approvals. |
@@ -109,7 +94,7 @@ Example:
 
 The token address must implement ERC-2612 / IERC20Permit, as subscription payments use gasless permit approvals.
 
-New assets are appended to the `assets` array of the corresponding registry in `packages/config/src/deployments/registries_<chain_id>.json`. Each asset entry includes `address`, `assetId`, `assetIdHash`, `subscriptionPrice`, `tokenAddress`, and `owner`.
+New assets are appended to the `assets` array of the corresponding registry in `deployments/registries_<chain_id>.json`. Each asset entry includes `address`, `assetId`, `assetIdHash`, `subscriptionPrice`, `tokenAddress`, and `owner`.
 
 ### Subscribe
 
@@ -121,7 +106,7 @@ Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs 
 
 | Input | Description |
 |-------|--------------|
-| `registry_index` | Zero-based index of the registry in `packages/config/src/deployments/registries_<chain_id>.json`. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). The script hashes it with keccak256 for the on-chain call. |
 | `subscriber_id` | Human-readable subscriber identity (e.g. user id, wallet-derived id). The script hashes it with keccak256 to get the `bytes32` subscriber used on-chain. Access and subscription queries use this identity. |
 | `value` | Payment amount in the token's smallest unit. Must be a multiple of the asset's subscription price; excess is rounded down. |
@@ -143,7 +128,7 @@ Update the subscription price for an asset (asset owner only):
 
 | Input | Description |
 |-------|--------------|
-| `registry_index` | Zero-based index of the registry in `packages/config/src/deployments/registries_<chain_id>.json`. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
 | `new_subscription_price` | New price per subscription unit (e.g. per second) in the token's smallest unit. |
 | `asset_owner_private_key` | Private key of the asset owner. Used to send the transaction. |
@@ -154,7 +139,7 @@ Example:
 ./scripts/setSubscriptionPrice.sh 0 "default_asset_id" 8 0x1b97...
 ```
 
-The script updates the `subscriptionPrice` for the asset in `packages/config/src/deployments/registries_<chain_id>.json`.
+The script updates the `subscriptionPrice` for the asset in `deployments/registries_<chain_id>.json`.
 
 ### Transfer Asset Ownership
 
@@ -166,7 +151,7 @@ Transfer ownership of an asset to a new address (asset owner only). The asset ow
 
 | Input | Description |
 |-------|--------------|
-| `registry_index` | Zero-based index of the registry in `packages/config/src/deployments/registries_<chain_id>.json`. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
 | `asset_owner_private_key` | Private key of the current asset owner. Used to send the transaction. |
 | `new_owner` | Address of the new owner; can claim creator share of subscription fees going forward. |
@@ -177,21 +162,21 @@ Example:
 ./scripts/transferAssetOwnership.sh 0 "default_asset_id" 0x1b97... 0xabcd...
 ```
 
-The script updates the `owner` for the asset in `packages/config/src/deployments/registries_<chain_id>.json`.
+The script updates the `owner` for the asset in `deployments/registries_<chain_id>.json`.
 
 ---
 
 > ### Test Tokens
 >
-> Test tokens supporting ERC-2612 (permit) are already deployed for testing subscriptions. Addresses are listed in `packages/config/src/deployments/token_addresses.json` keyed by chain ID (e.g. Sepolia `11155111`, Base Sepolia `84532`). Anyone can mint any amount for testing.
+> Test tokens supporting ERC-2612 (permit) are already deployed for testing subscriptions. Addresses are listed in `deployments/token_addresses.json` keyed by chain ID (e.g. Sepolia `11155111`, Base Sepolia `84532`). Anyone can mint any amount for testing.
 >
-> **Deploy a test token** (records the address in `packages/config/src/deployments/token_addresses.json` for the current chain):
+> **Deploy a test token** (records the address in `deployments/token_addresses.json` for the current chain):
 >
 > ```bash
 > ./scripts/deployTestToken.sh
 > ```
 >
-> **Mint test tokens** to an address (uses the token in `packages/config/src/deployments/token_addresses.json` for the current chain):
+> **Mint test tokens** to an address (uses the token in `deployments/token_addresses.json` for the current chain):
 >
 > ```bash
 > ./scripts/mintTestToken.sh <to> <amount>
