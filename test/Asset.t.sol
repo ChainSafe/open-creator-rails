@@ -3,9 +3,7 @@ pragma solidity ^0.8.0;
 
 import {BaseTest} from "./Base.t.sol";
 import {Asset} from "../src/Asset.sol";
-import {AssetRegistry} from "../src/AssetRegistry.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import {Vm} from "forge-std/Vm.sol";
 
 contract AssetTest is BaseTest {
     function test_getAssetId() public view {
