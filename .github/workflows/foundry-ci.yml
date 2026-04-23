@@ -20,10 +20,8 @@ jobs:
           version: stable
 
       - name: Run Forge Build
-        working-directory: apps/contracts
         run: forge build
 
       - name: Run Forge Test
-        working-directory: apps/contracts
         run: forge test
 
