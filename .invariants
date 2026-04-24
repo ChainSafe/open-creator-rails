@@ -1,0 +1,39 @@
+version: "1.0"
+scope: "open-creator-rails (contracts)"
+inherits: "../.invariants"
+
+# Contract-level assertions. These extend the apex invariants with guarantees
+# specific to the deployed Asset and AssetRegistry contracts.
+# Maintainer: contracts team — not agent-writable.
+
+asserts:
+
+  - id: payment_held_not_distributed
+    claim: "All subscription payment is held in the Asset contract at subscribe() — not distributed at that time"
+    source: codebase
+    severity: FROZEN
+    verify:
+      search: "subscribe payment transfer claimCreatorFee claimRegistryFee pull"
+      in_file: "open-creator-rails/apps/contracts/src/Asset.sol"
+    ref: "protocol-surface/FROZEN.md §6"
+    why: "Downstream fee-claiming code (claimCreatorFee, claimRegistryFee) assumes pull model. Push distribution at subscribe time would break all fee accounting."
+
+  - id: event_signatures_frozen
+    claim: "SubscriptionAdded, SubscriptionExtended, SubscriptionRevoked, SubscriptionCancelled event signatures are frozen"
+    source: codebase
+    severity: FROZEN
+    verify:
+      search: "SubscriptionAdded SubscriptionExtended SubscriptionRevoked SubscriptionCancelled event indexed"
+      in_file: "open-creator-rails/apps/contracts/src/Asset.sol"
+    ref: "protocol-surface/FROZEN.md §5"
+    why: "Indexers compile against these ABI event definitions. Any signature change breaks all indexers."
+
+  - id: refund_goes_to_payer
+    claim: "On cancel or revoke, unused time is refunded to subscription.payer — not to subscriber"
+    source: codebase
+    severity: FROZEN
+    verify:
+      search: "cancel revoke refund payer subscriber unused time"
+      in_file: "open-creator-rails/apps/contracts/src/Asset.sol"
+    ref: "protocol-surface/FROZEN.md §6"
+    why: "Payer and subscriber may be different wallets. Refunding subscriber would redirect funds to the wrong party."
