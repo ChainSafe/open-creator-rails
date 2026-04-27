@@ -22,6 +22,9 @@ jobs:
       - name: Run Forge Build
         run: forge build
 
+      - name: Forge format check
+        run: forge fmt --check
+        
       - name: Run Forge Test
         run: forge test
 
