@@ -23,7 +23,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
     address internal immutable TOKEN_ADDRESS;
     IERC20 internal immutable TOKEN_CONTRACT;
-    IERC20Permit internal immutable TOKEN_PERMIT_CONTRACT;
 
     mapping(bytes32 => Subscription) internal subscriptions;
     mapping(bytes32 => uint256) internal nonces;
@@ -85,7 +84,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         TOKEN_ADDRESS = _tokenAddress;
 
         TOKEN_CONTRACT = IERC20(TOKEN_ADDRESS);
-        TOKEN_PERMIT_CONTRACT = IERC20Permit(TOKEN_ADDRESS);
 
         REGISTRY_ADDRESS = msg.sender;
         ASSET_REGISTRY = IAssetRegistry(REGISTRY_ADDRESS);
@@ -142,9 +140,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     function _subscribe(bytes32 subscriber, address payer, uint256 value) internal returns (uint256) {
         uint256 duration = value / subscriptionPrice;
 
-        uint256 timestamp = block.timestamp;
-
-        uint256 startTime = timestamp;
+        uint256 startTime = block.timestamp;
 
         uint256 nonce = nonces[subscriber];
 
@@ -222,7 +218,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             revert InvalidSpender();
         }
 
-        try TOKEN_PERMIT_CONTRACT.permit(owner, address(this), value, deadline, v, r, s) {
+        try IERC20Permit(TOKEN_ADDRESS).permit(owner, address(this), value, deadline, v, r, s) {
             value -= value % subscriptionPrice;
 
             if (value < subscriptionPrice) {
