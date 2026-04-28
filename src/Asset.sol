@@ -20,7 +20,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
-    
+
     bytes32 internal immutable ASSET_ID;
     address internal immutable REGISTRY_ADDRESS;
 
@@ -490,7 +490,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     }
 
     function commitCancellation(string memory subscriberId) external returns (uint256 timestamp) {
-        
         timestamp = block.timestamp;
 
         cancellations[keccak256(abi.encode(subscriberId, msg.sender))] = timestamp;
@@ -498,10 +497,12 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return timestamp;
     }
 
-    function cancelSubscription(string memory subscriberId, uint256 timestamp, bytes memory signature) external nonReentrant {
-        
+    function cancelSubscription(string memory subscriberId, uint256 timestamp, bytes memory signature)
+        external
+        nonReentrant
+    {
         bytes32 subscriber = keccak256(abi.encode(subscriberId, msg.sender));
-        
+
         if (cancellations[subscriber] != timestamp) {
             revert InvalidCancellationCommitment();
         }

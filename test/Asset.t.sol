@@ -595,7 +595,8 @@ contract AssetTest is BaseTest {
 
         vm.prank(otherAddress);
         uint256 otherTimestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory otherSignature = _getCancellationSignatureWithKey(SUBSCRIBER_ID, otherAddress, otherTimestamp, otherKey);
+        bytes memory otherSignature =
+            _getCancellationSignatureWithKey(SUBSCRIBER_ID, otherAddress, otherTimestamp, otherKey);
 
         vm.prank(signer);
         asset.cancelSubscription(SUBSCRIBER_ID, signerTimestamp, signerSignature);
