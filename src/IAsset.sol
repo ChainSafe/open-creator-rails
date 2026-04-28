@@ -82,7 +82,14 @@ interface IAsset {
     /// @param subscriber Subscriber whose subscription to revoke.
     function revokeSubscription(bytes32 subscriber) external;
 
-    /// @notice Cancels a subscriber's subscription. Callable by the asset owner or the subscription payer.
-    /// @param subscriber Subscriber whose subscription to cancel.
-    function cancelSubscription(bytes32 subscriber) external;
+    /// @notice Commits the cancellation of your subscriber's subscription.
+    /// @param subscriberId Your subscriber ID.
+    /// @return timestamp The timestamp of the cancellation commitment.
+    function commitCancellation(string memory subscriberId) external returns (uint256 timestamp);
+
+    /// @notice Cancels your subscriber's subscription.
+    /// @param subscriberId Your subscriber ID.
+    /// @param timestamp The timestamp of the cancellation commitment.
+    /// @param signature The signature of the cancellation commitment by your subscriber.
+    function cancelSubscription(string memory subscriberId, uint256 timestamp, bytes memory signature) external;
 }

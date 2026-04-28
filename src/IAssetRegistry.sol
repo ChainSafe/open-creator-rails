@@ -112,11 +112,6 @@ interface IAssetRegistry {
     /// @return The amount of registry fee claimed.
     function claimRegistryFee(bytes32 _assetId, bytes32[] calldata _subscribers) external returns (uint256);
 
-    /// @notice Cancels a subscription. Callable only by the Registry owner.
-    /// @param _assetId Asset identifier.
-    /// @param _subscriber Hash of the subscriber identity.
-    function cancelSubscription(bytes32 _assetId, bytes32 _subscriber) external;
-
     /// @notice Returns the owner of the registry (e.g. for receiving registry fees).
     /// @return The registry owner address.
     function getOwner() external view returns (address);
