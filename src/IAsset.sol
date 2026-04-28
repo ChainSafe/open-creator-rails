@@ -26,19 +26,22 @@ interface IAsset {
     /// @param newSubscriptionPrice New subscription price.
     function setSubscriptionPrice(uint256 newSubscriptionPrice) external;
 
-    /// @notice Returns a user's subscription expiry timestamp.
-    /// @param subscriber Hash of the subscriber identity to query.
+    /// @notice Returns a subscriber's subscription expiry timestamp.
+    /// @param subscriber Subscriber hash to query (recommended canonical form:
+    ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @return Expiry timestamp; 0 if no subscription.
     function getSubscription(bytes32 subscriber) external view returns (uint256);
 
-    /// @notice Checks whether a user has an active subscription.
-    /// @param subscriber Hash of the subscriber identity to check.
+    /// @notice Checks whether a subscriber has an active subscription.
+    /// @param subscriber Subscriber hash to check (recommended canonical form:
+    ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @return True if the subscriber's subscription is active.
     function isSubscriptionActive(bytes32 subscriber) external view returns (bool);
 
-    /// @notice Subscribes an owner using ERC-2612 permit: owner signs permit,
-    ///         then payment is pulled and subscription extended.
-    /// @param subscriber Hash of the subscriber identity to subscribe.
+    /// @notice Subscribes using ERC-2612 permit: payer signs permit,
+    ///         then payment is pulled and subscription is attributed to `subscriber`.
+    /// @param subscriber Subscriber hash to subscribe (recommended canonical form:
+    ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @param payer Subscription payer and subscription refund beneficiary.
     /// @param spender Must be this asset contract for the permit to be accepted.
     /// @param value Permit allowance / payment amount (will be rounded down to subscription price units).
@@ -58,38 +61,38 @@ interface IAsset {
         bytes32 s
     ) external returns (uint256);
 
-    /// @notice Claims the creator fee for a user. Callable only by the asset owner.
-    /// @param subscriber Hash of the subscriber identity whose creator fee to claim.
+    /// @notice Claims the creator fee for a subscriber. Callable only by the asset owner.
+    /// @param subscriber Subscriber hash whose creator fee to claim.
     /// @return The amount of creator fee claimed.
     function claimCreatorFee(bytes32 subscriber) external returns (uint256);
 
-    /// @notice Claims the creator fee for multiple users. Callable only by the asset owner.
-    /// @param subscribers Array of subscriber identities whose creator fee to claim.
+    /// @notice Claims the creator fee for multiple subscribers. Callable only by the asset owner.
+    /// @param subscribers Array of subscriber hashes whose creator fee to claim.
     /// @return The amount of creator fee claimed.
     function claimCreatorFee(bytes32[] calldata subscribers) external returns (uint256);
 
-    /// @notice Claims the registry fee for a user. Callable only by the Registry owner.
-    /// @param subscriber Hash of the subscriber identity whose registry fee to claim.
+    /// @notice Claims the registry fee for a subscriber. Callable only by the Registry owner.
+    /// @param subscriber Subscriber hash whose registry fee to claim.
     /// @return The amount of registry fee claimed.
     function claimRegistryFee(bytes32 subscriber) external returns (uint256);
 
-    /// @notice Claims the registry fee for multiple users. Callable only by the Registry owner.
-    /// @param subscribers Array of subscriber identities whose registry fee to claim.
+    /// @notice Claims the registry fee for multiple subscribers. Callable only by the Registry owner.
+    /// @param subscribers Array of subscriber hashes whose registry fee to claim.
     /// @return The amount of registry fee claimed.
     function claimRegistryFee(bytes32[] calldata subscribers) external returns (uint256);
 
     /// @notice Revokes a subscriber's subscription. Callable only by the asset owner.
-    /// @param subscriber Subscriber whose subscription to revoke.
+    /// @param subscriber Subscriber hash whose subscription to revoke.
     function revokeSubscription(bytes32 subscriber) external;
 
-    /// @notice Commits the cancellation of your subscriber's subscription.
-    /// @param subscriberId Your subscriber ID.
+    /// @notice Commits cancellation intent for subscriber hash derived from `(subscriberId, msg.sender)`.
+    /// @param subscriberId Human-readable subscriber ID used in `keccak256(abi.encode(subscriberId, msg.sender))`.
     /// @return timestamp The timestamp of the cancellation commitment.
     function commitCancellation(string memory subscriberId) external returns (uint256 timestamp);
 
-    /// @notice Cancels your subscriber's subscription.
-    /// @param subscriberId Your subscriber ID.
+    /// @notice Cancels your subscription for subscriber hash derived from `(subscriberId, msg.sender)`.
+    /// @param subscriberId Human-readable subscriber ID used in `keccak256(abi.encode(subscriberId, msg.sender))`.
     /// @param timestamp The timestamp of the cancellation commitment.
-    /// @param signature The signature of the cancellation commitment by your subscriber.
+    /// @param signature Signature by msg.sender over the cancellation payload.
     function cancelSubscription(string memory subscriberId, uint256 timestamp, bytes memory signature) external;
 }
