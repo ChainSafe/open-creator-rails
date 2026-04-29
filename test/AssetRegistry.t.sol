@@ -557,13 +557,7 @@ contract AssetRegistryTest is BaseTest {
         uint256 newEnd = block.timestamp + DURATION;
         vm.expectEmit(true, true, true, true);
         emit Asset.SubscriptionAdded(
-            SUBSCRIBER,
-            block.timestamp,
-            newEnd,
-            1,
-            signer,
-            SUBSCRIPTION_PRICE,
-            assetRegistry.getRegistryFeeShare()
+            SUBSCRIBER, block.timestamp, newEnd, 1, signer, SUBSCRIPTION_PRICE, assetRegistry.getRegistryFeeShare()
         );
         _subscribe(DURATION);
 

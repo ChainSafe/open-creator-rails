@@ -63,8 +63,13 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     error OnlyRegistryUnauthorizedAccount();
 
     event SubscriptionAdded(
-        bytes32 indexed subscriber, uint256 indexed startTime, uint256 indexed endTime, uint256 nonce, address payer, 
-        uint256 subscriptionPrice, uint256 registryFeeShare
+        bytes32 indexed subscriber,
+        uint256 indexed startTime,
+        uint256 indexed endTime,
+        uint256 nonce,
+        address payer,
+        uint256 subscriptionPrice,
+        uint256 registryFeeShare
     );
     event SubscriptionExtended(bytes32 indexed subscriber, uint256 indexed endTime);
     event CreatorFeeClaimed(bytes32 indexed subscriber, uint256 amount);

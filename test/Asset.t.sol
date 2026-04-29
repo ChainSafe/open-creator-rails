@@ -119,7 +119,13 @@ contract AssetTest is BaseTest {
             vm.expectEmit(true, true, true, true);
             if (i == 0) {
                 emit Asset.SubscriptionAdded(
-                    SUBSCRIBER, deadline, deadline + DURATION, i, signer, SUBSCRIPTION_PRICE, assetRegistry.getRegistryFeeShare()
+                    SUBSCRIBER,
+                    deadline,
+                    deadline + DURATION,
+                    i,
+                    signer,
+                    SUBSCRIPTION_PRICE,
+                    assetRegistry.getRegistryFeeShare()
                 );
             } else {
                 emit Asset.SubscriptionExtended(SUBSCRIBER, deadline + DURATION);
@@ -1185,13 +1191,7 @@ contract AssetTest is BaseTest {
         uint256 newEnd = block.timestamp + DURATION;
         vm.expectEmit(true, true, true, true);
         emit Asset.SubscriptionAdded(
-            SUBSCRIBER,
-            block.timestamp,
-            newEnd,
-            1,
-            signer,
-            SUBSCRIPTION_PRICE,
-            assetRegistry.getRegistryFeeShare()
+            SUBSCRIBER, block.timestamp, newEnd, 1, signer, SUBSCRIPTION_PRICE, assetRegistry.getRegistryFeeShare()
         );
         uint256 returnedEnd = _subscribe(DURATION);
 
