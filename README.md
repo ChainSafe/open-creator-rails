@@ -12,10 +12,8 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v22+)
-- [pnpm](https://pnpm.io/)
 - [Foundry](https://book.getfoundry.sh/getting-started/installation) (forge, cast, anvil)
-- [jq](https://jqlang.org/) (optional) — for script usage (e.g. `get_address` in `./scripts/utils.sh` reads `packages/config/src/deployments/registries_<chain_id>.json` via jq)
+- [jq](https://jqlang.org/) (optional) — for script usage (e.g. `get_address` in `script/utils.sh` reads `registries_<chain_id>.json` via jq)
 
 ### Setup
 
@@ -24,7 +22,7 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
    ```bash
    git clone <repo-url>
    cd open-creator-rails
-   pnpm install
+   forge install
    ```
 
 2. **Environment variables**
@@ -36,29 +34,16 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
    | `PRIVATE_KEY` | Private key used to deploy and send transactions (e.g. `0x...`). |
    | `RPC_URL`     | JSON-RPC URL of the network (e.g. `https://sepolia.infura.io/v3/YOUR_KEY` or `http://127.0.0.1:8545` for local). |
 
-3. **Build Contracts & Sync ABIs**
+3. **Build**
 
    ```bash
-   pnpm setup
+   forge build
    ```
 
-   Or individually:
+4. **Run tests**
 
    ```bash
-   pnpm contract:build
-   pnpm -C packages/config sync
-   ```
-
-4. **Run Indexer (Local)**
-
-   ```bash
-   pnpm indexer:dev
-   ```
-
-5. **Run tests**
-
-   ```bash
-   pnpm test
+   forge test
    ```
 
 ---
@@ -83,7 +68,7 @@ Example:
 ./scripts/deployRegistry.sh 20
 ```
 
-Deployments are recorded in `packages/config/src/deployments/registries_<chain_id>.json`, where `chain_id` is the chain ID of the network from `RPC_URL` (e.g. `registries_11155111.json` for Sepolia, `registries_84532.json` for Base Sepolia). The file is an array of registry objects with `address`, `registryFeeShare`, `owner`, and `assets`.
+Deployments are recorded in `deployments/registries_<chain_id>.json`, where `chain_id` is the chain ID of the network from `RPC_URL` (e.g. `registries_11155111.json` for Sepolia, `registries_84532.json` for Base Sepolia). The file is an array of registry objects with `address`, `registryFeeShare`, `owner`, and `assets`.
 
 ### Creating Assets
 
@@ -95,7 +80,7 @@ Create an asset in a registry (registry owner only):
 
 | Input | Description |
 |-------|--------------|
-| `registry_index` | Zero-based index of the registry in `packages/config/src/deployments/registries_<chain_id>.json` (e.g. `0` for the first registry). |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json` (e.g. `0` for the first registry). |
 | `asset_id` | Human-readable identifier for the asset. The script hashes it with keccak256 to get the bytes32 used on-chain. |
 | `subscription_price` | Price per subscription unit per second in the token's smallest unit. |
 | `token_address` | Address of the ERC20 contract used for subscription payments. Must implement ERC-2612 (Permits), as subscription payments use gasless permit approvals. |
@@ -109,11 +94,11 @@ Example:
 
 The token address must implement ERC-2612 / IERC20Permit, as subscription payments use gasless permit approvals.
 
-New assets are appended to the `assets` array of the corresponding registry in `packages/config/src/deployments/registries_<chain_id>.json`. Each asset entry includes `address`, `assetId`, `assetIdHash`, `subscriptionPrice`, `tokenAddress`, and `owner`.
+New assets are appended to the `assets` array of the corresponding registry in `deployments/registries_<chain_id>.json`. Each asset entry includes `address`, `assetId`, `assetIdHash`, `subscriptionPrice`, `tokenAddress`, and `owner`.
 
 ### Subscribe
 
-Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs the permit and pays with tokens; the subscription is associated with a **subscriber** identity (a `bytes32` hash, e.g. `keccak256(abi.encodePacked(subscriber_id))`). The payer and the subscriber can be the same or different (e.g. "pay for someone else"). The **payer** is the address entitled to refunds if the subscription is later cancelled or revoked (unearned time is refunded to the payer).
+Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs the permit and pays with tokens; the subscription is associated with a **subscriber** identity (a `bytes32` hash). For cancellation, the subscriber identity should be derived as `keccak256(abi.encode(subscriberId, subscriberAddress))`, so only that `subscriberAddress` can cancel using a signed cancellation flow. The payer and the subscriber can be the same or different (e.g. "pay for someone else"). The **payer** is the address entitled to refunds if the subscription is later cancelled or revoked (unearned time is refunded to the payer).
 
 ```bash
 ./scripts/subscribe.sh <registry_index> <asset_id> <subscriber_id> <value> <payer_private_key>
@@ -121,9 +106,9 @@ Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs 
 
 | Input | Description |
 |-------|--------------|
-| `registry_index` | Zero-based index of the registry in `packages/config/src/deployments/registries_<chain_id>.json`. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). The script hashes it with keccak256 for the on-chain call. |
-| `subscriber_id` | Human-readable subscriber identity (e.g. user id, wallet-derived id). The script hashes it with keccak256 to get the `bytes32` subscriber used on-chain. Access and subscription queries use this identity. |
+| `subscriber_id` | Human-readable subscriber identity (e.g. user id, wallet-derived id). For cancellation-compatible identity, the subscriber hash should be computed as `keccak256(abi.encode(subscriber_id, subscriber_address))`, where `subscriber_address` is the address that is allowed to cancel. Access and subscription queries use this resulting `bytes32` identity. |
 | `value` | Payment amount in the token's smallest unit. Must be a multiple of the asset's subscription price; excess is rounded down. |
 | `payer_private_key` | Private key of the token owner. Used only to sign the ERC-2612 permit (this address’s tokens are spent). The subscribe transaction is sent using `PRIVATE_KEY` from `.env`. |
 
@@ -143,7 +128,7 @@ Update the subscription price for an asset (asset owner only):
 
 | Input | Description |
 |-------|--------------|
-| `registry_index` | Zero-based index of the registry in `packages/config/src/deployments/registries_<chain_id>.json`. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
 | `new_subscription_price` | New price per subscription unit (e.g. per second) in the token's smallest unit. |
 | `asset_owner_private_key` | Private key of the asset owner. Used to send the transaction. |
@@ -154,7 +139,7 @@ Example:
 ./scripts/setSubscriptionPrice.sh 0 "default_asset_id" 8 0x1b97...
 ```
 
-The script updates the `subscriptionPrice` for the asset in `packages/config/src/deployments/registries_<chain_id>.json`.
+The script updates the `subscriptionPrice` for the asset in `deployments/registries_<chain_id>.json`.
 
 ### Transfer Asset Ownership
 
@@ -166,7 +151,7 @@ Transfer ownership of an asset to a new address (asset owner only). The asset ow
 
 | Input | Description |
 |-------|--------------|
-| `registry_index` | Zero-based index of the registry in `packages/config/src/deployments/registries_<chain_id>.json`. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
 | `asset_owner_private_key` | Private key of the current asset owner. Used to send the transaction. |
 | `new_owner` | Address of the new owner; can claim creator share of subscription fees going forward. |
@@ -177,21 +162,21 @@ Example:
 ./scripts/transferAssetOwnership.sh 0 "default_asset_id" 0x1b97... 0xabcd...
 ```
 
-The script updates the `owner` for the asset in `packages/config/src/deployments/registries_<chain_id>.json`.
+The script updates the `owner` for the asset in `deployments/registries_<chain_id>.json`.
 
 ---
 
 > ### Test Tokens
 >
-> Test tokens supporting ERC-2612 (permit) are already deployed for testing subscriptions. Addresses are listed in `packages/config/src/deployments/token_addresses.json` keyed by chain ID (e.g. Sepolia `11155111`, Base Sepolia `84532`). Anyone can mint any amount for testing.
+> Test tokens supporting ERC-2612 (permit) are already deployed for testing subscriptions. Addresses are listed in `deployments/token_addresses.json` keyed by chain ID (e.g. Sepolia `11155111`, Base Sepolia `84532`). Anyone can mint any amount for testing.
 >
-> **Deploy a test token** (records the address in `packages/config/src/deployments/token_addresses.json` for the current chain):
+> **Deploy a test token** (records the address in `deployments/token_addresses.json` for the current chain):
 >
 > ```bash
 > ./scripts/deployTestToken.sh
 > ```
 >
-> **Mint test tokens** to an address (uses the token in `packages/config/src/deployments/token_addresses.json` for the current chain):
+> **Mint test tokens** to an address (uses the token in `deployments/token_addresses.json` for the current chain):
 >
 > ```bash
 > ./scripts/mintTestToken.sh <to> <amount>
@@ -284,12 +269,12 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**subscribe** : Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract. The permit is signed by the payer; the subscription is attributed to `_subscriber` (payer and subscriber can differ). The payer is the refund beneficiary on cancel/revoke.
+**subscribe** : Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract. The permit is signed by the payer; the subscription is attributed to `_subscriber` (payer and subscriber can differ). The payer is the refund beneficiary on cancel/revoke. For cancellation-compatible identity, `_subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will commit/sign cancellation.
 - Type: write
 - Permission: none
 - Parameters:
   - `bytes32 _assetId` : Asset identifier.
-  - `bytes32 _subscriber` : Hash of the subscriber identity (who gets the access).
+  - `bytes32 _subscriber` : Hash of the subscriber identity (who gets the access). Recommended canonical form: `keccak256(abi.encode(subscriberId, subscriberAddress))`.
   - `address _payer` : Payer; signs the permit and pays. Receives refunds on cancel/revoke. Can be the same or different from the subscriber (e.g. gifting).
   - `address _spender` : Must be the asset contract address for the permit.
   - `uint256 _value` : Permit allowance / payment amount.
@@ -402,17 +387,6 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**cancelSubscription** : Cancels a subscriber's subscription via the registry. Callable only by the registry owner. Unearned subscription value is refunded to the original payer.
-- Type: write
-- Permission: `onlyOwner`
-- Parameters:
-  - `bytes32 _assetId` : Asset identifier.
-  - `bytes32 _subscriber` : Hash of the subscriber identity whose subscription to cancel.
-- Returns: void
-
-
----
-
 **getOwner** : Returns the owner of the registry (e.g. for receiving registry fees).
 - Type: read
 - Permission: none
@@ -500,11 +474,11 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**subscribe** : Subscribes a subscriber using ERC-2612 permit: payer signs permit, then payment is pulled and subscription is attributed to the given subscriber. Payer and subscriber can differ (e.g. pay for someone else). The payer is the refund beneficiary on cancel/revoke.
+**subscribe** : Subscribes a subscriber using ERC-2612 permit: payer signs permit, then payment is pulled and subscription is attributed to the given subscriber. Payer and subscriber can differ (e.g. pay for someone else). The payer is the refund beneficiary on cancel/revoke. For cancellation-compatible identity, `subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will commit/sign cancellation.
 - Type: write
 - Permission: none
 - Parameters:
-  - `bytes32 subscriber` : Hash of the subscriber identity (who gets the access).
+  - `bytes32 subscriber` : Hash of the subscriber identity (who gets the access). Recommended canonical form: `keccak256(abi.encode(subscriberId, subscriberAddress))`.
   - `address payer` : Payer; signs the permit and pays. Receives refunds on cancel/revoke.
   - `address spender` : Must be this asset contract for the permit to be accepted.
   - `uint256 value` : Permit allowance / payment amount (will be rounded down to subscription price units).
@@ -572,11 +546,23 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**cancelSubscription** : Cancels a subscriber's subscription. Callable only by the registry contract. The payer of each subscription is entitled to a refund of the unearned portion (tokens are returned to the payer address).
+**commitCancellation** : Commits a cancellation intent for the caller's `(subscriberId, msg.sender)` pair.
 - Type: write
-- Permission: `onlyRegistry`
+- Permission: caller is the subscriber address committing cancellation
 - Parameters:
-  - `bytes32 subscriber` : Subscriber whose subscription to cancel.
+  - `string subscriberId` : Human-readable subscriber id used in the subscriber hash.
+- Returns:
+  - `uint256` : Commitment timestamp used in the subsequent cancellation signature.
+
+---
+
+**cancelSubscription** : Cancels the caller's subscription after validating a prior commitment and signature. Unearned subscription value is refunded to each original payer.
+- Type: write
+- Permission: caller must be the subscriber address represented in `keccak256(abi.encode(subscriberId, msg.sender))`
+- Parameters:
+  - `string subscriberId` : Human-readable subscriber id used in the subscriber hash.
+  - `uint256 timestamp` : Commitment timestamp returned by `commitCancellation`.
+  - `bytes signature` : ECDSA signature by `msg.sender` over `keccak256(abi.encodePacked(chainid, assetAddress, timestamp, subscriberHash))`.
 - Returns: void
 
 ---
@@ -678,7 +664,7 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
 
 ---
 
-**SubscriptionCancelled** : Emitted when a subscriber's subscription is cancelled by the registry contract.
+**SubscriptionCancelled** : Emitted when a subscriber's subscription is cancelled through the subscriber-signed cancellation flow.
 - Contract: `Asset`
 - Parameters:
-  - `bytes32 indexed subscriber` : Subscriber whose subscription was cancelled.
+  - `bytes32 indexed subscriber` : Subscriber hash `keccak256(abi.encode(subscriberId, subscriberAddress))` whose subscription was cancelled.
