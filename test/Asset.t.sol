@@ -601,11 +601,7 @@ contract AssetTest is BaseTest {
 
         uint256 paidRecord0 = DURATION * originalPrice;
         uint256 paidRecord1 = DURATION * doubledPrice;
-        assertEq(
-            testToken.balanceOf(signer),
-            tokenBalance - paidRecord0 - paidRecord1,
-            "both records charged upfront"
-        );
+        assertEq(testToken.balanceOf(signer), tokenBalance - paidRecord0 - paidRecord1, "both records charged upfront");
 
         // Warp half-way into record 0
         vm.warp(block.timestamp + DURATION / 2);
@@ -623,11 +619,7 @@ contract AssetTest is BaseTest {
         uint256 refund1 = paidRecord1;
         uint256 expectedCharged = paidRecord0 + paidRecord1 - refund0 - refund1;
 
-        assertEq(
-            testToken.balanceOf(signer),
-            tokenBalance - expectedCharged,
-            "only first half of record 0 forfeited"
-        );
+        assertEq(testToken.balanceOf(signer), tokenBalance - expectedCharged, "only first half of record 0 forfeited");
     }
 
     function test_commitCancellation_setsTimestampForHashedSubscriber() public {

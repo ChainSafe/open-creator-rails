@@ -46,8 +46,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         uint256 _subscriptionDuration,
         address _tokenAddress,
         address _owner
-    ) external onlyOwner returns (address)
-    {
+    ) external onlyOwner returns (address) {
         if (assets[_assetId] != address(0)) {
             revert AssetAlreadyExists();
         }
@@ -86,31 +85,28 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return IAsset(asset).getSubscription(_subscriber);
     }
 
-    function getSubscriptionPrice(bytes32 _assetId, uint256 _count) external view returns (uint256)
-    {
+    function getSubscriptionPrice(bytes32 _assetId, uint256 _count) external view returns (uint256) {
         address asset = getAsset(_assetId);
 
         return IAsset(asset).getSubscriptionPrice(_count);
     }
 
-    function getSubscriptionDuration(bytes32 _assetId) external view returns (uint256)
-    {
+    function getSubscriptionDuration(bytes32 _assetId) external view returns (uint256) {
         address asset = getAsset(_assetId);
 
         return IAsset(asset).getSubscriptionDuration();
     }
 
-    function getSubscriptionDuration(bytes32 _assetId, uint256 _value) external view returns (uint256)
-    {
+    function getSubscriptionDuration(bytes32 _assetId, uint256 _value) external view returns (uint256) {
         address asset = getAsset(_assetId);
 
         return IAsset(asset).getSubscriptionDuration(_value);
     }
 
-    function getSubscriptionPriceAndDuration(
-        bytes32 _assetId,
-        uint256 _count
-    ) external view returns (uint256 price, uint256 duration)
+    function getSubscriptionPriceAndDuration(bytes32 _assetId, uint256 _count)
+        external
+        view
+        returns (uint256 price, uint256 duration)
     {
         address asset = getAsset(_assetId);
 

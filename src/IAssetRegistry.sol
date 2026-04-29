@@ -67,10 +67,10 @@ interface IAssetRegistry {
     /// @param _count Number of periods.
     /// @return price Total cost.
     /// @return duration Total duration in seconds (whole periods only).
-    function getSubscriptionPriceAndDuration(
-        bytes32 _assetId,
-        uint256 _count
-    ) external view returns (uint256 price, uint256 duration);
+    function getSubscriptionPriceAndDuration(bytes32 _assetId, uint256 _count)
+        external
+        view
+        returns (uint256 price, uint256 duration);
 
     /// @notice Subscribes a subscriber hash to the asset using ERC-2612 permit; forwards to the asset contract.
     ///         The payer signs the permit and is the refund beneficiary on cancel/revoke.

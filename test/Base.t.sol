@@ -48,7 +48,11 @@ contract BaseTest is Test {
 
         vm.startPrank(registryOwner);
         assetRegistry = new AssetRegistry(30);
-        asset = IAsset(assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner));
+        asset = IAsset(
+            assetRegistry.createAsset(
+                ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner
+            )
+        );
         vm.stopPrank();
     }
 

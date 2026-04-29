@@ -57,8 +57,14 @@ contract AssetRegistryTest is BaseTest {
 
         vm.startPrank(registryOwner);
         vm.expectEmit(true, false, true, true);
-        emit AssetRegistry.AssetCreated(ASSET_ID, address(0), SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner);
-        asset = IAsset(assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner));
+        emit AssetRegistry.AssetCreated(
+            ASSET_ID, address(0), SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner
+        );
+        asset = IAsset(
+            assetRegistry.createAsset(
+                ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner
+            )
+        );
         vm.stopPrank();
 
         assertEq(asset.getAssetId(), ASSET_ID);
@@ -608,5 +614,4 @@ contract AssetRegistryTest is BaseTest {
         uint256 value = SUBSCRIPTION_PRICE * 2 + SUBSCRIPTION_PRICE / 2;
         assertEq(assetRegistry.getSubscriptionDuration(customId, value), 2 * customDuration);
     }
-
 }
