@@ -63,10 +63,12 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     error OnlyRegistryUnauthorizedAccount();
 
     event SubscriptionAdded(
-        bytes32 indexed subscriber, uint256 indexed startTime, uint256 indexed endTime, uint256 nonce, address payer
+        bytes32 indexed subscriber, uint256 indexed startTime, uint256 indexed endTime, uint256 nonce, address payer, 
+        uint256 subscriptionPrice, uint256 registryFeeShare
     );
     event SubscriptionExtended(bytes32 indexed subscriber, uint256 indexed endTime);
     event CreatorFeeClaimed(bytes32 indexed subscriber, uint256 amount);
+    event CreatorFeeClaimedBatch(bytes32[] indexed subscribers, uint256 totalAmount);
     event SubscriptionPriceUpdated(uint256 newSubscriptionPrice);
     event SubscriptionRevoked(bytes32 indexed subscriber);
     event SubscriptionCancelled(bytes32 indexed subscriber);
@@ -208,7 +210,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
         subscribers.add(subscriber);
 
-        emit SubscriptionAdded(subscriber, startTime, endTime, nonce, payer);
+        emit SubscriptionAdded(subscriber, startTime, endTime, nonce, payer, subscriptionPrice, registryFeeShare);
 
         return endTime;
     }
@@ -351,6 +353,8 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         if (claimed != 0) {
             SafeERC20.safeTransfer(TOKEN_CONTRACT, owner(), claimed);
         }
+
+        emit CreatorFeeClaimedBatch(_subscribers, claimed);
 
         return claimed;
     }
