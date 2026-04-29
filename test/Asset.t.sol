@@ -86,7 +86,15 @@ contract AssetTest is BaseTest {
         uint256 assetBalanceBefore = testToken.balanceOf(address(asset));
 
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(SUBSCRIBER, block.timestamp, block.timestamp + DURATION, 0, signer);
+        emit Asset.SubscriptionAdded(
+            SUBSCRIBER,
+            block.timestamp,
+            block.timestamp + DURATION,
+            0,
+            signer,
+            SUBSCRIPTION_PRICE,
+            assetRegistry.getRegistryFeeShare()
+        );
 
         uint256 subscription = _subscribe(DURATION);
 
@@ -110,7 +118,15 @@ contract AssetTest is BaseTest {
         for (uint256 i = 0; i < count; i++) {
             vm.expectEmit(true, true, true, true);
             if (i == 0) {
-                emit Asset.SubscriptionAdded(SUBSCRIBER, deadline, deadline + DURATION, i, signer);
+                emit Asset.SubscriptionAdded(
+                    SUBSCRIBER,
+                    deadline,
+                    deadline + DURATION,
+                    i,
+                    signer,
+                    SUBSCRIPTION_PRICE,
+                    assetRegistry.getRegistryFeeShare()
+                );
             } else {
                 emit Asset.SubscriptionExtended(SUBSCRIBER, deadline + DURATION);
             }
@@ -916,7 +932,15 @@ contract AssetTest is BaseTest {
 
     function test_subscribe_newNonce_differentPrice() public {
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(SUBSCRIBER, block.timestamp, block.timestamp + DURATION, 0, signer);
+        emit Asset.SubscriptionAdded(
+            SUBSCRIBER,
+            block.timestamp,
+            block.timestamp + DURATION,
+            0,
+            signer,
+            SUBSCRIPTION_PRICE,
+            assetRegistry.getRegistryFeeShare()
+        );
         _subscribe(DURATION);
 
         vm.prank(assetOwner);
@@ -924,13 +948,29 @@ contract AssetTest is BaseTest {
 
         uint256 newStart = block.timestamp + DURATION;
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(SUBSCRIBER, newStart, newStart + DURATION, 1, signer);
+        emit Asset.SubscriptionAdded(
+            SUBSCRIBER,
+            newStart,
+            newStart + DURATION,
+            1,
+            signer,
+            SUBSCRIPTION_PRICE * 2,
+            assetRegistry.getRegistryFeeShare()
+        );
         _subscribe(DURATION);
     }
 
     function test_subscribe_newNonce_feeShareChanged() public {
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(SUBSCRIBER, block.timestamp, block.timestamp + DURATION, 0, signer);
+        emit Asset.SubscriptionAdded(
+            SUBSCRIBER,
+            block.timestamp,
+            block.timestamp + DURATION,
+            0,
+            signer,
+            SUBSCRIPTION_PRICE,
+            assetRegistry.getRegistryFeeShare()
+        );
         _subscribe(DURATION);
 
         vm.prank(registryOwner);
@@ -938,13 +978,21 @@ contract AssetTest is BaseTest {
 
         uint256 newStart = block.timestamp + DURATION;
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(SUBSCRIBER, newStart, newStart + DURATION, 1, signer);
+        emit Asset.SubscriptionAdded(SUBSCRIBER, newStart, newStart + DURATION, 1, signer, SUBSCRIPTION_PRICE, 50);
         _subscribe(DURATION);
     }
 
     function test_subscribe_newNonce_differentPayer() public {
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(SUBSCRIBER, block.timestamp, block.timestamp + DURATION, 0, signer);
+        emit Asset.SubscriptionAdded(
+            SUBSCRIBER,
+            block.timestamp,
+            block.timestamp + DURATION,
+            0,
+            signer,
+            SUBSCRIPTION_PRICE,
+            assetRegistry.getRegistryFeeShare()
+        );
         _subscribe(DURATION);
 
         uint256 key2 = vm.deriveKey(MNEMONIC, 1);
@@ -960,7 +1008,15 @@ contract AssetTest is BaseTest {
 
         uint256 newStart = block.timestamp + DURATION;
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(SUBSCRIBER, newStart, newStart + DURATION, 1, payer2);
+        emit Asset.SubscriptionAdded(
+            SUBSCRIBER,
+            newStart,
+            newStart + DURATION,
+            1,
+            payer2,
+            SUBSCRIPTION_PRICE,
+            assetRegistry.getRegistryFeeShare()
+        );
         asset.subscribe(SUBSCRIBER, payer2, address(asset), value, deadline, v, r, s);
     }
 
@@ -986,6 +1042,8 @@ contract AssetTest is BaseTest {
         emit Asset.CreatorFeeClaimed(SUBSCRIBER, creatorFeePerSubscriber);
         vm.expectEmit(true, true, true, true);
         emit Asset.CreatorFeeClaimed(subscriber2, creatorFeePerSubscriber);
+        vm.expectEmit(true, true, true, true);
+        emit Asset.CreatorFeeClaimedBatch(subs, creatorFeePerSubscriber * 2);
         uint256 claimed = asset.claimCreatorFee(subs);
         vm.stopPrank();
 
@@ -1132,7 +1190,9 @@ contract AssetTest is BaseTest {
         // startTime (block.timestamp) != subscription.endTime, so no in-place extension occurs.
         uint256 newEnd = block.timestamp + DURATION;
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(SUBSCRIBER, block.timestamp, newEnd, 1, signer);
+        emit Asset.SubscriptionAdded(
+            SUBSCRIBER, block.timestamp, newEnd, 1, signer, SUBSCRIPTION_PRICE, assetRegistry.getRegistryFeeShare()
+        );
         uint256 returnedEnd = _subscribe(DURATION);
 
         assertEq(returnedEnd, newEnd);

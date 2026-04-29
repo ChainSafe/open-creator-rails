@@ -37,6 +37,8 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         }
 
         registryFeeShare = _registryFeeShare;
+
+        emit RegistryFeeShareUpdated(registryFeeShare);
     }
 
     function createAsset(bytes32 _assetId, uint256 _subscriptionPrice, address _tokenAddress, address _owner)
