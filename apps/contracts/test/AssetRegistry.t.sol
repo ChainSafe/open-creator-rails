@@ -52,17 +52,17 @@ contract AssetRegistryTest is BaseTest {
     }
 
     function test_createAsset() public {
-        
+
         if (assetRegistry.viewAsset(ASSET_ID)) {
             return;
         }
 
         vm.startPrank(registryOwner);
         vm.expectEmit(true, false, true, true);
-        emit AssetRegistry.AssetCreated(ASSET_ID, address(0), SUBSCRIPTION_PRICE, address(testToken), assetOwner);
-        asset = IAsset(assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner));
+        emit AssetRegistry.AssetCreated(ASSET_ID, address(0), SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner);
+        asset = IAsset(assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner));
         vm.stopPrank();
-        
+
         assertEq(asset.getAssetId(), ASSET_ID);
         assertEq(address(asset), assetRegistry.getAsset(ASSET_ID));
     }
@@ -137,7 +137,7 @@ contract AssetRegistryTest is BaseTest {
 
         vm.startPrank(registryOwner);
         vm.expectRevert(AssetRegistry.AssetAlreadyExists.selector);
-        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner);
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner);
         vm.stopPrank();
     }
 
@@ -151,7 +151,7 @@ contract AssetRegistryTest is BaseTest {
     function test_createAsset_invalidOwner() public {
         vm.prank(registryOwner);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0)));
-        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), address(0));
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), address(0));
     }
 
     function test_constructor_registryFeeShareOutOfBounds() public {
@@ -168,7 +168,14 @@ contract AssetRegistryTest is BaseTest {
     function test_createAsset_invalidTokenAddress() public {
         vm.prank(registryOwner);
         vm.expectRevert(Asset.InvalidTokenAddress.selector);
-        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(0), assetOwner);
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(0), assetOwner);
+    }
+
+    function test_createAsset_invalidSubscriptionDuration() public {
+        bytes32 zeroDurationId = keccak256(abi.encodePacked("zero_duration_asset"));
+        vm.prank(registryOwner);
+        vm.expectRevert(Asset.InvalidSubscriptionDuration.selector);
+        assetRegistry.createAsset(zeroDurationId, SUBSCRIPTION_PRICE, 0, address(testToken), assetOwner);
     }
 
     function test_getSubscriptionPrice_assetNotFound() public {
@@ -191,7 +198,7 @@ contract AssetRegistryTest is BaseTest {
     function test_createAsset_unauthorized() public {
         vm.prank(UNAUTHORIZED);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, UNAUTHORIZED));
-        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner);
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner);
     }
 
     function test_updateRegistryFeeShare_unauthorized() public {
@@ -553,6 +560,46 @@ contract AssetRegistryTest is BaseTest {
         _subscribe(DURATION);
 
         assertEq(assetRegistry.getSubscription(ASSET_ID, SUBSCRIBER), newEnd);
+    }
+
+    // --- Getters for subscription duration and price (forwarded from asset) ---
+
+    function test_getSubscriptionDuration_immutable_forward() public {
+        test_createAsset();
+        assertEq(assetRegistry.getSubscriptionDuration(ASSET_ID), SUBSCRIPTION_DURATION);
+    }
+
+    function test_getSubscriptionDuration_forward() public {
+        test_createAsset();
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, 3);
+        assertEq(assetRegistry.getSubscriptionDuration(ASSET_ID, value), 3 * SUBSCRIPTION_DURATION);
+    }
+
+    function test_getSubscriptionPriceAndDuration_forward() public {
+        test_createAsset();
+        (uint256 price, uint256 duration) = assetRegistry.getSubscriptionPriceAndDuration(ASSET_ID, 5);
+        assertEq(price, SUBSCRIPTION_PRICE * 5);
+        assertEq(duration, 5 * SUBSCRIPTION_DURATION);
+    }
+
+    function test_createAsset_withCustomDuration() public {
+        uint256 customDuration = 3600; // 1 hour
+        bytes32 customId = keccak256(abi.encodePacked("custom_duration_asset"));
+
+        vm.startPrank(registryOwner);
+        assetRegistry.createAsset(customId, SUBSCRIPTION_PRICE, customDuration, address(testToken), assetOwner);
+        vm.stopPrank();
+
+        assertEq(assetRegistry.getSubscriptionDuration(customId), customDuration);
+        assertEq(assetRegistry.getSubscriptionPrice(customId, 3), SUBSCRIPTION_PRICE * 3);
+
+        (uint256 price, uint256 duration) = assetRegistry.getSubscriptionPriceAndDuration(customId, 2);
+        assertEq(price, SUBSCRIPTION_PRICE * 2);
+        assertEq(duration, 2 * customDuration);
+
+        // 2 full periods + half a period worth → rounds down to 2 periods of duration
+        uint256 value = SUBSCRIPTION_PRICE * 2 + SUBSCRIPTION_PRICE / 2;
+        assertEq(assetRegistry.getSubscriptionDuration(customId, value), 2 * customDuration);
     }
 
 }

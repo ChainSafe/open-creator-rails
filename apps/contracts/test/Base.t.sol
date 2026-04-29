@@ -21,6 +21,7 @@ contract BaseTest is Test {
     bytes32 internal constant ASSET_ID = keccak256(abi.encodePacked("asset_id"));
     bytes32 internal constant SUBSCRIBER = keccak256(abi.encodePacked("subscriber_id"));
     uint256 internal constant SUBSCRIPTION_PRICE = 100000000;
+    uint256 internal constant SUBSCRIPTION_DURATION = 1;
     uint256 internal constant DURATION = 3600;
 
     address internal constant UNAUTHORIZED = address(403);
@@ -46,7 +47,7 @@ contract BaseTest is Test {
 
         vm.startPrank(registryOwner);
         assetRegistry = new AssetRegistry(30);
-        asset = IAsset(assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner));
+        asset = IAsset(assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner));
         vm.stopPrank();
     }
 

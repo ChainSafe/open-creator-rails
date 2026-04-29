@@ -7,13 +7,15 @@ pragma solidity ^0.8.0;
 interface IAssetRegistry {
     /// @notice Deploys a new Asset contract and registers it under the given id. Callable only by registry owner.
     /// @param _assetId Unique identifier for the asset.
-    /// @param _subscriptionPrice Price per subscription unit for the asset.
+    /// @param _subscriptionPrice Price per subscription duration.
+    /// @param _subscriptionDuration Fixed period length in seconds; subscriptions must be whole multiples.
     /// @param _tokenAddress ERC20 (with permit) used for subscription payments.
     /// @param _owner Creator/owner of the new asset.
     /// @return The address of the newly deployed Asset contract.
     function createAsset(
         bytes32 _assetId,
         uint256 _subscriptionPrice,
+        uint256 _subscriptionDuration,
         address _tokenAddress,
         address _owner
     ) external returns (address);
@@ -40,11 +42,33 @@ interface IAssetRegistry {
     /// @return Expiry timestamp in seconds; 0 if no subscription.
     function getSubscription(bytes32 _assetId, bytes32 _subscriber) external view returns (uint256);
 
-    /// @notice Returns the subscription price for the given asset and duration.
+    /// @notice Returns the total price for a given number of subscription periods for the given asset.
     /// @param _assetId Asset identifier.
-    /// @param _duration Subscription duration in seconds.
-    /// @return Total price for the duration.
-    function getSubscriptionPrice(bytes32 _assetId, uint256 _duration) external view returns (uint256);
+    /// @param _count Number of periods.
+    /// @return Total price for the number of periods.
+    function getSubscriptionPrice(bytes32 _assetId, uint256 _count) external view returns (uint256);
+
+    /// @notice Returns the asset's fixed subscription period length in seconds.
+    /// @param _assetId Asset identifier.
+    /// @return Period length in seconds.
+    function getSubscriptionDuration(bytes32 _assetId) external view returns (uint256);
+
+    /// @notice Returns the total duration in seconds covered by value for the given asset,
+    ///         rounded down to whole periods.
+    /// @param _assetId Asset identifier.
+    /// @param _value Payment amount in token units.
+    /// @return Total duration in seconds (whole periods only).
+    function getSubscriptionDuration(bytes32 _assetId, uint256 _value) external view returns (uint256);
+
+    /// @notice Returns both price and duration for a given number of periods for the given asset.
+    /// @param _assetId Asset identifier.
+    /// @param _count Number of periods.
+    /// @return price Total cost.
+    /// @return duration Total duration in seconds (whole periods only).
+    function getSubscriptionPriceAndDuration(
+        bytes32 _assetId,
+        uint256 _count
+    ) external view returns (uint256 price, uint256 duration);
 
     /// @notice Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract.
     ///         The payer signs the permit and is the refund beneficiary on cancel/revoke.

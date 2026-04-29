@@ -17,10 +17,25 @@ interface IAsset {
     /// @return The token contract address. Must be an ERC20 with permit.
     function getTokenAddress() external view returns (address);
 
-    /// @notice Returns the total price for a subscription of the given duration.
-    /// @param duration Length of the subscription in seconds.
-    /// @return Total price for the duration.
-    function getSubscriptionPrice(uint256 duration) external view returns (uint256);
+    /// @notice Returns the total price for a given number of subscription periods.
+    /// @param count Number of periods to subscribe for.
+    /// @return Total price for the number of periods.
+    function getSubscriptionPrice(uint256 count) external view returns (uint256);
+
+    /// @notice Returns the asset's fixed subscription period length in seconds.
+    /// @return Period length in seconds.
+    function getSubscriptionDuration() external view returns (uint256);
+
+    /// @notice Returns the total duration in seconds covered by value, rounded down to whole periods.
+    /// @param value Payment amount in token units.
+    /// @return Total duration in seconds (whole periods only).
+    function getSubscriptionDuration(uint256 value) external view returns (uint256);
+
+    /// @notice Returns both price and duration for a given number of periods.
+    /// @param count Number of periods.
+    /// @return price Total cost.
+    /// @return duration Total duration in seconds (whole periods only).
+    function getSubscriptionPriceAndDuration(uint256 count) external view returns (uint256 price, uint256 duration);
 
     /// @notice Sets the subscription price for the asset.
     /// @param newSubscriptionPrice New subscription price.

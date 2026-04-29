@@ -22,6 +22,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         bytes32 indexed assetId,
         address indexed asset,
         uint256 subscriptionPrice,
+        uint256 subscriptionDuration,
         address tokenAddress,
         address indexed owner
     );
@@ -43,19 +44,20 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     function createAsset(
         bytes32 _assetId,
         uint256 _subscriptionPrice,
+        uint256 _subscriptionDuration,
         address _tokenAddress,
         address _owner
     ) external onlyOwner returns (address)
     {
 
         if (assets[_assetId] != address(0)) {
-            revert AssetAlreadyExists();    
+            revert AssetAlreadyExists();
         }
 
-        Asset asset = new Asset(_assetId, _subscriptionPrice, _tokenAddress, _owner);
+        Asset asset = new Asset(_assetId, _subscriptionPrice, _subscriptionDuration, _tokenAddress, _owner);
         assets[_assetId] = address(asset);
 
-        emit AssetCreated(_assetId, address(asset), _subscriptionPrice, _tokenAddress, _owner);
+        emit AssetCreated(_assetId, address(asset), _subscriptionPrice, _subscriptionDuration, _tokenAddress, _owner);
 
         return address(asset);
     }
@@ -90,11 +92,35 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return IAsset(asset).getSubscription(_subscriber);
     }
 
-    function getSubscriptionPrice(bytes32 _assetId, uint256 _duration) external view returns (uint256)
+    function getSubscriptionPrice(bytes32 _assetId, uint256 _count) external view returns (uint256)
     {
         address asset = getAsset(_assetId);
-        
-        return IAsset(asset).getSubscriptionPrice(_duration);
+
+        return IAsset(asset).getSubscriptionPrice(_count);
+    }
+
+    function getSubscriptionDuration(bytes32 _assetId) external view returns (uint256)
+    {
+        address asset = getAsset(_assetId);
+
+        return IAsset(asset).getSubscriptionDuration();
+    }
+
+    function getSubscriptionDuration(bytes32 _assetId, uint256 _value) external view returns (uint256)
+    {
+        address asset = getAsset(_assetId);
+
+        return IAsset(asset).getSubscriptionDuration(_value);
+    }
+
+    function getSubscriptionPriceAndDuration(
+        bytes32 _assetId,
+        uint256 _count
+    ) external view returns (uint256 price, uint256 duration)
+    {
+        address asset = getAsset(_assetId);
+
+        return IAsset(asset).getSubscriptionPriceAndDuration(_count);
     }
 
     function subscribe(
