@@ -10,12 +10,17 @@ import {IAssetRegistry} from "./IAssetRegistry.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {EnumerableSet} from "lib/openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /// @title Asset
 /// @notice Implementation of IAsset: a subscription-gated asset with permit-based ERC20 payment.
 ///         Deployed by the asset registry; subscription revenue is split between creator (owner) and registry.
 contract Asset is Ownable, ReentrancyGuard, IAsset {
     using EnumerableSet for EnumerableSet.Bytes32Set;
+    using ECDSA for bytes32;
+    using MessageHashUtils for bytes32;
+
     bytes32 internal immutable ASSET_ID;
     address internal immutable REGISTRY_ADDRESS;
 
@@ -26,6 +31,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
     mapping(bytes32 => Subscription) internal subscriptions;
     mapping(bytes32 => uint256) internal nonces;
+    mapping(bytes32 => uint256) internal cancellations;
 
     mapping(bytes32 => uint256) internal creatorClaimedAtTimestamps;
     mapping(bytes32 => uint256) internal creatorClaimedAtNonces;
@@ -52,6 +58,8 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     error SubscriptionNotFound();
     error SubscriptionRevocationFailed();
     error SubscriptionCancellationFailed();
+    error InvalidCancellationCommitment();
+    error InvalidSignature();
     error OnlyRegistryUnauthorizedAccount();
 
     event SubscriptionAdded(
@@ -481,8 +489,35 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         emit SubscriptionRevoked(subscriber);
     }
 
-    function cancelSubscription(bytes32 subscriber) external onlyRegistry nonReentrant {
+    function commitCancellation(string memory subscriberId) external returns (uint256 timestamp) {
+        timestamp = block.timestamp;
+
+        cancellations[keccak256(abi.encode(subscriberId, msg.sender))] = timestamp;
+
+        return timestamp;
+    }
+
+    function cancelSubscription(string memory subscriberId, uint256 timestamp, bytes memory signature)
+        external
+        nonReentrant
+    {
+        bytes32 subscriber = keccak256(abi.encode(subscriberId, msg.sender));
+
+        if (cancellations[subscriber] != timestamp) {
+            revert InvalidCancellationCommitment();
+        }
+
+        bytes32 hash = keccak256(abi.encodePacked(block.chainid, address(this), timestamp, subscriber));
+
+        address signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(hash), signature);
+
+        if (signer != msg.sender) {
+            revert InvalidSignature();
+        }
+
         _removeSubscription(subscriber);
+
+        delete cancellations[subscriber];
 
         emit SubscriptionCancelled(subscriber);
     }

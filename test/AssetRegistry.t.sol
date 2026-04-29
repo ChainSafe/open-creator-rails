@@ -479,8 +479,12 @@ contract AssetRegistryTest is BaseTest {
 
         assertEq(testToken.balanceOf(signer), tokenBalanceBefore - asset.getSubscriptionPrice(DURATION));
 
-        vm.prank(registryOwner);
-        assetRegistry.cancelSubscription(ASSET_ID, SUBSCRIBER);
+        vm.prank(signer);
+        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
+        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
+
+        vm.prank(signer);
+        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
 
         assertFalse(assetRegistry.isSubscriptionActive(ASSET_ID, SUBSCRIBER));
         assertEq(testToken.balanceOf(signer), tokenBalanceBefore);
@@ -490,8 +494,12 @@ contract AssetRegistryTest is BaseTest {
         _subscribe(DURATION);
 
         vm.prank(UNAUTHORIZED);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, UNAUTHORIZED));
-        assetRegistry.cancelSubscription(ASSET_ID, SUBSCRIBER);
+        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
+        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
+
+        vm.prank(UNAUTHORIZED);
+        vm.expectRevert(Asset.InvalidSignature.selector);
+        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
     }
 
     function test_cancelSubscription_assetNotFound() public {
@@ -499,7 +507,7 @@ contract AssetRegistryTest is BaseTest {
 
         vm.prank(registryOwner);
         vm.expectRevert(AssetRegistry.AssetNotFound.selector);
-        assetRegistry.cancelSubscription(nonexistentId, SUBSCRIBER);
+        assetRegistry.getAsset(nonexistentId);
     }
 
     // --- RegistryFeeClaimedBatch event on batch claimRegistryFee ---

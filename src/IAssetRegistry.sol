@@ -25,15 +25,17 @@ interface IAssetRegistry {
     /// @return The address of the Asset contract. Throws if not found.
     function getAsset(bytes32 _assetId) external view returns (address);
 
-    /// @notice Checks whether a subscriber has an active subscription for the given asset.
+    /// @notice Checks whether a subscriber hash has an active subscription for the given asset.
     /// @param _assetId Asset identifier.
-    /// @param _subscriber Hash of the subscriber identity.
+    /// @param _subscriber Subscriber hash (recommended canonical form:
+    ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @return True if the subscriber's subscription for that asset is active.
     function isSubscriptionActive(bytes32 _assetId, bytes32 _subscriber) external view returns (bool);
 
-    /// @notice Returns the subscription expiry timestamp for the given subscriber for the given asset.
+    /// @notice Returns the subscription expiry timestamp for the given subscriber hash for the given asset.
     /// @param _assetId Asset identifier.
-    /// @param _subscriber Hash of the subscriber identity.
+    /// @param _subscriber Subscriber hash (recommended canonical form:
+    ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @return Expiry timestamp in seconds; 0 if no subscription.
     function getSubscription(bytes32 _assetId, bytes32 _subscriber) external view returns (uint256);
 
@@ -43,10 +45,11 @@ interface IAssetRegistry {
     /// @return Total price for the duration.
     function getSubscriptionPrice(bytes32 _assetId, uint256 _duration) external view returns (uint256);
 
-    /// @notice Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract.
+    /// @notice Subscribes a subscriber hash to the asset using ERC-2612 permit; forwards to the asset contract.
     ///         The payer signs the permit and is the refund beneficiary on cancel/revoke.
     /// @param _assetId Asset identifier.
-    /// @param _subscriber Hash of the subscriber identity.
+    /// @param _subscriber Subscriber hash (recommended canonical form:
+    ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @param _payer Payer; signs the permit and receives refunds on cancel/revoke.
     /// @param _spender Must be the asset contract address for the permit.
     /// @param _value Permit allowance / payment amount.
@@ -100,22 +103,17 @@ interface IAssetRegistry {
     /// @return registryFee The registry fee.
     function getFees(uint256 _value) external view returns (uint256 creatorFee, uint256 registryFee);
 
-    /// @notice Claims the registry fee for a subscriber. Callable only by the Registry owner.
+    /// @notice Claims the registry fee for a subscriber hash. Callable only by the Registry owner.
     /// @param _assetId Asset identifier.
-    /// @param _subscriber Hash of the subscriber identity.
+    /// @param _subscriber Subscriber hash.
     /// @return The amount of registry fee claimed.
     function claimRegistryFee(bytes32 _assetId, bytes32 _subscriber) external returns (uint256);
 
-    /// @notice Claims the registry fee for multiple subscribers. Callable only by the Registry owner.
+    /// @notice Claims the registry fee for multiple subscriber hashes. Callable only by the Registry owner.
     /// @param _assetId Asset identifier.
-    /// @param _subscribers Array of subscriber identities.
+    /// @param _subscribers Array of subscriber hashes.
     /// @return The amount of registry fee claimed.
     function claimRegistryFee(bytes32 _assetId, bytes32[] calldata _subscribers) external returns (uint256);
-
-    /// @notice Cancels a subscription. Callable only by the Registry owner.
-    /// @param _assetId Asset identifier.
-    /// @param _subscriber Hash of the subscriber identity.
-    function cancelSubscription(bytes32 _assetId, bytes32 _subscriber) external;
 
     /// @notice Returns the owner of the registry (e.g. for receiving registry fees).
     /// @return The registry owner address.

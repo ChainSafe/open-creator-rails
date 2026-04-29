@@ -18,7 +18,8 @@ contract BaseTest is Test {
     string internal constant MNEMONIC = "test test test test test test test test test test test junk";
 
     bytes32 internal constant ASSET_ID = keccak256(abi.encodePacked("asset_id"));
-    bytes32 internal constant SUBSCRIBER = keccak256(abi.encodePacked("subscriber_id"));
+    string internal constant SUBSCRIBER_ID = "subscriber_id";
+    bytes32 internal SUBSCRIBER;
     uint256 internal constant SUBSCRIPTION_PRICE = 100000000;
     uint256 internal constant DURATION = 3600;
 
@@ -35,6 +36,7 @@ contract BaseTest is Test {
 
         key = vm.deriveKey(MNEMONIC, 0);
         signer = vm.addr(key);
+        SUBSCRIBER = keccak256(abi.encode(SUBSCRIBER_ID, signer));
 
         vm.startPrank(signer);
 
@@ -63,5 +65,17 @@ contract BaseTest is Test {
         (v, r, s) = vm.sign(key, digest);
 
         return (v, r, s);
+    }
+
+    function getCancellationSignature(string memory subscriberId, address subscriberAddress, uint256 timestamp)
+        public
+        view
+        returns (bytes memory signature)
+    {
+        bytes32 subscriber = keccak256(abi.encode(subscriberId, subscriberAddress));
+        bytes32 hash = keccak256(abi.encodePacked(block.chainid, address(asset), timestamp, subscriber));
+        bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(key, digest);
+        signature = abi.encodePacked(r, s, v);
     }
 }
