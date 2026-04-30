@@ -49,7 +49,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         uint256 subscriptionPrice;
         uint256 registryFeeShare;
         address payer;
-        bool cancelled;
     }
 
     error InvalidOwner();
@@ -151,9 +150,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
     function _getSubscription(bytes32 subscriber) internal view returns (uint256) {
         bytes32 id = _hash(subscriber, nonces[subscriber]);
-        Subscription memory subscription = subscriptions[id];
-        if (subscription.cancelled) return 0;
-        return subscription.endTime;
+        return subscriptions[id].endTime;
     }
 
     function getSubscription(bytes32 subscriber) external view returns (uint256) {
@@ -202,9 +199,9 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             startTime = Math.max(startTime, subscription.endTime);
 
             // Extend existing subscription if still active and subscription price, registry fee share,
-            // and payer are the same (and it was not cancelled).
+            // and payer are the same.
             if (
-                !subscription.cancelled && startTime == subscription.endTime && subscription.payer == payer
+                startTime == subscription.endTime && subscription.payer == payer
                     && subscription.subscriptionPrice == subscriptionPrice
                     && subscription.registryFeeShare == registryFeeShare
             ) {
@@ -241,8 +238,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             endTime: endTime,
             subscriptionPrice: subscriptionPrice,
             registryFeeShare: registryFeeShare,
-            payer: payer,
-            cancelled: false
+            payer: payer
         });
 
         subscribers.add(subscriber);
@@ -478,26 +474,24 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
             Subscription memory subscription = subscriptions[id];
 
-            // Skip expired or already-cancelled subscriptions — all prior ones will also be done
-            if (subscription.endTime <= timestamp || subscription.cancelled) {
+            // Skip expired subscriptions — all prior ones will also be done
+            if (subscription.endTime <= timestamp) {
                 break;
             }
 
-            // Effective start for refund: use startTime for future subscriptions, timestamp for active subscriptions
-            uint256 effectiveStart = subscription.startTime >= timestamp ? subscription.startTime : timestamp;
-
-            uint256 remainingTime = subscription.endTime - effectiveStart;
-            uint256 refundablePeriods = remainingTime / SUBSCRIPTION_DURATION;
-            uint256 returnable = refundablePeriods * subscription.subscriptionPrice;
-
+            uint256 returnable;
             if (subscription.startTime >= timestamp) {
                 // Future subscription: full refund, delete record
+                uint256 refundablePeriods = (subscription.endTime - subscription.startTime) / SUBSCRIPTION_DURATION;
+                returnable = refundablePeriods * subscription.subscriptionPrice;
                 delete subscriptions[id];
                 deleted++;
             } else {
-                // Active subscription: mark cancelled immediately; truncate endTime to end of last
-                // started period so _claimable charges the full in-progress period as fee
-                subscriptions[id].cancelled = true;
+                // Active subscription: keep it active until the end of the current period;
+                // truncate endTime so unstarted periods are refunded.
+                uint256 remainingTime = subscription.endTime - timestamp;
+                uint256 refundablePeriods = remainingTime / SUBSCRIPTION_DURATION;
+                returnable = refundablePeriods * subscription.subscriptionPrice;
                 subscriptions[id].endTime = subscription.endTime - (refundablePeriods * SUBSCRIPTION_DURATION);
             }
 

@@ -378,9 +378,10 @@ contract AssetTest is BaseTest {
         asset.revokeSubscription(SUBSCRIBER);
 
         assertEq(testToken.balanceOf(signer), tokenBalance - (value + (value / 2)));
-        // With SUBSCRIPTION_DURATION=1 every second is a refundable period, so the full remaining
-        // half-duration is refunded; subscription is immediately marked cancelled, returns 0
-        assertEq(asset.getSubscription(SUBSCRIBER), 0);
+        // With SUBSCRIPTION_DURATION=1 every remaining second is a refundable period, so full
+        // remaining half-duration is refunded and endTime is truncated to the current timestamp
+        // (end of the just completed 1-second period); subscription stays active until that point.
+        assertEq(asset.getSubscription(SUBSCRIBER), block.timestamp);
         assertFalse(asset.isSubscriptionActive(SUBSCRIBER));
     }
 
@@ -526,8 +527,9 @@ contract AssetTest is BaseTest {
 
         assertEq(testToken.balanceOf(signer), tokenBalance - (value + (value / 2)));
         // With SUBSCRIPTION_DURATION=1 every remaining second is a refundable period, so full
-        // remaining half-duration is refunded; subscription is immediately marked cancelled, returns 0
-        assertEq(asset.getSubscription(SUBSCRIBER), 0);
+        // remaining half-duration is refunded and endTime is truncated to the current timestamp
+        // (end of the just completed 1-second period); subscription stays active until that point.
+        assertEq(asset.getSubscription(SUBSCRIBER), block.timestamp);
         assertFalse(asset.isSubscriptionActive(SUBSCRIBER));
     }
 
@@ -610,9 +612,10 @@ contract AssetTest is BaseTest {
 
         _cancelAsSubscriber();
 
-        // Subscription is immediately inactive and reads as cleared
+        // Active record is truncated to end of current period (== block.timestamp here since
+        // SUBSCRIPTION_DURATION=1); future record is deleted.
         assertFalse(asset.isSubscriptionActive(SUBSCRIBER));
-        assertEq(asset.getSubscription(SUBSCRIBER), 0);
+        assertEq(asset.getSubscription(SUBSCRIBER), block.timestamp);
 
         // Refund:
         //   record 0 (active): (DURATION/2 seconds remaining) / SUBSCRIPTION_DURATION (=1) periods at original price
@@ -659,7 +662,8 @@ contract AssetTest is BaseTest {
         vm.prank(signer);
         asset.cancelSubscription(SUBSCRIBER_ID, timestamp2, newSignature);
 
-        assertEq(asset.getSubscription(SUBSCRIBER), 0);
+        // endTime truncates to end of current period (== block.timestamp with SUBSCRIPTION_DURATION=1)
+        assertEq(asset.getSubscription(SUBSCRIBER), block.timestamp);
     }
 
     function test_commitCancellation_sameSubscriberIdDifferentAddress_storesIndependently() public {
