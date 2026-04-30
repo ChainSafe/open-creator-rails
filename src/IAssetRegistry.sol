@@ -55,13 +55,6 @@ interface IAssetRegistry {
     /// @return Period length in seconds.
     function getSubscriptionDuration(bytes32 _assetId) external view returns (uint256);
 
-    /// @notice Returns the total duration in seconds covered by value for the given asset,
-    ///         rounded down to whole periods.
-    /// @param _assetId Asset identifier.
-    /// @param _value Payment amount in token units.
-    /// @return Total duration in seconds (whole periods only).
-    function getSubscriptionDuration(bytes32 _assetId, uint256 _value) external view returns (uint256);
-
     /// @notice Returns both price and duration for a given number of periods for the given asset.
     /// @param _assetId Asset identifier.
     /// @param _count Number of periods.
@@ -79,7 +72,7 @@ interface IAssetRegistry {
     ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @param _payer Payer; signs the permit and receives refunds on cancel/revoke.
     /// @param _spender Must be the asset contract address for the permit.
-    /// @param _value Permit allowance / payment amount.
+    /// @param _count Number of full subscription periods to subscribe for. Must be > 0.
     /// @param _deadline Permit signature expiry.
     /// @param _v Signature v.
     /// @param _r Signature r.
@@ -90,7 +83,7 @@ interface IAssetRegistry {
         bytes32 _subscriber,
         address _payer,
         address _spender,
-        uint256 _value,
+        uint256 _count,
         uint256 _deadline,
         uint8 _v,
         bytes32 _r,

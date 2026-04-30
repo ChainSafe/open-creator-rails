@@ -97,12 +97,6 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return IAsset(asset).getSubscriptionDuration();
     }
 
-    function getSubscriptionDuration(bytes32 _assetId, uint256 _value) external view returns (uint256) {
-        address asset = getAsset(_assetId);
-
-        return IAsset(asset).getSubscriptionDuration(_value);
-    }
-
     function getSubscriptionPriceAndDuration(bytes32 _assetId, uint256 _count)
         external
         view
@@ -118,14 +112,14 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         bytes32 _subscriber,
         address _payer,
         address _spender,
-        uint256 _value,
+        uint256 _count,
         uint256 _deadline,
         uint8 _v,
         bytes32 _r,
         bytes32 _s
     ) external returns (uint256) {
         address asset = getAsset(_assetId);
-        return IAsset(asset).subscribe(_subscriber, _payer, _spender, _value, _deadline, _v, _r, _s);
+        return IAsset(asset).subscribe(_subscriber, _payer, _spender, _count, _deadline, _v, _r, _s);
     }
 
     function getCreatorFeeShare() external view returns (uint256) {

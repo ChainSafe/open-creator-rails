@@ -8,35 +8,35 @@ import {BaseTest} from "./Base.t.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract AssetRegistryTest is BaseTest {
-    function _subscribe(uint256 duration) internal returns (uint256 subscription) {
+    function _subscribe(uint256 count) internal returns (uint256 subscription) {
         test_createAsset();
 
         address payer = signer;
         address spender = address(asset);
-        uint256 value = asset.getSubscriptionPrice(duration);
-        uint256 deadline = block.timestamp + duration;
+        uint256 value = asset.getSubscriptionPrice(count);
+        uint256 deadline = block.timestamp + count * SUBSCRIPTION_DURATION;
 
         (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
 
         vm.startPrank(signer);
-        subscription = assetRegistry.subscribe(ASSET_ID, SUBSCRIBER, payer, spender, value, deadline, v, r, s);
+        subscription = assetRegistry.subscribe(ASSET_ID, SUBSCRIBER, payer, spender, count, deadline, v, r, s);
         vm.stopPrank();
 
         return subscription;
     }
 
-    function _subscribeFor(bytes32 subscriber, uint256 duration) internal returns (uint256 subscription) {
+    function _subscribeFor(bytes32 subscriber, uint256 count) internal returns (uint256 subscription) {
         test_createAsset();
 
         address payer = signer;
         address spender = address(asset);
-        uint256 value = asset.getSubscriptionPrice(duration);
-        uint256 deadline = block.timestamp + duration;
+        uint256 value = asset.getSubscriptionPrice(count);
+        uint256 deadline = block.timestamp + count * SUBSCRIPTION_DURATION;
 
         (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
 
         vm.startPrank(signer);
-        subscription = assetRegistry.subscribe(ASSET_ID, subscriber, payer, spender, value, deadline, v, r, s);
+        subscription = assetRegistry.subscribe(ASSET_ID, subscriber, payer, spender, count, deadline, v, r, s);
         vm.stopPrank();
 
         return subscription;
@@ -87,7 +87,8 @@ contract AssetRegistryTest is BaseTest {
         uint256 deadline = block.timestamp + DURATION;
         (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
 
-        uint256 subscription = assetRegistry.subscribe(ASSET_ID, SUBSCRIBER, payer, spender, value, deadline, v, r, s);
+        uint256 subscription =
+            assetRegistry.subscribe(ASSET_ID, SUBSCRIBER, payer, spender, DURATION, deadline, v, r, s);
 
         assertTrue(subscription > block.timestamp);
         assertEq(assetRegistry.getSubscription(ASSET_ID, SUBSCRIBER), subscription);
@@ -402,7 +403,7 @@ contract AssetRegistryTest is BaseTest {
         (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
 
         vm.expectRevert(AssetRegistry.AssetNotFound.selector);
-        assetRegistry.subscribe(nonexistentId, SUBSCRIBER, payer, spender, value, deadline, v, r, s);
+        assetRegistry.subscribe(nonexistentId, SUBSCRIBER, payer, spender, DURATION, deadline, v, r, s);
     }
 
     function test_isSubscriptionActive_assetNotFound() public {
@@ -582,12 +583,6 @@ contract AssetRegistryTest is BaseTest {
         assertEq(assetRegistry.getSubscriptionDuration(ASSET_ID), SUBSCRIPTION_DURATION);
     }
 
-    function test_getSubscriptionDuration_forward() public {
-        test_createAsset();
-        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, 3);
-        assertEq(assetRegistry.getSubscriptionDuration(ASSET_ID, value), 3 * SUBSCRIPTION_DURATION);
-    }
-
     function test_getSubscriptionPriceAndDuration_forward() public {
         test_createAsset();
         (uint256 price, uint256 duration) = assetRegistry.getSubscriptionPriceAndDuration(ASSET_ID, 5);
@@ -609,9 +604,5 @@ contract AssetRegistryTest is BaseTest {
         (uint256 price, uint256 duration) = assetRegistry.getSubscriptionPriceAndDuration(customId, 2);
         assertEq(price, SUBSCRIPTION_PRICE * 2);
         assertEq(duration, 2 * customDuration);
-
-        // 2 full periods + half a period worth → rounds down to 2 periods of duration
-        uint256 value = SUBSCRIPTION_PRICE * 2 + SUBSCRIPTION_PRICE / 2;
-        assertEq(assetRegistry.getSubscriptionDuration(customId, value), 2 * customDuration);
     }
 }

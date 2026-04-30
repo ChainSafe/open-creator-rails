@@ -32,49 +32,37 @@ contract AssetTest is BaseTest {
         assertEq(asset.getSubscriptionDuration(), SUBSCRIPTION_DURATION);
     }
 
-    function test_getSubscriptionDuration() public view {
-        // 3 periods worth of tokens = 3 * SUBSCRIPTION_DURATION seconds
-        uint256 value = SUBSCRIPTION_PRICE * 3;
-        assertEq(asset.getSubscriptionDuration(value), 3 * SUBSCRIPTION_DURATION);
-    }
-
-    function test_getSubscriptionDuration_roundsDown() public view {
-        // Value covers 3 whole periods plus a partial period, should floor to 3
-        uint256 value = SUBSCRIPTION_PRICE * 4 - 1;
-        assertEq(asset.getSubscriptionDuration(value), 3 * SUBSCRIPTION_DURATION);
-    }
-
     function test_getSubscriptionPriceAndDuration() public view {
         (uint256 price, uint256 duration) = asset.getSubscriptionPriceAndDuration(5);
         assertEq(price, SUBSCRIPTION_PRICE * 5);
         assertEq(duration, 5 * SUBSCRIPTION_DURATION);
     }
 
-    function _subscribe(uint256 duration) internal returns (uint256 subscription) {
+    function _subscribe(uint256 count) internal returns (uint256 subscription) {
         address payer = signer;
         address spender = address(asset);
 
-        uint256 value = asset.getSubscriptionPrice(duration);
+        uint256 value = asset.getSubscriptionPrice(count);
 
-        uint256 deadline = block.timestamp + duration;
+        uint256 deadline = block.timestamp;
 
         (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
 
-        subscription = asset.subscribe(SUBSCRIBER, payer, spender, value, deadline, v, r, s);
+        subscription = asset.subscribe(SUBSCRIBER, payer, spender, count, deadline, v, r, s);
 
         return subscription;
     }
 
-    function _subscribeFor(bytes32 subscriber, uint256 duration) internal returns (uint256 subscription) {
+    function _subscribeFor(bytes32 subscriber, uint256 count) internal returns (uint256 subscription) {
         address payer = signer;
         address spender = address(asset);
 
-        uint256 value = asset.getSubscriptionPrice(duration);
-        uint256 deadline = block.timestamp + duration;
+        uint256 value = asset.getSubscriptionPrice(count);
+        uint256 deadline = block.timestamp;
 
         (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
 
-        subscription = asset.subscribe(subscriber, payer, spender, value, deadline, v, r, s);
+        subscription = asset.subscribe(subscriber, payer, spender, count, deadline, v, r, s);
 
         return subscription;
     }
@@ -131,16 +119,16 @@ contract AssetTest is BaseTest {
     function test_subscribe_multiple() public {
         uint256 deadline = block.timestamp;
         uint256 count = 10;
+        uint256 duration = DURATION * count;
 
         for (uint256 i = 0; i < count; i++) {
             vm.expectEmit(true, true, true, true);
             if (i == 0) {
                 emit Asset.SubscriptionAdded(SUBSCRIBER, deadline, deadline + DURATION, i, signer);
             } else {
-                emit Asset.SubscriptionExtended(SUBSCRIBER, deadline + DURATION);
+                emit Asset.SubscriptionExtended(SUBSCRIBER, deadline + DURATION * (i + 1));
             }
             _subscribe(DURATION);
-            deadline += DURATION;
         }
 
         assertEq(asset.getSubscription(SUBSCRIBER), block.timestamp + (DURATION * count));
@@ -438,34 +426,32 @@ contract AssetTest is BaseTest {
         address payer = signer;
         address spender = address(1); // Wrong spender - must be address(asset)
         uint256 value = asset.getSubscriptionPrice(DURATION);
-        uint256 deadline = block.timestamp + DURATION;
+        uint256 deadline = block.timestamp;
         (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, address(asset), value, deadline);
 
         vm.expectRevert(Asset.InvalidSpender.selector);
-        asset.subscribe(SUBSCRIBER, payer, spender, value, deadline, v, r, s);
+        asset.subscribe(SUBSCRIBER, payer, spender, DURATION, deadline, v, r, s);
     }
 
     function test_subscribe_permitFailed() public {
         address payer = signer;
         address spender = address(asset);
-        uint256 value = asset.getSubscriptionPrice(DURATION);
-        uint256 deadline = block.timestamp + DURATION;
+        uint256 deadline = block.timestamp;
         // Use invalid signature - wrong v, r, s
         (uint8 v, bytes32 r, bytes32 s) = (0, bytes32(0), bytes32(0));
 
         vm.expectRevert(Asset.PermitFailed.selector);
-        asset.subscribe(SUBSCRIBER, payer, spender, value, deadline, v, r, s);
+        asset.subscribe(SUBSCRIBER, payer, spender, DURATION, deadline, v, r, s);
     }
 
     function test_subscribe_insufficientFunds() public {
         address payer = signer;
         address spender = address(asset);
-        uint256 value = SUBSCRIPTION_PRICE - 1; // Below subscriptionPrice, rounds to 0
-        uint256 deadline = block.timestamp + DURATION;
-        (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
+        uint256 deadline = block.timestamp;
+        (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, 0, deadline);
 
         vm.expectRevert(Asset.InsufficientFunds.selector);
-        asset.subscribe(SUBSCRIBER, payer, spender, value, deadline, v, r, s);
+        asset.subscribe(SUBSCRIBER, payer, spender, 0, deadline, v, r, s);
     }
 
     function test_setSubscriptionPrice_unauthorized() public {
@@ -944,7 +930,7 @@ contract AssetTest is BaseTest {
         (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
 
         vm.expectRevert(Asset.PermitFailed.selector);
-        asset.subscribe(SUBSCRIBER, payer, spender, value, deadline, v, r, s);
+        asset.subscribe(SUBSCRIBER, payer, spender, 1, deadline, v, r, s);
     }
 
     function test_claimCreatorFee_zeroClaimable() public {
@@ -1031,7 +1017,7 @@ contract AssetTest is BaseTest {
         testToken.mint(payer2, 1e30);
 
         uint256 value = asset.getSubscriptionPrice(DURATION);
-        uint256 deadline = block.timestamp + DURATION * 2;
+        uint256 deadline = block.timestamp;
         uint256 nonce2 = testToken.nonces(payer2);
         bytes32 permitHash = keccak256(abi.encode(PERMIT_TYPEHASH, payer2, address(asset), value, nonce2, deadline));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", testToken.DOMAIN_SEPARATOR(), permitHash));
@@ -1040,7 +1026,7 @@ contract AssetTest is BaseTest {
         uint256 newStart = block.timestamp + DURATION;
         vm.expectEmit(true, true, true, true);
         emit Asset.SubscriptionAdded(SUBSCRIBER, newStart, newStart + DURATION, 1, payer2);
-        asset.subscribe(SUBSCRIBER, payer2, address(asset), value, deadline, v, r, s);
+        asset.subscribe(SUBSCRIBER, payer2, address(asset), DURATION, deadline, v, r, s);
     }
 
     // --- Batch claimCreatorFee ---

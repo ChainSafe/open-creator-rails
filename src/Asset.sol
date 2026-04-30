@@ -137,10 +137,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return SUBSCRIPTION_DURATION;
     }
 
-    function getSubscriptionDuration(uint256 value) external view returns (uint256) {
-        return (value / subscriptionPrice) * SUBSCRIPTION_DURATION;
-    }
-
     function getSubscriptionPriceAndDuration(uint256 count) external view returns (uint256 price, uint256 duration) {
         price = count * subscriptionPrice;
         duration = count * SUBSCRIPTION_DURATION;
@@ -165,19 +161,23 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         bytes32 subscriber,
         address payer,
         address spender,
-        uint256 value,
+        uint256 count,
         uint256 deadline,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external nonReentrant returns (uint256) {
-        _validatePermit(payer, spender, value, deadline, v, r, s);
+        if (count == 0) {
+            revert InsufficientFunds();
+        }
 
-        return _subscribe(subscriber, payer, value);
+        _validatePermit(payer, spender, count * subscriptionPrice, deadline, v, r, s);
+
+        return _subscribe(subscriber, payer, count);
     }
 
-    function _subscribe(bytes32 subscriber, address payer, uint256 value) internal returns (uint256) {
-        uint256 duration = (value / subscriptionPrice) * SUBSCRIPTION_DURATION;
+    function _subscribe(bytes32 subscriber, address payer, uint256 count) internal returns (uint256) {
+        uint256 duration = count * SUBSCRIPTION_DURATION;
 
         uint256 startTime = block.timestamp;
 
@@ -259,12 +259,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         }
 
         try IERC20Permit(TOKEN_ADDRESS).permit(owner, address(this), value, deadline, v, r, s) {
-            value -= value % subscriptionPrice;
-
-            if (value < subscriptionPrice) {
-                revert InsufficientFunds();
-            }
-
             SafeERC20.safeTransferFrom(TOKEN_CONTRACT, owner, address(this), value);
         } catch {
             revert PermitFailed();
