@@ -626,6 +626,8 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
   - `uint256 indexed endTime` : Subscription expiry time (Unix timestamp).
   - `uint256 nonce` : Subscription nonce (increments each time a new record is created for the subscriber).
   - `address payer` : Payer for this subscription (refund beneficiary on cancel/revoke).
+  - `uint256 subscriptionPrice` : Per-second subscription price snapshot used for this subscription record.
+  - `uint256 registryFeeShare` : Registry fee share snapshot (0-100) used for this subscription record.
 
 
 ---
@@ -644,6 +646,15 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
 - Parameters:
   - `bytes32 indexed subscriber` : Subscriber whose creator fee was claimed.
   - `uint256 amount` : Amount of creator fee claimed.
+
+
+---
+
+**CreatorFeeClaimedBatch** : Emitted when creator fees are claimed for multiple subscribers in a single batch call. Emitted once per batch call regardless of how many subscribers had claimable fees.
+- Contract: `Asset`
+- Parameters:
+  - `bytes32[] indexed subscribers` : Array of subscriber identities passed to the batch claim (note: as an indexed dynamic type, the topic is the keccak256 hash of the ABI-encoded array).
+  - `uint256 totalAmount` : Total creator fee claimed across all subscribers in the batch.
 
 
 ---

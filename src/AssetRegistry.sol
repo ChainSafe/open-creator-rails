@@ -38,6 +38,8 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         }
 
         registryFeeShare = _registryFeeShare;
+
+        emit RegistryFeeShareUpdated(registryFeeShare);
     }
 
     function createAsset(
