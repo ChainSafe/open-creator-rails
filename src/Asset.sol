@@ -77,8 +77,8 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     event CreatorFeeClaimed(bytes32 indexed subscriber, uint256 amount);
     event CreatorFeeClaimedBatch(bytes32[] indexed subscribers, uint256 totalAmount);
     event SubscriptionPriceUpdated(uint256 newSubscriptionPrice);
-    event SubscriptionRevoked(bytes32 indexed subscriber);
-    event SubscriptionCancelled(bytes32 indexed subscriber);
+    event SubscriptionRevoked(bytes32 indexed subscriber, uint256 endTime);
+    event SubscriptionCancelled(bytes32 indexed subscriber, uint256 endTime);
 
     /// @notice Initializes the asset with id, price, payment token, and owner.
     ///         Callable only by the registry (msg.sender).
@@ -456,7 +456,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return claimed;
     }
 
-    function _removeSubscription(bytes32 subscriber) internal {
+    function _removeSubscription(bytes32 subscriber) internal returns (uint256 endTime) {
         if (!subscribers.contains(subscriber)) {
             revert SubscriptionNotFound();
         }
@@ -468,6 +468,9 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         uint256 count = nonce + 1;
 
         uint256 timestamp = block.timestamp;
+
+        // Explicit assignment for clarity
+        endTime = 0;
 
         for (uint256 i = count; i > 0; i--) {
             bytes32 id = _hash(subscriber, i - 1);
@@ -492,7 +495,8 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                 uint256 remainingTime = subscription.endTime - timestamp;
                 uint256 refundablePeriods = remainingTime / SUBSCRIPTION_DURATION;
                 returnable = refundablePeriods * subscription.subscriptionPrice;
-                subscriptions[id].endTime = subscription.endTime - (refundablePeriods * SUBSCRIPTION_DURATION);
+                endTime = subscription.endTime - (refundablePeriods * SUBSCRIPTION_DURATION);
+                subscriptions[id].endTime = endTime;
             }
 
             if (returnable != 0) {
@@ -514,12 +518,13 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         else if (deleted != 0) {
             nonces[subscriber] -= deleted;
         }
+        return endTime;
     }
 
     function revokeSubscription(bytes32 subscriber) external onlyOwner nonReentrant {
-        _removeSubscription(subscriber);
+        uint256 endTime = _removeSubscription(subscriber);
 
-        emit SubscriptionRevoked(subscriber);
+        emit SubscriptionRevoked(subscriber, endTime);
     }
 
     function commitCancellation(string memory subscriberId) external returns (uint256 timestamp) {
@@ -548,11 +553,11 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             revert InvalidSignature();
         }
 
-        _removeSubscription(subscriber);
+        uint256 endTime = _removeSubscription(subscriber);
 
         delete cancellations[subscriber];
 
-        emit SubscriptionCancelled(subscriber);
+        emit SubscriptionCancelled(subscriber, endTime);
     }
 
     function _hash(bytes32 a, uint256 b) internal pure returns (bytes32 result) {

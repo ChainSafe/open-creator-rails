@@ -341,7 +341,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(SUBSCRIBER);
+        emit Asset.SubscriptionRevoked(SUBSCRIBER, 0);
         asset.revokeSubscription(SUBSCRIBER);
 
         assertEq(testToken.balanceOf(signer), tokenBalance);
@@ -356,7 +356,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(SUBSCRIBER);
+        emit Asset.SubscriptionRevoked(SUBSCRIBER, 0);
         asset.revokeSubscription(SUBSCRIBER);
 
         assertEq(testToken.balanceOf(signer), tokenBalance);
@@ -374,7 +374,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(SUBSCRIBER);
+        emit Asset.SubscriptionRevoked(SUBSCRIBER, block.timestamp);
         asset.revokeSubscription(SUBSCRIBER);
 
         assertEq(testToken.balanceOf(signer), tokenBalance - (value + (value / 2)));
@@ -392,7 +392,7 @@ contract AssetTest is BaseTest {
         vm.warp(block.timestamp + DURATION);
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(SUBSCRIBER);
+        emit Asset.SubscriptionRevoked(SUBSCRIBER, 0);
         asset.revokeSubscription(SUBSCRIBER);
 
         assertEq(testToken.balanceOf(signer), tokenBalance - asset.getSubscriptionPrice(DURATION));
@@ -409,7 +409,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(SUBSCRIBER);
+        emit Asset.SubscriptionRevoked(SUBSCRIBER, 0);
         asset.revokeSubscription(SUBSCRIBER);
 
         assertEq(asset.getSubscription(SUBSCRIBER), 0);
@@ -888,7 +888,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(signer);
         vm.expectEmit(true, false, false, true);
-        emit Asset.SubscriptionCancelled(SUBSCRIBER);
+        emit Asset.SubscriptionCancelled(SUBSCRIBER, 0);
         asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
     }
 
