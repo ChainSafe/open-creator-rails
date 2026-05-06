@@ -31,7 +31,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
     mapping(bytes32 => Subscription) internal subscriptions;
     mapping(bytes32 => uint256) internal nonces;
-    mapping(bytes32 => uint256) internal cancellations;
 
     mapping(bytes32 => uint256) internal creatorClaimedAtTimestamps;
     mapping(bytes32 => uint256) internal creatorClaimedAtNonces;
@@ -58,7 +57,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     error SubscriptionNotFound();
     error SubscriptionRevocationFailed();
     error SubscriptionCancellationFailed();
-    error InvalidCancellationCommitment();
     error InvalidSignature();
     error OnlyRegistryUnauthorizedAccount();
 
@@ -498,25 +496,13 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         emit SubscriptionRevoked(subscriber);
     }
 
-    function commitCancellation(string memory subscriberId) external returns (uint256 timestamp) {
-        timestamp = block.timestamp;
-
-        cancellations[keccak256(abi.encode(subscriberId, msg.sender))] = timestamp;
-
-        return timestamp;
-    }
-
-    function cancelSubscription(string memory subscriberId, uint256 timestamp, bytes memory signature)
+    function cancelSubscription(string memory subscriberId, bytes memory signature)
         external
         nonReentrant
     {
         bytes32 subscriber = keccak256(abi.encode(subscriberId, msg.sender));
 
-        if (cancellations[subscriber] != timestamp) {
-            revert InvalidCancellationCommitment();
-        }
-
-        bytes32 hash = keccak256(abi.encodePacked(block.chainid, address(this), timestamp, subscriber));
+        bytes32 hash = keccak256(abi.encodePacked(block.chainid, address(this), subscriber));
 
         address signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(hash), signature);
 
@@ -525,8 +511,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         }
 
         _removeSubscription(subscriber);
-
-        delete cancellations[subscriber];
 
         emit SubscriptionCancelled(subscriber);
     }
