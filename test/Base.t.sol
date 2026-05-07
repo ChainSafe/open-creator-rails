@@ -19,7 +19,7 @@ contract BaseTest is Test {
 
     bytes32 internal constant ASSET_ID = keccak256(abi.encodePacked("asset_id"));
     string internal constant SUBSCRIBER_ID = "subscriber_id";
-    bytes32 internal SUBSCRIBER;
+    bytes32 internal _subscriber;
     uint256 internal constant SUBSCRIPTION_PRICE = 100000000;
     uint256 internal constant DURATION = 3600;
 
@@ -30,13 +30,15 @@ contract BaseTest is Test {
 
     address internal signer;
     uint256 internal key;
+    uint256 internal otherKey;
 
     function setUp() public virtual {
         testToken = new TestToken();
 
         key = vm.deriveKey(MNEMONIC, 0);
+        otherKey = vm.deriveKey(MNEMONIC, 1);
         signer = vm.addr(key);
-        SUBSCRIBER = keccak256(abi.encode(SUBSCRIBER_ID, signer));
+        _subscriber = keccak256(abi.encode(SUBSCRIBER_ID, signer));
 
         vm.startPrank(signer);
 
