@@ -67,13 +67,13 @@ contract BaseTest is Test {
         return (v, r, s);
     }
 
-    function getCancellationSignature(string memory subscriberId, address subscriberAddress, uint256 timestamp)
+    function getCancellationSignature(string memory subscriberId, address subscriberAddress)
         public
         view
         returns (bytes memory signature)
     {
         bytes32 subscriber = keccak256(abi.encode(subscriberId, subscriberAddress));
-        bytes32 hash = keccak256(abi.encodePacked(block.chainid, address(asset), timestamp, subscriber));
+        bytes32 hash = keccak256(abi.encodePacked(block.chainid, address(asset), subscriber));
         bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(key, digest);
         signature = abi.encodePacked(r, s, v);

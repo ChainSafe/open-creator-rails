@@ -479,12 +479,10 @@ contract AssetRegistryTest is BaseTest {
 
         assertEq(testToken.balanceOf(signer), tokenBalanceBefore - asset.getSubscriptionPrice(DURATION));
 
-        vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
+        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
 
         vm.prank(signer);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
+        asset.cancelSubscription(SUBSCRIBER_ID, signature);
 
         assertFalse(assetRegistry.isSubscriptionActive(ASSET_ID, SUBSCRIBER));
         assertEq(testToken.balanceOf(signer), tokenBalanceBefore);
@@ -493,13 +491,11 @@ contract AssetRegistryTest is BaseTest {
     function test_cancelSubscription_unauthorized() public {
         _subscribe(DURATION);
 
-        vm.prank(UNAUTHORIZED);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
+        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
 
         vm.prank(UNAUTHORIZED);
         vm.expectRevert(Asset.InvalidSignature.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
+        asset.cancelSubscription(SUBSCRIBER_ID, signature);
     }
 
     function test_cancelSubscription_assetNotFound() public {

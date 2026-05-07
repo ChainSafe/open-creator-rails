@@ -55,12 +55,9 @@ contract AssetTest is BaseTest {
     }
 
     function _cancelAsSubscriber() internal {
+        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
         vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
-
-        vm.prank(signer);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
+        asset.cancelSubscription(SUBSCRIBER_ID, signature);
     }
 
     function _subscriberHash(string memory subscriberId, address subscriberAddress) internal pure returns (bytes32) {
@@ -70,11 +67,10 @@ contract AssetTest is BaseTest {
     function _getCancellationSignatureWithKey(
         string memory subscriberId,
         address subscriberAddress,
-        uint256 timestamp,
         uint256 signingKey
     ) internal view returns (bytes memory signature) {
         bytes32 subscriber = keccak256(abi.encode(subscriberId, subscriberAddress));
-        bytes32 hash = keccak256(abi.encodePacked(block.chainid, address(asset), timestamp, subscriber));
+        bytes32 hash = keccak256(abi.encodePacked(block.chainid, address(asset), subscriber));
         bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signingKey, digest);
         signature = abi.encodePacked(r, s, v);
@@ -534,13 +530,11 @@ contract AssetTest is BaseTest {
     }
 
     function test_cancelSubscription_noSubscription() public {
-        vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
+        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
 
         vm.prank(signer);
         vm.expectRevert(Asset.SubscriptionNotFound.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
+        asset.cancelSubscription(SUBSCRIBER_ID, signature);
     }
 
     function test_cancelSubscription_unauthorized() public {
@@ -548,56 +542,16 @@ contract AssetTest is BaseTest {
 
         test_subscribe();
 
-        vm.prank(UNAUTHORIZED);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
+        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
 
         vm.prank(UNAUTHORIZED);
         vm.expectRevert(Asset.InvalidSignature.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
+        asset.cancelSubscription(SUBSCRIBER_ID, signature);
 
         assertEq(testToken.balanceOf(signer), tokenBalance - asset.getSubscriptionPrice(DURATION));
     }
 
-    function test_commitCancellation_setsTimestampForHashedSubscriber() public {
-        test_subscribe();
-
-        vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        assertEq(timestamp, block.timestamp);
-
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
-        vm.prank(signer);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
-
-        assertEq(asset.getSubscription(SUBSCRIBER), 0);
-    }
-
-    function test_commitCancellation_overwritesPreviousTimestampForSameSubscriber() public {
-        test_subscribe();
-
-        vm.prank(signer);
-        uint256 timestamp1 = asset.commitCancellation(SUBSCRIBER_ID);
-
-        vm.warp(block.timestamp + 1);
-        vm.prank(signer);
-        uint256 timestamp2 = asset.commitCancellation(SUBSCRIBER_ID);
-
-        assertTrue(timestamp2 > timestamp1);
-
-        bytes memory oldSignature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp1);
-        vm.prank(signer);
-        vm.expectRevert(Asset.InvalidCancellationCommitment.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp1, oldSignature);
-
-        bytes memory newSignature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp2);
-        vm.prank(signer);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp2, newSignature);
-
-        assertEq(asset.getSubscription(SUBSCRIBER), block.timestamp);
-    }
-
-    function test_commitCancellation_sameSubscriberIdDifferentAddress_storesIndependently() public {
+    function test_cancelSubscription_sameSubscriberIdDifferentAddressesIndependent() public {
         uint256 otherKey = vm.deriveKey(MNEMONIC, 1);
         address otherAddress = vm.addr(otherKey);
         bytes32 otherSubscriber = _subscriberHash(SUBSCRIBER_ID, otherAddress);
@@ -605,155 +559,65 @@ contract AssetTest is BaseTest {
         _subscribe(DURATION);
         _subscribeFor(otherSubscriber, DURATION);
 
-        vm.prank(signer);
-        uint256 signerTimestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signerSignature = getCancellationSignature(SUBSCRIBER_ID, signer, signerTimestamp);
-
-        vm.prank(otherAddress);
-        uint256 otherTimestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory otherSignature =
-            _getCancellationSignatureWithKey(SUBSCRIBER_ID, otherAddress, otherTimestamp, otherKey);
+        bytes memory signerSignature = getCancellationSignature(SUBSCRIBER_ID, signer);
+        bytes memory otherSignature = _getCancellationSignatureWithKey(SUBSCRIBER_ID, otherAddress, otherKey);
 
         vm.prank(signer);
-        asset.cancelSubscription(SUBSCRIBER_ID, signerTimestamp, signerSignature);
+        asset.cancelSubscription(SUBSCRIBER_ID, signerSignature);
 
         assertEq(asset.getSubscription(SUBSCRIBER), 0);
         assertTrue(asset.isSubscriptionActive(otherSubscriber));
 
         vm.prank(otherAddress);
-        asset.cancelSubscription(SUBSCRIBER_ID, otherTimestamp, otherSignature);
+        asset.cancelSubscription(SUBSCRIBER_ID, otherSignature);
         assertEq(asset.getSubscription(otherSubscriber), 0);
     }
 
-    function test_cancelSubscription_reverts_invalidCommitment_whenNoCommit() public {
-        test_subscribe();
-        uint256 timestamp = block.timestamp;
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
-
-        vm.prank(signer);
-        vm.expectRevert(Asset.InvalidCancellationCommitment.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
-    }
-
-    function test_cancelSubscription_reverts_invalidCommitment_whenTimestampMismatch() public {
+    function test_cancelSubscription_reverts_invalidSignature_whenWrongAddressUsesSignersProof() public {
         test_subscribe();
 
-        vm.prank(signer);
-        uint256 committedTimestamp = asset.commitCancellation(SUBSCRIBER_ID);
-
-        uint256 wrongTimestamp = committedTimestamp + 1;
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, wrongTimestamp);
-
-        vm.prank(signer);
-        vm.expectRevert(Asset.InvalidCancellationCommitment.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, wrongTimestamp, signature);
-    }
-
-    function test_cancelSubscription_reverts_invalidCommitment_whenUsingCommitFromDifferentAddress() public {
-        test_subscribe();
-
-        vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
+        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
 
         uint256 otherKey = vm.deriveKey(MNEMONIC, 1);
         address otherAddress = vm.addr(otherKey);
         vm.prank(otherAddress);
-        vm.expectRevert(Asset.InvalidCancellationCommitment.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
-    }
-
-    function test_cancelSubscription_reverts_invalidCommitment_whenUsingDifferentSubscriberId() public {
-        test_subscribe();
-
-        vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(OTHER_SUBSCRIBER_ID, signer, timestamp);
-
-        vm.prank(signer);
-        vm.expectRevert(Asset.InvalidCancellationCommitment.selector);
-        asset.cancelSubscription(OTHER_SUBSCRIBER_ID, timestamp, signature);
+        vm.expectRevert(Asset.InvalidSignature.selector);
+        asset.cancelSubscription(SUBSCRIBER_ID, signature);
     }
 
     function test_cancelSubscription_reverts_invalidSignature_whenSignedByDifferentKey() public {
         test_subscribe();
 
-        vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-
         uint256 otherKey = vm.deriveKey(MNEMONIC, 1);
-        bytes memory badSignature = _getCancellationSignatureWithKey(SUBSCRIBER_ID, signer, timestamp, otherKey);
+        bytes memory badSignature = _getCancellationSignatureWithKey(SUBSCRIBER_ID, signer, otherKey);
 
         vm.prank(signer);
         vm.expectRevert(Asset.InvalidSignature.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, badSignature);
-    }
-
-    function test_cancelSubscription_reverts_invalidSignature_whenSignatureForDifferentTimestamp() public {
-        test_subscribe();
-
-        vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory badSignature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp + 1);
-
-        vm.prank(signer);
-        vm.expectRevert(Asset.InvalidSignature.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, badSignature);
+        asset.cancelSubscription(SUBSCRIBER_ID, badSignature);
     }
 
     function test_cancelSubscription_reverts_invalidSignature_whenSignatureForDifferentSubscriberHash() public {
         test_subscribe();
 
-        vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory badSignature = getCancellationSignature(OTHER_SUBSCRIBER_ID, signer, timestamp);
+        bytes memory badSignature = getCancellationSignature(OTHER_SUBSCRIBER_ID, signer);
 
         vm.prank(signer);
         vm.expectRevert(Asset.InvalidSignature.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, badSignature);
+        asset.cancelSubscription(SUBSCRIBER_ID, badSignature);
     }
 
-    function test_cancelSubscription_reverts_invalidSignature_whenCallerDiffersFromSigner() public {
+    function test_cancelSubscription_secondCall_reverts_subscriptionNotFound() public {
         test_subscribe();
 
-        vm.prank(UNAUTHORIZED);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
-
-        vm.prank(UNAUTHORIZED);
-        vm.expectRevert(Asset.InvalidSignature.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
-    }
-
-    function test_cancelSubscription_success_deletesCancellationCommitment() public {
-        test_subscribe();
+        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
 
         vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
-
-        vm.prank(signer);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
+        asset.cancelSubscription(SUBSCRIBER_ID, signature);
         assertEq(asset.getSubscription(SUBSCRIBER), 0);
 
         vm.prank(signer);
-        vm.expectRevert(Asset.InvalidCancellationCommitment.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
-    }
-
-    function test_cancelSubscription_replayFails_afterSuccessfulCancellation() public {
-        test_subscribe();
-
-        vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
-
-        vm.prank(signer);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
-
-        vm.prank(signer);
-        vm.expectRevert(Asset.InvalidCancellationCommitment.selector);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
+        vm.expectRevert(Asset.SubscriptionNotFound.selector);
+        asset.cancelSubscription(SUBSCRIBER_ID, signature);
     }
 
     function test_cancelSubscription_doesNotAffectOtherAddressWithSameSubscriberId() public {
@@ -765,11 +629,7 @@ contract AssetTest is BaseTest {
         _subscribeFor(otherSubscriber, DURATION);
 
         vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
-
-        vm.prank(signer);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
+        asset.cancelSubscription(SUBSCRIBER_ID, getCancellationSignature(SUBSCRIBER_ID, signer));
 
         assertEq(asset.getSubscription(SUBSCRIBER), 0);
         assertTrue(asset.isSubscriptionActive(otherSubscriber));
@@ -782,11 +642,7 @@ contract AssetTest is BaseTest {
         _subscribeFor(otherSubscriber, DURATION);
 
         vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
-
-        vm.prank(signer);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
+        asset.cancelSubscription(SUBSCRIBER_ID, getCancellationSignature(SUBSCRIBER_ID, signer));
 
         assertEq(asset.getSubscription(SUBSCRIBER), 0);
         assertTrue(asset.isSubscriptionActive(otherSubscriber));
@@ -800,11 +656,7 @@ contract AssetTest is BaseTest {
         _subscribe(DURATION);
 
         vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
-
-        vm.prank(signer);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
+        asset.cancelSubscription(SUBSCRIBER_ID, getCancellationSignature(SUBSCRIBER_ID, signer));
 
         assertEq(asset.getSubscription(SUBSCRIBER), 0);
         assertEq(testToken.balanceOf(signer), tokenBalance);
@@ -813,14 +665,12 @@ contract AssetTest is BaseTest {
     function test_cancelSubscription_emitsSubscriptionCancelled_withExpectedSubscriberHash() public {
         test_subscribe();
 
-        vm.prank(signer);
-        uint256 timestamp = asset.commitCancellation(SUBSCRIBER_ID);
-        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer, timestamp);
+        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
 
         vm.prank(signer);
         vm.expectEmit(true, false, false, true);
         emit Asset.SubscriptionCancelled(SUBSCRIBER);
-        asset.cancelSubscription(SUBSCRIBER_ID, timestamp, signature);
+        asset.cancelSubscription(SUBSCRIBER_ID, signature);
     }
 
     function test_claimCreatorFee_unauthorized() public {

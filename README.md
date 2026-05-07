@@ -98,7 +98,7 @@ New assets are appended to the `assets` array of the corresponding registry in `
 
 ### Subscribe
 
-Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs the permit and pays with tokens; the subscription is associated with a **subscriber** identity (a `bytes32` hash). For cancellation, the subscriber identity should be derived as `keccak256(abi.encode(subscriberId, subscriberAddress))`, so only that `subscriberAddress` can cancel using a signed cancellation flow. The payer and the subscriber can be the same or different (e.g. "pay for someone else"). The **payer** is the address entitled to refunds if the subscription is later cancelled or revoked (unearned time is refunded to the payer).
+Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs the permit and pays with tokens; the subscription is associated with a **subscriber** identity (a `bytes32` hash). For cancellation, the subscriber identity should be derived as `keccak256(abi.encode(subscriberId, subscriberAddress))`, so only that `subscriberAddress` can cancel by signing an off-chain message and calling `cancelSubscription` in one step (no on-chain commit or timestamp binding). The payer and the subscriber can be the same or different (e.g. "pay for someone else"). The **payer** is the address entitled to refunds if the subscription is later cancelled or revoked (unearned time is refunded to the payer).
 
 ```bash
 ./scripts/subscribe.sh <registry_index> <asset_id> <subscriber_id> <value> <payer_private_key>
@@ -269,7 +269,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**subscribe** : Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract. The permit is signed by the payer; the subscription is attributed to `_subscriber` (payer and subscriber can differ). The payer is the refund beneficiary on cancel/revoke. For cancellation-compatible identity, `_subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will commit/sign cancellation.
+**subscribe** : Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract. The permit is signed by the payer; the subscription is attributed to `_subscriber` (payer and subscriber can differ). The payer is the refund beneficiary on cancel/revoke. For cancellation-compatible identity, `_subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will call `cancelSubscription` and sign the cancellation payload.
 - Type: write
 - Permission: none
 - Parameters:
@@ -474,7 +474,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**subscribe** : Subscribes a subscriber using ERC-2612 permit: payer signs permit, then payment is pulled and subscription is attributed to the given subscriber. Payer and subscriber can differ (e.g. pay for someone else). The payer is the refund beneficiary on cancel/revoke. For cancellation-compatible identity, `subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will commit/sign cancellation.
+**subscribe** : Subscribes a subscriber using ERC-2612 permit: payer signs permit, then payment is pulled and subscription is attributed to the given subscriber. Payer and subscriber can differ (e.g. pay for someone else). The payer is the refund beneficiary on cancel/revoke. For cancellation-compatible identity, `subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will call `cancelSubscription` and sign the cancellation payload.
 - Type: write
 - Permission: none
 - Parameters:
@@ -546,23 +546,12 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**commitCancellation** : Commits a cancellation intent for the caller's `(subscriberId, msg.sender)` pair.
+**cancelSubscription** : Cancels the caller's subscription after validating an EIP-191 signature from `msg.sender`. Unearned subscription value is refunded to each original payer. There is no separate on-chain commit step: the subscriber signs an off-chain message, then submits one transaction with that signature.
 - Type: write
-- Permission: caller is the subscriber address committing cancellation
+- Permission: `msg.sender` must be the subscriber address represented in `keccak256(abi.encode(subscriberId, msg.sender))` (the recovered signer must equal `msg.sender`).
 - Parameters:
   - `string subscriberId` : Human-readable subscriber id used in the subscriber hash.
-- Returns:
-  - `uint256` : Commitment timestamp used in the subsequent cancellation signature.
-
----
-
-**cancelSubscription** : Cancels the caller's subscription after validating a prior commitment and signature. Unearned subscription value is refunded to each original payer.
-- Type: write
-- Permission: caller must be the subscriber address represented in `keccak256(abi.encode(subscriberId, msg.sender))`
-- Parameters:
-  - `string subscriberId` : Human-readable subscriber id used in the subscriber hash.
-  - `uint256 timestamp` : Commitment timestamp returned by `commitCancellation`.
-  - `bytes signature` : ECDSA signature by `msg.sender` over `keccak256(abi.encodePacked(chainid, assetAddress, timestamp, subscriberHash))`.
+  - `bytes signature` : ECDSA signature by `msg.sender` over the Ethereum signed message hash of `keccak256(abi.encodePacked(chainid, assetAddress, subscriber))`, where `subscriber` is `keccak256(abi.encode(subscriberId, msg.sender))` and `assetAddress` is this asset contract.
 - Returns: void
 
 ---
