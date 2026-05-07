@@ -85,14 +85,8 @@ interface IAsset {
     /// @param subscriber Subscriber hash whose subscription to revoke.
     function revokeSubscription(bytes32 subscriber) external;
 
-    /// @notice Commits cancellation intent for subscriber hash derived from `(subscriberId, msg.sender)`.
-    /// @param subscriberId Human-readable subscriber ID used in `keccak256(abi.encode(subscriberId, msg.sender))`.
-    /// @return timestamp The timestamp of the cancellation commitment.
-    function commitCancellation(string memory subscriberId) external returns (uint256 timestamp);
-
     /// @notice Cancels your subscription for subscriber hash derived from `(subscriberId, msg.sender)`.
     /// @param subscriberId Human-readable subscriber ID used in `keccak256(abi.encode(subscriberId, msg.sender))`.
-    /// @param timestamp The timestamp of the cancellation commitment.
     /// @param signature Signature by msg.sender over the cancellation payload.
-    function cancelSubscription(string memory subscriberId, uint256 timestamp, bytes memory signature) external;
+    function cancelSubscription(string memory subscriberId, bytes memory signature) external;
 }
