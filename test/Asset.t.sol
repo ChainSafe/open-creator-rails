@@ -64,11 +64,11 @@ contract AssetTest is BaseTest {
         return keccak256(abi.encode(subscriberId, subscriberAddress));
     }
 
-    function _getCancellationSignatureWithKey(
-        string memory subscriberId,
-        address subscriberAddress,
-        uint256 signingKey
-    ) internal view returns (bytes memory signature) {
+    function _getCancellationSignatureWithKey(string memory subscriberId, address subscriberAddress, uint256 signingKey)
+        internal
+        view
+        returns (bytes memory signature)
+    {
         bytes32 subscriber = keccak256(abi.encode(subscriberId, subscriberAddress));
         bytes32 hash = keccak256(abi.encodePacked(block.chainid, address(asset), subscriber));
         bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));

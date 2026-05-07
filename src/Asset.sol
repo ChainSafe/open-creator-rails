@@ -84,7 +84,9 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     event CreatorFeeClaimedBatch(bytes32[] indexed subscribers, uint256 totalAmount);
     event SubscriptionPriceUpdated(uint256 newSubscriptionPrice);
     event SubscriptionRevoked(bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime, bool removed);
-    event SubscriptionCancelled(bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime, bool removed);
+    event SubscriptionCancelled(
+        bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime, bool removed
+    );
 
     /// @notice Initializes the asset with id, price, payment token, and owner.
     ///         Callable only by the registry (msg.sender).
@@ -524,10 +526,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         emit SubscriptionRevoked(subscriber, nonce, endTime, removed);
     }
 
-    function cancelSubscription(string memory subscriberId, bytes memory signature)
-        external
-        nonReentrant
-    {
+    function cancelSubscription(string memory subscriberId, bytes memory signature) external nonReentrant {
         bytes32 subscriber = _hash(subscriberId, msg.sender);
 
         bytes32 hash = _signatureHash(block.chainid, address(this), subscriber);
@@ -553,7 +552,11 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return result;
     }
 
-    function _signatureHash(uint256 chainId, address assetAddress, bytes32 subscriber) internal pure returns (bytes32 result) {
+    function _signatureHash(uint256 chainId, address assetAddress, bytes32 subscriber)
+        internal
+        pure
+        returns (bytes32 result)
+    {
         result = keccak256(abi.encodePacked(chainId, assetAddress, subscriber));
         return result;
     }
