@@ -521,7 +521,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     function cancelSubscription(string memory subscriberId, bytes memory signature) external nonReentrant {
         bytes32 subscriber = _hash(subscriberId, msg.sender);
 
-        bytes32 hash = _signatureHash(block.chainid, address(this), subscriber);
+        bytes32 hash = _hash(block.chainid, address(this), subscriber);
 
         address signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(hash), signature);
 
@@ -547,12 +547,8 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return result;
     }
 
-    function _signatureHash(uint256 chainId, address assetAddress, bytes32 subscriber)
-        internal
-        pure
-        returns (bytes32 result)
-    {
-        result = keccak256(abi.encodePacked(chainId, assetAddress, subscriber));
+    function _hash(uint256 a, address b, bytes32 c) internal pure returns (bytes32 result) {
+        result = keccak256(abi.encodePacked(a, b, c));
         return result;
     }
 
