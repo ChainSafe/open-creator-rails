@@ -322,7 +322,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(_subscriber, 0, block.timestamp, true);
+        emit Asset.SubscriptionRevoked(_subscriber, 0, block.timestamp);
         asset.revokeSubscription(_subscriber);
 
         assertEq(testToken.balanceOf(signer), tokenBalance);
@@ -337,7 +337,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(_subscriber, 0, block.timestamp, true);
+        emit Asset.SubscriptionRevoked(_subscriber, 0, block.timestamp);
         asset.revokeSubscription(_subscriber);
 
         assertEq(testToken.balanceOf(signer), tokenBalance);
@@ -663,7 +663,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(signer);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionCancelled(_subscriber, 0, block.timestamp, true);
+        emit Asset.SubscriptionCancelled(_subscriber, 0, block.timestamp);
         asset.cancelSubscription(SUBSCRIBER_ID, signature);
     }
 

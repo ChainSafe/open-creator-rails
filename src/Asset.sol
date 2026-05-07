@@ -83,10 +83,9 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     event CreatorFeeClaimed(bytes32 indexed subscriber, uint256 amount);
     event CreatorFeeClaimedBatch(bytes32[] indexed subscribers, uint256 totalAmount);
     event SubscriptionPriceUpdated(uint256 newSubscriptionPrice);
-    event SubscriptionRevoked(bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime, bool removed);
-    event SubscriptionCancelled(
-        bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime, bool removed
-    );
+    event SubscriptionRevoked(bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime);
+    event SubscriptionCancelled(bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime);
+    event SubscriptionRemoved(bytes32 indexed subscriber);
 
     /// @notice Initializes the asset with id, price, payment token, and owner.
     ///         Callable only by the registry (msg.sender).
@@ -200,14 +199,14 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
             id = _hash(subscriber, nonce);
 
-            endTime = _addSubscription(id, nonce, subscriber, startTime, duration, registryFeeShare, payer);
+            endTime = _addSubscription(id, subscriber, startTime, duration, registryFeeShare, payer);
 
             emit SubscriptionRenewed(subscriber, startTime, endTime, nonce, payer, subscriptionPrice, registryFeeShare);
 
             return endTime;
         }
 
-        endTime = _addSubscription(id, nonce, subscriber, startTime, duration, registryFeeShare, payer);
+        endTime = _addSubscription(id, subscriber, startTime, duration, registryFeeShare, payer);
 
         emit SubscriptionAdded(subscriber, startTime, endTime, payer, subscriptionPrice, registryFeeShare);
 
@@ -216,7 +215,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
     function _addSubscription(
         bytes32 id,
-        uint256 nonce,
         bytes32 subscriber,
         uint256 startTime,
         uint256 duration,
@@ -446,12 +444,12 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return claimed;
     }
 
-    function _removeSubscription(bytes32 subscriber) internal returns (uint256 nonce, uint256 endTime, bool removed) {
+    function _removeSubscription(bytes32 subscriber) internal {
         if (!subscribers.contains(subscriber)) {
             revert SubscriptionNotFound();
         }
 
-        nonce = nonces[subscriber];
+        uint256 nonce = nonces[subscriber];
 
         uint256 deleted = 0;
 
@@ -464,11 +462,9 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
             Subscription memory subscription = subscriptions[id];
 
-            endTime = subscription.endTime;
-
             // If the subscription has already expired, break the loop since all subsequent subscriptions
             // will also have expired
-            if (endTime <= timestamp) {
+            if (subscription.endTime <= timestamp) {
                 break;
             }
 
@@ -477,7 +473,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             // If the subscription has not started yet, delete it, add the returnable amount to the returnable total and
             // update the nonce
             if (subscription.startTime >= timestamp) {
-                returnable = (endTime - subscription.startTime) * subscription.subscriptionPrice;
+                returnable = (subscription.endTime - subscription.startTime) * subscription.subscriptionPrice;
 
                 delete subscriptions[id];
 
@@ -488,9 +484,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             else if (subscription.endTime > timestamp) {
                 returnable = (subscription.endTime - timestamp) * subscription.subscriptionPrice;
 
-                endTime = timestamp;
-
-                subscriptions[id].endTime = endTime;
+                subscriptions[id].endTime = timestamp;
             }
 
             if (returnable != 0) {
@@ -500,30 +494,28 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
         // If the user has deleted all of their subscriptions, delete the nonce and remove the user from the
         // subscribers set
-        removed = deleted == count;
-        if (removed) {
+        if (deleted == count) {
             delete nonces[subscriber];
             delete creatorClaimedAtNonces[subscriber];
             delete creatorClaimedAtTimestamps[subscriber];
             delete registryClaimedAtNonces[subscriber];
             delete registryClaimedAtTimestamps[subscriber];
             subscribers.remove(subscriber);
+
+            emit SubscriptionRemoved(subscriber);
         }
         // If the user has subscriptions left, decrement the nonce by the number of deleted subscriptions
         else if (deleted != 0) {
-            nonce -= deleted;
-            nonces[subscriber] = nonce;
+            nonces[subscriber] -= deleted;
         }
-
-        endTime = Math.min(endTime, block.timestamp);
-
-        return (nonce, endTime, removed);
     }
 
     function revokeSubscription(bytes32 subscriber) external onlyOwner nonReentrant {
-        (uint256 nonce, uint256 endTime, bool removed) = _removeSubscription(subscriber);
+        _removeSubscription(subscriber);
 
-        emit SubscriptionRevoked(subscriber, nonce, endTime, removed);
+        uint256 nonce = nonces[subscriber];
+        bytes32 id = _hash(subscriber, nonce);
+        emit SubscriptionRevoked(subscriber, nonce, subscriptions[id].endTime);
     }
 
     function cancelSubscription(string memory subscriberId, bytes memory signature) external nonReentrant {
@@ -537,9 +529,12 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             revert InvalidSignature();
         }
 
-        (uint256 nonce, uint256 endTime, bool removed) = _removeSubscription(subscriber);
+        _removeSubscription(subscriber);
 
-        emit SubscriptionCancelled(subscriber, nonce, endTime, removed);
+        // If the user has subscriptions left, emit the SubscriptionCancelled event
+        uint256 nonce = nonces[subscriber];
+        bytes32 id = _hash(subscriber, nonce);
+        emit SubscriptionCancelled(subscriber, nonce, subscriptions[id].endTime);
     }
 
     function _hash(bytes32 a, uint256 b) internal pure returns (bytes32 result) {
