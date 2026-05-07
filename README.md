@@ -607,13 +607,26 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
 
 ---
 
-**SubscriptionAdded** : Emitted when a new subscription record is created for a subscriber (new nonce). This happens on the first subscription and whenever the payer, subscription price, or registry fee share differs from the active subscription. For renewals that extend an existing active subscription under the same terms, see `SubscriptionExtended`.
+**SubscriptionAdded** : Emitted when the first subscription record is created for a subscriber.
 - Contract: `Asset`
 - Parameters:
   - `bytes32 indexed subscriber` : Subscriber identity (hash).
   - `uint256 indexed startTime` : Subscription start time (Unix timestamp).
   - `uint256 indexed endTime` : Subscription expiry time (Unix timestamp).
-  - `uint256 nonce` : Subscription nonce (increments each time a new record is created for the subscriber).
+  - `address payer` : Payer for this subscription (refund beneficiary on cancel/revoke).
+  - `uint256 subscriptionPrice` : Per-second subscription price snapshot used for this subscription record.
+  - `uint256 registryFeeShare` : Registry fee share snapshot (0-100) used for this subscription record.
+
+
+---
+
+**SubscriptionRenewed** : Emitted when a subscriber already has prior subscription history and a new subscription record is created (new nonce). This occurs when in-place extension is not possible (e.g. prior subscription expired, or payer/price/registry fee share differs from the current active record).
+- Contract: `Asset`
+- Parameters:
+  - `bytes32 indexed subscriber` : Subscriber identity (hash).
+  - `uint256 indexed startTime` : New subscription record start time (Unix timestamp).
+  - `uint256 indexed endTime` : New subscription record expiry time (Unix timestamp).
+  - `uint256 nonce` : New subscription nonce for this subscriber.
   - `address payer` : Payer for this subscription (refund beneficiary on cancel/revoke).
   - `uint256 subscriptionPrice` : Per-second subscription price snapshot used for this subscription record.
   - `uint256 registryFeeShare` : Registry fee share snapshot (0-100) used for this subscription record.
@@ -660,6 +673,9 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
 - Contract: `Asset`
 - Parameters:
   - `bytes32 indexed subscriber` : Subscriber whose subscription was revoked.
+  - `uint256 indexed nonce` : Active nonce after revocation/removal processing.
+  - `uint256 indexed endTime` : Effective end time after revocation.
+  - `bool removed` : True if the subscriber was fully removed (all future records deleted); false if at least one record remained and was truncated.
 
 
 ---
@@ -668,3 +684,6 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
 - Contract: `Asset`
 - Parameters:
   - `bytes32 indexed subscriber` : Subscriber hash `keccak256(abi.encode(subscriberId, subscriberAddress))` whose subscription was cancelled.
+  - `uint256 indexed nonce` : Active nonce after cancellation/removal processing.
+  - `uint256 indexed endTime` : Effective end time after cancellation.
+  - `bool removed` : True if the subscriber was fully removed (all future records deleted); false if at least one record remained and was truncated.

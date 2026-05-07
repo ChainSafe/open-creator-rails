@@ -552,7 +552,7 @@ contract AssetRegistryTest is BaseTest {
         // Re-subscribe with same terms after expiry — should produce a new nonce, not extend.
         uint256 newEnd = block.timestamp + DURATION;
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(
+        emit Asset.SubscriptionRenewed(
             _subscriber, block.timestamp, newEnd, 1, signer, SUBSCRIPTION_PRICE, assetRegistry.getRegistryFeeShare()
         );
         _subscribe(DURATION);

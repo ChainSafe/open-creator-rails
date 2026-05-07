@@ -86,7 +86,6 @@ contract AssetTest is BaseTest {
             _subscriber,
             block.timestamp,
             block.timestamp + DURATION,
-            0,
             signer,
             SUBSCRIPTION_PRICE,
             assetRegistry.getRegistryFeeShare()
@@ -118,7 +117,6 @@ contract AssetTest is BaseTest {
                     _subscriber,
                     deadline,
                     deadline + DURATION,
-                    i,
                     signer,
                     SUBSCRIPTION_PRICE,
                     assetRegistry.getRegistryFeeShare()
@@ -324,7 +322,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(_subscriber);
+        emit Asset.SubscriptionRevoked(_subscriber, 0, block.timestamp, true);
         asset.revokeSubscription(_subscriber);
 
         assertEq(testToken.balanceOf(signer), tokenBalance);
@@ -339,7 +337,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(_subscriber);
+        emit Asset.SubscriptionRevoked(_subscriber, 0, block.timestamp, true);
         asset.revokeSubscription(_subscriber);
 
         assertEq(testToken.balanceOf(signer), tokenBalance);
@@ -664,8 +662,8 @@ contract AssetTest is BaseTest {
         bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
 
         vm.prank(signer);
-        vm.expectEmit(true, false, false, true);
-        emit Asset.SubscriptionCancelled(_subscriber);
+        vm.expectEmit(true, true, true, true);
+        emit Asset.SubscriptionCancelled(_subscriber, 0, block.timestamp, true);
         asset.cancelSubscription(SUBSCRIBER_ID, signature);
     }
 
@@ -782,7 +780,6 @@ contract AssetTest is BaseTest {
             _subscriber,
             block.timestamp,
             block.timestamp + DURATION,
-            0,
             signer,
             SUBSCRIPTION_PRICE,
             assetRegistry.getRegistryFeeShare()
@@ -794,7 +791,7 @@ contract AssetTest is BaseTest {
 
         uint256 newStart = block.timestamp + DURATION;
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(
+        emit Asset.SubscriptionRenewed(
             _subscriber,
             newStart,
             newStart + DURATION,
@@ -812,7 +809,6 @@ contract AssetTest is BaseTest {
             _subscriber,
             block.timestamp,
             block.timestamp + DURATION,
-            0,
             signer,
             SUBSCRIPTION_PRICE,
             assetRegistry.getRegistryFeeShare()
@@ -824,7 +820,7 @@ contract AssetTest is BaseTest {
 
         uint256 newStart = block.timestamp + DURATION;
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(_subscriber, newStart, newStart + DURATION, 1, signer, SUBSCRIPTION_PRICE, 50);
+        emit Asset.SubscriptionRenewed(_subscriber, newStart, newStart + DURATION, 1, signer, SUBSCRIPTION_PRICE, 50);
         _subscribe(DURATION);
     }
 
@@ -834,7 +830,6 @@ contract AssetTest is BaseTest {
             _subscriber,
             block.timestamp,
             block.timestamp + DURATION,
-            0,
             signer,
             SUBSCRIPTION_PRICE,
             assetRegistry.getRegistryFeeShare()
@@ -853,7 +848,7 @@ contract AssetTest is BaseTest {
 
         uint256 newStart = block.timestamp + DURATION;
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(
+        emit Asset.SubscriptionRenewed(
             _subscriber,
             newStart,
             newStart + DURATION,
@@ -1035,7 +1030,7 @@ contract AssetTest is BaseTest {
         // startTime (block.timestamp) != subscription.endTime, so no in-place extension occurs.
         uint256 newEnd = block.timestamp + DURATION;
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionAdded(
+        emit Asset.SubscriptionRenewed(
             _subscriber, block.timestamp, newEnd, 1, signer, SUBSCRIPTION_PRICE, assetRegistry.getRegistryFeeShare()
         );
         uint256 returnedEnd = _subscribe(DURATION);
