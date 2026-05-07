@@ -674,8 +674,7 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
 - Parameters:
   - `bytes32 indexed subscriber` : Subscriber whose subscription was revoked.
   - `uint256 indexed nonce` : Active nonce after revocation/removal processing.
-  - `uint256 indexed endTime` : Effective end time after revocation.
-  - `bool removed` : True if the subscriber was fully removed (all future records deleted); false if at least one record remained and was truncated.
+  - `uint256 indexed endTime` : Effective end time after revocation. Will be `0` when the subscriber is fully removed.
 
 
 ---
@@ -685,5 +684,12 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
 - Parameters:
   - `bytes32 indexed subscriber` : Subscriber hash `keccak256(abi.encode(subscriberId, subscriberAddress))` whose subscription was cancelled.
   - `uint256 indexed nonce` : Active nonce after cancellation/removal processing.
-  - `uint256 indexed endTime` : Effective end time after cancellation.
-  - `bool removed` : True if the subscriber was fully removed (all future records deleted); false if at least one record remained and was truncated.
+  - `uint256 indexed endTime` : Effective end time after cancellation. Will be `0` when the subscriber is fully removed.
+
+
+---
+
+**SubscriptionRemoved** : Emitted when all remaining subscription records for a subscriber are deleted and the subscriber is removed from tracking state.
+- Contract: `Asset`
+- Parameters:
+  - `bytes32 indexed subscriber` : Subscriber identity (hash) that was fully removed.

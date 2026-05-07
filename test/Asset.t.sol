@@ -322,7 +322,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(_subscriber, 0, block.timestamp);
+        emit Asset.SubscriptionRevoked(_subscriber, 0, 0);
         asset.revokeSubscription(_subscriber);
 
         assertEq(testToken.balanceOf(signer), tokenBalance);
@@ -337,7 +337,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(_subscriber, 0, block.timestamp);
+        emit Asset.SubscriptionRevoked(_subscriber, 0, 0);
         asset.revokeSubscription(_subscriber);
 
         assertEq(testToken.balanceOf(signer), tokenBalance);
@@ -663,7 +663,27 @@ contract AssetTest is BaseTest {
 
         vm.prank(signer);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionCancelled(_subscriber, 0, block.timestamp);
+        emit Asset.SubscriptionCancelled(_subscriber, 0, 0);
+        asset.cancelSubscription(SUBSCRIBER_ID, signature);
+    }
+
+    function test_revokeSubscription_emitsSubscriptionRemoved_whenFullyDeleted() public {
+        _subscribe(DURATION);
+
+        vm.prank(assetOwner);
+        vm.expectEmit(true, false, false, false);
+        emit Asset.SubscriptionRemoved(_subscriber);
+        asset.revokeSubscription(_subscriber);
+    }
+
+    function test_cancelSubscription_emitsSubscriptionRemoved_whenFullyDeleted() public {
+        _subscribe(DURATION);
+
+        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
+
+        vm.prank(signer);
+        vm.expectEmit(true, false, false, false);
+        emit Asset.SubscriptionRemoved(_subscriber);
         asset.cancelSubscription(SUBSCRIBER_ID, signature);
     }
 
