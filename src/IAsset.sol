@@ -81,7 +81,9 @@ interface IAsset {
     /// @return claimedAmount The amount of registry fee claimed.
     /// @return claimedAtTimestamp The timestamp used as the upper claim bound for this call.
     /// @return claimedAtNonce The subscription nonce reached while computing the claim.
-    function claimRegistryFee(bytes32 subscriber) external returns (uint256 claimedAmount, uint256 claimedAtTimestamp, uint256 claimedAtNonce);
+    function claimRegistryFee(bytes32 subscriber)
+        external
+        returns (uint256 claimedAmount, uint256 claimedAtTimestamp, uint256 claimedAtNonce);
 
     /// @notice Claims the registry fee for multiple subscribers. Callable only by the registry contract.
     /// @param subscribers Array of subscriber hashes whose registry fee to claim.

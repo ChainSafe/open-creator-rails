@@ -80,7 +80,9 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     );
 
     event SubscriptionExtended(bytes32 indexed subscriber, uint256 indexed endTime);
-    event CreatorFeeClaimed(bytes32 indexed subscriber, uint256 amount, uint256 indexed claimedAtTimestamp, uint256 indexed claimedAtNonce);
+    event CreatorFeeClaimed(
+        bytes32 indexed subscriber, uint256 amount, uint256 indexed claimedAtTimestamp, uint256 indexed claimedAtNonce
+    );
     event CreatorFeeClaimedBatch(bytes32[] indexed subscribers, uint256 totalAmount);
     event SubscriptionPriceUpdated(uint256 newSubscriptionPrice);
     event SubscriptionRevoked(bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime);
@@ -383,7 +385,12 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return totalClaimedAmount;
     }
 
-    function claimRegistryFee(bytes32 subscriber) external onlyRegistry nonReentrant returns (uint256 claimedAmount, uint256 claimedAtTimestamp, uint256 claimedAtNonce) {
+    function claimRegistryFee(bytes32 subscriber)
+        external
+        onlyRegistry
+        nonReentrant
+        returns (uint256 claimedAmount, uint256 claimedAtTimestamp, uint256 claimedAtNonce)
+    {
         claimedAtTimestamp = block.timestamp;
 
         (claimedAmount, claimedAtNonce) = _claimable(

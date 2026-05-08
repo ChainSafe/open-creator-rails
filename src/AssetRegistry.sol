@@ -27,7 +27,13 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         address indexed owner
     );
     event RegistryFeeShareUpdated(uint256 newRegistryFeeShare);
-    event RegistryFeeClaimed(bytes32 indexed assetId, bytes32 indexed subscriber, uint256 amount, uint256 claimedAtTimestamp, uint256 claimedAtNonce);
+    event RegistryFeeClaimed(
+        bytes32 indexed assetId,
+        bytes32 indexed subscriber,
+        uint256 amount,
+        uint256 claimedAtTimestamp,
+        uint256 claimedAtNonce
+    );
     event RegistryFeeClaimedBatch(bytes32 indexed assetId, bytes32[] indexed subscribers, uint256 totalAmount);
 
     /// @notice Initializes the registry with fee shares. Caller becomes owner.
@@ -145,7 +151,8 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     function claimRegistryFee(bytes32 _assetId, bytes32 _subscriber) external onlyOwner returns (uint256) {
         address asset = getAsset(_assetId);
 
-        (uint256 claimedAmount, uint256 claimedAtTimestamp, uint256 claimedAtNonce) = IAsset(asset).claimRegistryFee(_subscriber);
+        (uint256 claimedAmount, uint256 claimedAtTimestamp, uint256 claimedAtNonce) =
+            IAsset(asset).claimRegistryFee(_subscriber);
 
         emit RegistryFeeClaimed(_assetId, _subscriber, claimedAmount, claimedAtTimestamp, claimedAtNonce);
 
@@ -169,14 +176,12 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         uint256 claimedAmount,
         uint256 claimedAtTimestamp,
         uint256 claimedAtNonce
-    ) external
-    {
-        if (msg.sender != getAsset(_assetId))
-        {
+    ) external {
+        if (msg.sender != getAsset(_assetId)) {
             revert OnlyAssetUnauthorizedAccount();
         }
 
-        emit RegistryFeeClaimed(_assetId, _subscriber, claimedAmount, claimedAtTimestamp, claimedAtNonce); 
+        emit RegistryFeeClaimed(_assetId, _subscriber, claimedAmount, claimedAtTimestamp, claimedAtNonce);
     }
 
     function getOwner() external view returns (address) {
