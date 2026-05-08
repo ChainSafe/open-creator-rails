@@ -159,7 +159,7 @@ contract AssetTest is BaseTest {
         vm.startPrank(assetOwner);
         uint256 creatorFee = assetRegistry.getCreatorFee(value);
         vm.expectEmit(true, true, true, true);
-        emit Asset.CreatorFeeClaimed(_subscriber, creatorFee);
+        emit Asset.CreatorFeeClaimed(_subscriber, creatorFee, block.timestamp, 0);
         uint256 claimedCreatorFee = asset.claimCreatorFee(_subscriber);
         vm.stopPrank();
 
@@ -179,7 +179,7 @@ contract AssetTest is BaseTest {
 
         uint256 creatorFee = assetRegistry.getCreatorFee(value);
         vm.expectEmit(true, true, true, true);
-        emit Asset.CreatorFeeClaimed(_subscriber, creatorFee);
+        emit Asset.CreatorFeeClaimed(_subscriber, creatorFee, block.timestamp, 0);
 
         uint256 claimedCreatorFee = asset.claimCreatorFee(_subscriber);
 
@@ -210,7 +210,7 @@ contract AssetTest is BaseTest {
 
         vm.startPrank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.CreatorFeeClaimed(_subscriber, creatorFee);
+        emit Asset.CreatorFeeClaimed(_subscriber, creatorFee, block.timestamp, 1);
         uint256 claimedCreatorFee = asset.claimCreatorFee(_subscriber);
         vm.stopPrank();
 
@@ -228,7 +228,7 @@ contract AssetTest is BaseTest {
         vm.startPrank(assetOwner);
         uint256 creatorFee = assetRegistry.getCreatorFee(value) / 2;
         vm.expectEmit(true, true, true, true);
-        emit Asset.CreatorFeeClaimed(_subscriber, creatorFee);
+        emit Asset.CreatorFeeClaimed(_subscriber, creatorFee, block.timestamp, 0);
         uint256 claimedCreatorFee = asset.claimCreatorFee(_subscriber);
         vm.stopPrank();
 
@@ -294,7 +294,7 @@ contract AssetTest is BaseTest {
         vm.startPrank(assetOwner);
         uint256 creatorFee = assetRegistry.getCreatorFee(value);
         vm.expectEmit(true, true, true, true);
-        emit Asset.CreatorFeeClaimed(_subscriber, creatorFee);
+        emit Asset.CreatorFeeClaimed(_subscriber, creatorFee, block.timestamp, 0);
         uint256 claimedCreatorFee = asset.claimCreatorFee(_subscriber);
         vm.stopPrank();
 
@@ -719,7 +719,7 @@ contract AssetTest is BaseTest {
         uint256 claimedCreatorFee = asset.claimCreatorFee(_subscriber);
 
         vm.prank(address(assetRegistry));
-        uint256 claimedRegistryFee = asset.claimRegistryFee(_subscriber);
+        (uint256 claimedRegistryFee,,) = asset.claimRegistryFee(_subscriber);
 
         assertEq(claimedCreatorFee, creatorFee);
         assertEq(claimedRegistryFee, registryFee);
@@ -764,7 +764,7 @@ contract AssetTest is BaseTest {
         uint256 registryOwnerBalanceBefore = testToken.balanceOf(registryOwner);
 
         vm.prank(address(assetRegistry));
-        uint256 claimed = asset.claimRegistryFee(_subscriber);
+        (uint256 claimed,,) = asset.claimRegistryFee(_subscriber);
 
         assertEq(claimed, 0);
         assertEq(testToken.balanceOf(registryOwner), registryOwnerBalanceBefore);
@@ -786,7 +786,7 @@ contract AssetTest is BaseTest {
         uint256 registryOwnerBalanceBefore = testToken.balanceOf(registryOwner);
 
         vm.prank(address(assetRegistry));
-        uint256 claimed = asset.claimRegistryFee(neverSubscribed);
+        (uint256 claimed,,) = asset.claimRegistryFee(neverSubscribed);
 
         assertEq(claimed, 0);
         assertEq(testToken.balanceOf(registryOwner), registryOwnerBalanceBefore);
@@ -899,9 +899,9 @@ contract AssetTest is BaseTest {
 
         vm.startPrank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.CreatorFeeClaimed(_subscriber, creatorFeePerSubscriber);
+        emit Asset.CreatorFeeClaimed(_subscriber, creatorFeePerSubscriber, block.timestamp, 0);
         vm.expectEmit(true, true, true, true);
-        emit Asset.CreatorFeeClaimed(subscriber2, creatorFeePerSubscriber);
+        emit Asset.CreatorFeeClaimed(subscriber2, creatorFeePerSubscriber, block.timestamp, 0);
         vm.expectEmit(true, true, true, true);
         emit Asset.CreatorFeeClaimedBatch(subs, creatorFeePerSubscriber * 2);
         uint256 claimed = asset.claimCreatorFee(subs);
@@ -1099,7 +1099,7 @@ contract AssetTest is BaseTest {
         uint256 expectedFee = assetRegistry.getRegistryFee(value);
 
         vm.prank(address(assetRegistry));
-        uint256 claimed = asset.claimRegistryFee(_subscriber);
+        (uint256 claimed,,) = asset.claimRegistryFee(_subscriber);
         assertEq(claimed, expectedFee);
     }
 }

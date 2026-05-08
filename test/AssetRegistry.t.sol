@@ -224,7 +224,7 @@ contract AssetRegistryTest is BaseTest {
 
         vm.prank(registryOwner);
         vm.expectEmit(true, true, true, true);
-        emit AssetRegistry.RegistryFeeClaimed(_subscriber, registryFee);
+        emit AssetRegistry.RegistryFeeClaimed(ASSET_ID, _subscriber, registryFee, block.timestamp, 0);
         assetRegistry.claimRegistryFee(ASSET_ID, _subscriber);
 
         assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
@@ -243,7 +243,7 @@ contract AssetRegistryTest is BaseTest {
 
         vm.prank(registryOwner);
         vm.expectEmit(true, true, true, true);
-        emit AssetRegistry.RegistryFeeClaimed(_subscriber, registryFee);
+        emit AssetRegistry.RegistryFeeClaimed(ASSET_ID, _subscriber, registryFee, block.timestamp, 0);
         assetRegistry.claimRegistryFee(ASSET_ID, _subscriber);
 
         assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
@@ -309,7 +309,7 @@ contract AssetRegistryTest is BaseTest {
 
         vm.prank(registryOwner);
         vm.expectEmit(true, true, true, true);
-        emit AssetRegistry.RegistryFeeClaimed(_subscriber, registryFee);
+        emit AssetRegistry.RegistryFeeClaimed(ASSET_ID, _subscriber, registryFee, block.timestamp, 1);
         assetRegistry.claimRegistryFee(ASSET_ID, _subscriber);
 
         assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
@@ -325,7 +325,7 @@ contract AssetRegistryTest is BaseTest {
 
         vm.prank(registryOwner);
         vm.expectEmit(true, true, true, true);
-        emit AssetRegistry.RegistryFeeClaimed(_subscriber, registryFee);
+        emit AssetRegistry.RegistryFeeClaimed(ASSET_ID, _subscriber, registryFee, block.timestamp, 0);
         assetRegistry.claimRegistryFee(ASSET_ID, _subscriber);
 
         assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
@@ -343,7 +343,7 @@ contract AssetRegistryTest is BaseTest {
         uint256 registryFee = assetRegistry.getRegistryFee(value);
         vm.prank(registryOwner);
         vm.expectEmit(true, true, true, true);
-        emit AssetRegistry.RegistryFeeClaimed(_subscriber, registryFee);
+        emit AssetRegistry.RegistryFeeClaimed(ASSET_ID, _subscriber, registryFee, block.timestamp, 0);
         assetRegistry.claimRegistryFee(ASSET_ID, _subscriber);
 
         assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
