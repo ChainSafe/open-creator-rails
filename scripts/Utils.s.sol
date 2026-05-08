@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Script} from "forge-std/Script.sol";
 import {IERC20Permit} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import {MessageHashUtils} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract UtilsScript is Script {
 
@@ -27,5 +28,18 @@ contract UtilsScript is Script {
         (v, r, s) = vm.sign(privateKey, digest);
 
         return (v, r, s, deadline, owner);
+    }
+
+    // Produces the EIP-191 signature required by Asset.cancelSubscription.
+    function signCancel(string memory subscriberId, address assetAddress, uint256 privateKey)
+        public
+        view
+        returns (bytes memory signature, bytes32 subscriber)
+    {
+        address signer = vm.addr(privateKey);
+        subscriber = keccak256(abi.encode(subscriberId, signer));
+        bytes32 hash = keccak256(abi.encodePacked(block.chainid, assetAddress, subscriber));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, MessageHashUtils.toEthSignedMessageHash(hash));
+        signature = abi.encodePacked(r, s, v);
     }
 }
