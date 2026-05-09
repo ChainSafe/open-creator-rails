@@ -32,7 +32,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
     mapping(bytes32 => Subscription) internal subscriptions;
     mapping(bytes32 => uint256) internal nonces;
-    mapping(bytes32 => uint256) internal cancellations;
 
     mapping(bytes32 => uint256) internal creatorClaimedAtTimestamps;
     mapping(bytes32 => uint256) internal creatorClaimedAtNonces;
@@ -60,11 +59,19 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     error SubscriptionNotFound();
     error SubscriptionRevocationFailed();
     error SubscriptionCancellationFailed();
-    error InvalidCancellationCommitment();
     error InvalidSignature();
     error OnlyRegistryUnauthorizedAccount();
 
     event SubscriptionAdded(
+        bytes32 indexed subscriber,
+        uint256 indexed startTime,
+        uint256 indexed endTime,
+        address payer,
+        uint256 subscriptionPrice,
+        uint256 registryFeeShare
+    );
+
+    event SubscriptionRenewed(
         bytes32 indexed subscriber,
         uint256 indexed startTime,
         uint256 indexed endTime,
@@ -73,12 +80,14 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         uint256 subscriptionPrice,
         uint256 registryFeeShare
     );
+
     event SubscriptionExtended(bytes32 indexed subscriber, uint256 indexed endTime);
     event CreatorFeeClaimed(bytes32 indexed subscriber, uint256 amount);
     event CreatorFeeClaimedBatch(bytes32[] indexed subscribers, uint256 totalAmount);
     event SubscriptionPriceUpdated(uint256 newSubscriptionPrice);
-    event SubscriptionRevoked(bytes32 indexed subscriber, uint256 endTime);
-    event SubscriptionCancelled(bytes32 indexed subscriber, uint256 endTime);
+    event SubscriptionRevoked(bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime);
+    event SubscriptionCancelled(bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime);
+    event SubscriptionRemoved(bytes32 indexed subscriber);
 
     /// @notice Initializes the asset with id, price, payment token, and owner.
     ///         Callable only by the registry (msg.sender).
@@ -180,7 +189,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return _subscribe(subscriber, payer, count);
     }
 
-    function _subscribe(bytes32 subscriber, address payer, uint256 count) internal returns (uint256) {
+    function _subscribe(bytes32 subscriber, address payer, uint256 count) internal returns (uint256 endTime) {
         uint256 duration = count * SUBSCRIPTION_DURATION;
 
         uint256 startTime = block.timestamp;
@@ -205,7 +214,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                     && subscription.subscriptionPrice == subscriptionPrice
                     && subscription.registryFeeShare == registryFeeShare
             ) {
-                uint256 endTime = subscription.endTime + duration;
+                endTime = subscription.endTime + duration;
 
                 subscriptions[id].endTime = endTime;
 
@@ -217,14 +226,23 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             nonce = ++nonces[subscriber];
 
             id = _hash(subscriber, nonce);
+
+            endTime = _addSubscription(id, subscriber, startTime, duration, registryFeeShare, payer);
+
+            emit SubscriptionRenewed(subscriber, startTime, endTime, nonce, payer, subscriptionPrice, registryFeeShare);
+
+            return endTime;
         }
 
-        return _addSubscription(id, nonce, subscriber, startTime, duration, registryFeeShare, payer);
+        endTime = _addSubscription(id, subscriber, startTime, duration, registryFeeShare, payer);
+
+        emit SubscriptionAdded(subscriber, startTime, endTime, payer, subscriptionPrice, registryFeeShare);
+
+        return endTime;
     }
 
     function _addSubscription(
         bytes32 id,
-        uint256 nonce,
         bytes32 subscriber,
         uint256 startTime,
         uint256 duration,
@@ -242,8 +260,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         });
 
         subscribers.add(subscriber);
-
-        emit SubscriptionAdded(subscriber, startTime, endTime, nonce, payer, subscriptionPrice, registryFeeShare);
 
         return endTime;
     }
@@ -513,6 +529,8 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             delete registryClaimedAtNonces[subscriber];
             delete registryClaimedAtTimestamps[subscriber];
             subscribers.remove(subscriber);
+
+            emit SubscriptionRemoved(subscriber);
         }
         // If the user has subscriptions left, decrement the nonce by the number of deleted subscriptions
         else if (deleted != 0) {
@@ -524,28 +542,15 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     function revokeSubscription(bytes32 subscriber) external onlyOwner nonReentrant {
         uint256 endTime = _removeSubscription(subscriber);
 
-        emit SubscriptionRevoked(subscriber, endTime);
+        uint256 nonce = nonces[subscriber];
+        bytes32 id = _hash(subscriber, nonce);
+        emit SubscriptionRevoked(subscriber, nonce, subscriptions[id].endTime);
     }
 
-    function commitCancellation(string memory subscriberId) external returns (uint256 timestamp) {
-        timestamp = block.timestamp;
+    function cancelSubscription(string memory subscriberId, bytes memory signature) external nonReentrant {
+        bytes32 subscriber = _hash(subscriberId, msg.sender);
 
-        cancellations[keccak256(abi.encode(subscriberId, msg.sender))] = timestamp;
-
-        return timestamp;
-    }
-
-    function cancelSubscription(string memory subscriberId, uint256 timestamp, bytes memory signature)
-        external
-        nonReentrant
-    {
-        bytes32 subscriber = keccak256(abi.encode(subscriberId, msg.sender));
-
-        if (cancellations[subscriber] != timestamp) {
-            revert InvalidCancellationCommitment();
-        }
-
-        bytes32 hash = keccak256(abi.encodePacked(block.chainid, address(this), timestamp, subscriber));
+        bytes32 hash = _hash(block.chainid, address(this), subscriber);
 
         address signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(hash), signature);
 
@@ -555,13 +560,24 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
         uint256 endTime = _removeSubscription(subscriber);
 
-        delete cancellations[subscriber];
-
-        emit SubscriptionCancelled(subscriber, endTime);
+        // If the user has subscriptions left, emit the SubscriptionCancelled event
+        uint256 nonce = nonces[subscriber];
+        bytes32 id = _hash(subscriber, nonce);
+        emit SubscriptionCancelled(subscriber, nonce, subscriptions[id].endTime);
     }
 
     function _hash(bytes32 a, uint256 b) internal pure returns (bytes32 result) {
         result = keccak256(abi.encode(a, b));
+        return result;
+    }
+
+    function _hash(string memory a, address b) internal pure returns (bytes32 result) {
+        result = keccak256(abi.encode(a, b));
+        return result;
+    }
+
+    function _hash(uint256 a, address b, bytes32 c) internal pure returns (bytes32 result) {
+        result = keccak256(abi.encodePacked(a, b, c));
         return result;
     }
 

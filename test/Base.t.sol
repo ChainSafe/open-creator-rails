@@ -19,7 +19,7 @@ contract BaseTest is Test {
 
     bytes32 internal constant ASSET_ID = keccak256(abi.encodePacked("asset_id"));
     string internal constant SUBSCRIBER_ID = "subscriber_id";
-    bytes32 internal SUBSCRIBER;
+    bytes32 internal _subscriber;
     uint256 internal constant SUBSCRIPTION_PRICE = 100000000;
     uint256 internal constant SUBSCRIPTION_DURATION = 10; // 10 seconds
     uint256 internal constant COUNT = 5; // 5 periods
@@ -32,13 +32,15 @@ contract BaseTest is Test {
 
     address internal signer;
     uint256 internal key;
+    uint256 internal otherKey;
 
     function setUp() public virtual {
         testToken = new TestToken();
 
         key = vm.deriveKey(MNEMONIC, 0);
+        otherKey = vm.deriveKey(MNEMONIC, 1);
         signer = vm.addr(key);
-        SUBSCRIBER = keccak256(abi.encode(SUBSCRIBER_ID, signer));
+        _subscriber = keccak256(abi.encode(SUBSCRIBER_ID, signer));
 
         vm.startPrank(signer);
 
@@ -73,13 +75,13 @@ contract BaseTest is Test {
         return (v, r, s);
     }
 
-    function getCancellationSignature(string memory subscriberId, address subscriberAddress, uint256 timestamp)
+    function getCancellationSignature(string memory subscriberId, address subscriberAddress)
         public
         view
         returns (bytes memory signature)
     {
         bytes32 subscriber = keccak256(abi.encode(subscriberId, subscriberAddress));
-        bytes32 hash = keccak256(abi.encodePacked(block.chainid, address(asset), timestamp, subscriber));
+        bytes32 hash = keccak256(abi.encodePacked(block.chainid, address(asset), subscriber));
         bytes32 digest = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(key, digest);
         signature = abi.encodePacked(r, s, v);
