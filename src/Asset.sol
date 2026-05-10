@@ -293,7 +293,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         uint256 timestamp
     ) internal view returns (uint256, uint256, uint256) {
         uint256 claimable = 0;
-        
+
         uint256 nonce = nonces[subscriber] + 1;
 
         for (uint256 i = claimedAtNonce; i < nonce; i++) {
@@ -497,18 +497,16 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
             // If the subscription has not started yet, return the full refund
             if (subscription.startTime >= timestamp) {
-
                 count = (subscription.endTime - subscription.startTime) / SUBSCRIPTION_DURATION;
-                
+
                 delete subscriptions[id];
-                
+
                 deleted++;
             }
             // If the subscription has started (is active), return the remaining time
             else {
-                
                 count = (subscription.endTime - timestamp) / SUBSCRIPTION_DURATION;
-                
+
                 subscriptions[id].endTime = subscription.endTime - (count * SUBSCRIPTION_DURATION);
             }
 
@@ -543,12 +541,11 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         uint256 nonce = nonces[subscriber];
 
         bytes32 id = _hash(subscriber, nonce);
-        
+
         emit SubscriptionRevoked(subscriber, nonce, subscriptions[id].endTime);
     }
 
     function cancelSubscription(string memory subscriberId, bytes memory signature) external nonReentrant {
-        
         bytes32 subscriber = _hash(subscriberId, msg.sender);
 
         bytes32 hash = _hash(block.chainid, address(this), subscriber);
@@ -562,7 +559,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         _removeSubscription(subscriber);
 
         uint256 nonce = nonces[subscriber];
-        
+
         bytes32 id = _hash(subscriber, nonce);
 
         emit SubscriptionCancelled(subscriber, nonce, subscriptions[id].endTime);
