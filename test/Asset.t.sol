@@ -308,6 +308,79 @@ contract AssetTest is BaseTest {
         assertEq(testToken.balanceOf(assetOwner), tokenBalance + claimedCreatorFee);
     }
 
+    /// @dev Single subscription (one nonce) spanning COUNT periods: claim after 2 full periods, then after all 5,
+    ///      ensuring `claimedAtTimestamp` grid snapping does not double-count or skip.
+    function test_claimCreatorFee_incrementalMultiPeriodSingleNonce() public {
+        uint256 tokenBalance = testToken.balanceOf(assetOwner);
+
+        _subscribe(COUNT);
+
+        uint256 endTime = asset.getSubscription(_subscriber);
+        uint256 startTime = endTime - COUNT * SUBSCRIPTION_DURATION;
+
+        uint256 perPeriodCreator = SUBSCRIPTION_PRICE * (100 - REGISTRY_FEE_SHARE) / 100;
+
+        vm.warp(startTime + 2 * SUBSCRIPTION_DURATION);
+
+        vm.startPrank(assetOwner);
+        vm.expectEmit(true, true, true, true);
+        emit Asset.CreatorFeeClaimed(_subscriber, 2 * perPeriodCreator);
+        uint256 firstClaim = asset.claimCreatorFee(_subscriber);
+        vm.stopPrank();
+
+        assertEq(firstClaim, 2 * perPeriodCreator);
+
+        vm.warp(endTime);
+
+        vm.startPrank(assetOwner);
+        vm.expectEmit(true, true, true, true);
+        emit Asset.CreatorFeeClaimed(_subscriber, 3 * perPeriodCreator);
+        uint256 secondClaim = asset.claimCreatorFee(_subscriber);
+        vm.stopPrank();
+
+        assertEq(secondClaim, 3 * perPeriodCreator);
+        assertEq(testToken.balanceOf(assetOwner), tokenBalance + COUNT * perPeriodCreator);
+
+        vm.startPrank(assetOwner);
+        vm.expectEmit(true, true, true, true);
+        emit Asset.CreatorFeeClaimed(_subscriber, 0);
+        uint256 thirdClaim = asset.claimCreatorFee(_subscriber);
+        vm.stopPrank();
+
+        assertEq(thirdClaim, 0);
+    }
+
+    function test_claimRegistryFee_incrementalMultiPeriodSingleNonce() public {
+        uint256 tokenBalance = testToken.balanceOf(registryOwner);
+
+        _subscribe(COUNT);
+
+        uint256 endTime = asset.getSubscription(_subscriber);
+        uint256 startTime = endTime - COUNT * SUBSCRIPTION_DURATION;
+
+        uint256 perPeriodRegistry = SUBSCRIPTION_PRICE * REGISTRY_FEE_SHARE / 100;
+
+        vm.warp(startTime + 2 * SUBSCRIPTION_DURATION);
+
+        vm.prank(address(assetRegistry));
+        uint256 firstClaim = asset.claimRegistryFee(_subscriber);
+
+        assertEq(firstClaim, 2 * perPeriodRegistry);
+
+        vm.warp(endTime);
+
+        vm.prank(address(assetRegistry));
+        uint256 secondClaim = asset.claimRegistryFee(_subscriber);
+
+        assertEq(secondClaim, 3 * perPeriodRegistry);
+        assertEq(testToken.balanceOf(registryOwner), tokenBalance + COUNT * perPeriodRegistry);
+
+        vm.prank(address(assetRegistry));
+        uint256 thirdClaim = asset.claimRegistryFee(_subscriber);
+
+        assertEq(thirdClaim, 0);
+    }
+
     function test_setSubscriptionPrice() public {
         uint256 newPrice = 200;
 
