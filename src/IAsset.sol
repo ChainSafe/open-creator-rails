@@ -17,10 +17,20 @@ interface IAsset {
     /// @return The token contract address. Must be an ERC20 with permit.
     function getTokenAddress() external view returns (address);
 
-    /// @notice Returns the total price for a subscription of the given duration.
-    /// @param duration Length of the subscription in seconds.
-    /// @return Total price for the duration.
-    function getSubscriptionPrice(uint256 duration) external view returns (uint256);
+    /// @notice Returns the total price for a given number of subscription periods.
+    /// @param count Number of subscription durations to subscribe for.
+    /// @return Total price for the number of subscription durations.
+    function getSubscriptionPrice(uint256 count) external view returns (uint256);
+
+    /// @notice Returns the asset's fixed subscription duration.
+    /// @return Subscription duration in seconds.
+    function getSubscriptionDuration() external view returns (uint256);
+
+    /// @notice Returns both price and duration for a given number of subscription durations.
+    /// @param count Number of subscription durations.
+    /// @return price Total cost for the number of subscription durations.
+    /// @return duration Total duration for the number of subscription durations in seconds.
+    function getSubscriptionPriceAndDuration(uint256 count) external view returns (uint256 price, uint256 duration);
 
     /// @notice Sets the subscription price for the asset.
     /// @param newSubscriptionPrice New subscription price.
@@ -44,7 +54,7 @@ interface IAsset {
     ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @param payer Subscription payer and subscription refund beneficiary.
     /// @param spender Must be this asset contract for the permit to be accepted.
-    /// @param value Permit allowance / payment amount (will be rounded down to subscription price units).
+    /// @param count Number of full subscription durations to subscribe for. Must be > 0.
     /// @param deadline Permit signature expiry.
     /// @param v Signature recovery id.
     /// @param r Signature r.
@@ -54,7 +64,7 @@ interface IAsset {
         bytes32 subscriber,
         address payer,
         address spender,
-        uint256 value,
+        uint256 count,
         uint256 deadline,
         uint8 v,
         bytes32 r,

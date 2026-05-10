@@ -21,7 +21,9 @@ contract BaseTest is Test {
     string internal constant SUBSCRIBER_ID = "subscriber_id";
     bytes32 internal _subscriber;
     uint256 internal constant SUBSCRIPTION_PRICE = 100000000;
-    uint256 internal constant DURATION = 3600;
+    uint256 internal constant SUBSCRIPTION_DURATION = 10; // 10 seconds
+    uint256 internal constant COUNT = 5; // 5 periods
+    uint256 internal constant REGISTRY_FEE_SHARE = 30; // 30%
 
     address internal constant UNAUTHORIZED = address(403);
 
@@ -48,8 +50,12 @@ contract BaseTest is Test {
         assetOwner = address(2);
 
         vm.startPrank(registryOwner);
-        assetRegistry = new AssetRegistry(30);
-        asset = IAsset(assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner));
+        assetRegistry = new AssetRegistry(REGISTRY_FEE_SHARE);
+        asset = IAsset(
+            assetRegistry.createAsset(
+                ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner
+            )
+        );
         vm.stopPrank();
     }
 
