@@ -397,6 +397,9 @@ All external functions for the registry and asset contracts, for use with JSON-R
   - `bytes32 _subscriber` : Hash of the subscriber identity whose registry fee to claim.
 - Returns:
   - `uint256` : Amount of registry fee claimed.
+- Notes:
+  - Emits `RegistryFeeClaimed(assetId, subscriber, amount, claimedAtTimestamp, claimedAtNonce)`.
+  - `claimedAtTimestamp` and `claimedAtNonce` are sourced from the underlying asset claim cursor.
 
 
 ---
@@ -408,7 +411,21 @@ All external functions for the registry and asset contracts, for use with JSON-R
   - `bytes32 _assetId` : Asset identifier.
   - `bytes32[] _subscribers` : Array of subscriber identity hashes to claim for.
 - Returns:
-  - `uint256` : Total amount of registry fee claimed across all subscribers.
+  - `uint256 totalClaimedAmount` : Total amount of registry fee claimed across all subscribers.
+
+
+---
+
+**emitRegistryFeeClaimedEvent** : Emits `RegistryFeeClaimed` for a single subscriber claim cursor update. Intended for calls from the corresponding Asset contract.
+- Type: write (event emission)
+- Permission: only the deployed asset for `_assetId`
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier.
+  - `bytes32 _subscriber` : Subscriber identity hash.
+  - `uint256 claimedAmount` : Amount claimed for this subscriber.
+  - `uint256 claimedAtTimestamp` : Timestamp used as upper claim bound.
+  - `uint256 claimedAtNonce` : Subscription nonce reached while computing the claim.
+- Returns: void
 
 
 ---
@@ -546,7 +563,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 - Parameters:
   - `bytes32 subscriber` : Hash of the subscriber identity whose creator fee to claim.
 - Returns:
-  - `uint256` : Amount of creator fee claimed.
+  - `uint256 claimedAmount` : Amount of creator fee claimed.
 
 
 ---
@@ -557,7 +574,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 - Parameters:
   - `bytes32[] subscribers` : Array of subscriber identity hashes to claim for.
 - Returns:
-  - `uint256` : Total amount of creator fee claimed across all subscribers.
+  - `uint256 totalClaimedAmount` : Total amount of creator fee claimed across all subscribers.
 
 
 ---
@@ -568,7 +585,9 @@ All external functions for the registry and asset contracts, for use with JSON-R
 - Parameters:
   - `bytes32 subscriber` : Hash of the subscriber identity whose registry fee to claim.
 - Returns:
-  - `uint256` : Amount of registry fee claimed.
+  - `uint256 claimedAmount` : Amount of registry fee claimed.
+  - `uint256 claimedAtTimestamp` : Timestamp used as the upper claim bound for this call.
+  - `uint256 claimedAtNonce` : Subscription nonce reached while computing the claim.
 
 
 ---
@@ -579,7 +598,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 - Parameters:
   - `bytes32[] subscribers` : Array of subscriber identity hashes to claim for.
 - Returns:
-  - `uint256` : Total amount of registry fee claimed across all subscribers.
+  - `uint256 totalClaimedAmount` : Total amount of registry fee claimed across all subscribers.
 
 
 ---
@@ -633,11 +652,14 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
 
 ---
 
-**RegistryFeeClaimed** : Emitted when the registry fee for a single subscriber is claimed via the single-subscriber overload.
+**RegistryFeeClaimed** : Emitted when registry fee for a single subscriber claim cursor is materialized.
 - Contract: `AssetRegistry`
 - Parameters:
+  - `bytes32 indexed assetId` : Asset identifier for the claim.
   - `bytes32 indexed subscriber` : Subscriber whose registry fee was claimed.
   - `uint256 amount` : Amount of registry fee claimed.
+  - `uint256 claimedAtTimestamp` : Timestamp used as the upper claim bound.
+  - `uint256 claimedAtNonce` : Subscription nonce reached while computing the claim.
 
 
 ---
@@ -697,6 +719,8 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
 - Parameters:
   - `bytes32 indexed subscriber` : Subscriber whose creator fee was claimed.
   - `uint256 amount` : Amount of creator fee claimed.
+  - `uint256 indexed claimedAtTimestamp` : Timestamp used as the upper claim bound.
+  - `uint256 indexed claimedAtNonce` : Subscription nonce reached while computing the claim.
 
 
 ---

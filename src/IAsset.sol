@@ -72,24 +72,33 @@ interface IAsset {
     ) external returns (uint256);
 
     /// @notice Claims the creator fee for a subscriber. Callable only by the asset owner.
+    ///         Updates and emits claim cursor metadata (`claimedAtTimestamp`, `claimedAtNonce`) in
+    ///         `CreatorFeeClaimed` to support deterministic indexer continuation.
     /// @param subscriber Subscriber hash whose creator fee to claim.
-    /// @return The amount of creator fee claimed.
-    function claimCreatorFee(bytes32 subscriber) external returns (uint256);
+    /// @return claimedAmount The amount of creator fee claimed.
+    function claimCreatorFee(bytes32 subscriber) external returns (uint256 claimedAmount);
 
     /// @notice Claims the creator fee for multiple subscribers. Callable only by the asset owner.
+    ///         Emits `CreatorFeeClaimed` per subscriber with per-subscriber claim cursor metadata,
+    ///         then emits `CreatorFeeClaimedBatch` once with the aggregate amount.
     /// @param subscribers Array of subscriber hashes whose creator fee to claim.
-    /// @return The amount of creator fee claimed.
-    function claimCreatorFee(bytes32[] calldata subscribers) external returns (uint256);
+    /// @return totalClaimedAmount The total amount of creator fee claimed across all subscribers.
+    function claimCreatorFee(bytes32[] calldata subscribers) external returns (uint256 totalClaimedAmount);
 
-    /// @notice Claims the registry fee for a subscriber. Callable only by the Registry owner.
+    /// @notice Claims the registry fee for a subscriber. Callable only by the registry contract.
+    ///         Returns claim cursor metadata so callers can emit or persist synchronized claim progress.
     /// @param subscriber Subscriber hash whose registry fee to claim.
-    /// @return The amount of registry fee claimed.
-    function claimRegistryFee(bytes32 subscriber) external returns (uint256);
+    /// @return claimedAmount The amount of registry fee claimed.
+    /// @return claimedAtTimestamp The timestamp used as the upper claim bound for this call.
+    /// @return claimedAtNonce The subscription nonce reached while computing the claim.
+    function claimRegistryFee(bytes32 subscriber)
+        external
+        returns (uint256 claimedAmount, uint256 claimedAtTimestamp, uint256 claimedAtNonce);
 
-    /// @notice Claims the registry fee for multiple subscribers. Callable only by the Registry owner.
+    /// @notice Claims the registry fee for multiple subscribers. Callable only by the registry contract.
     /// @param subscribers Array of subscriber hashes whose registry fee to claim.
-    /// @return The amount of registry fee claimed.
-    function claimRegistryFee(bytes32[] calldata subscribers) external returns (uint256);
+    /// @return totalClaimedAmount The total amount of registry fee claimed across all subscribers.
+    function claimRegistryFee(bytes32[] calldata subscribers) external returns (uint256 totalClaimedAmount);
 
     /// @notice Revokes a subscriber's subscription. Callable only by the asset owner.
     /// @param subscriber Subscriber hash whose subscription to revoke.

@@ -123,17 +123,37 @@ interface IAssetRegistry {
     /// @return registryFee The registry fee.
     function getFees(uint256 _value) external view returns (uint256 creatorFee, uint256 registryFee);
 
-    /// @notice Claims the registry fee for a subscriber hash. Callable only by the Registry owner.
+    /// @notice Claims the registry fee for a subscriber hash. Callable only by the registry owner.
+    ///         Internally uses the asset-returned claim cursor metadata when emitting
+    ///         `RegistryFeeClaimed(assetId, subscriber, amount, claimedAtTimestamp, claimedAtNonce)`.
     /// @param _assetId Asset identifier.
     /// @param _subscriber Subscriber hash.
-    /// @return The amount of registry fee claimed.
+    /// @return claimedAmount The amount of registry fee claimed.
     function claimRegistryFee(bytes32 _assetId, bytes32 _subscriber) external returns (uint256);
 
-    /// @notice Claims the registry fee for multiple subscriber hashes. Callable only by the Registry owner.
+    /// @notice Claims the registry fee for multiple subscriber hashes. Callable only by the registry owner.
+    ///         Emits `RegistryFeeClaimedBatch` once with the aggregate amount.
     /// @param _assetId Asset identifier.
     /// @param _subscribers Array of subscriber hashes.
-    /// @return The amount of registry fee claimed.
-    function claimRegistryFee(bytes32 _assetId, bytes32[] calldata _subscribers) external returns (uint256);
+    /// @return totalClaimedAmount The total amount of registry fee claimed across all subscribers.
+    function claimRegistryFee(bytes32 _assetId, bytes32[] calldata _subscribers)
+        external
+        returns (uint256 totalClaimedAmount);
+
+    /// @notice Emits a `RegistryFeeClaimed` event for a single subscriber claim cursor update.
+    ///         Callable only by the asset identified by `_assetId`.
+    /// @param _assetId Asset identifier.
+    /// @param _subscriber Subscriber hash.
+    /// @param claimedAmount Registry fee amount claimed.
+    /// @param claimedAtTimestamp Timestamp used as upper claim bound.
+    /// @param claimedAtNonce Subscription nonce reached while computing the claim.
+    function emitRegistryFeeClaimedEvent(
+        bytes32 _assetId,
+        bytes32 _subscriber,
+        uint256 claimedAmount,
+        uint256 claimedAtTimestamp,
+        uint256 claimedAtNonce
+    ) external;
 
     /// @notice Returns the owner of the registry (e.g. for receiving registry fees).
     /// @return The registry owner address.

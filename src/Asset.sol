@@ -82,7 +82,9 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     );
 
     event SubscriptionExtended(bytes32 indexed subscriber, uint256 indexed endTime);
-    event CreatorFeeClaimed(bytes32 indexed subscriber, uint256 amount);
+    event CreatorFeeClaimed(
+        bytes32 indexed subscriber, uint256 amount, uint256 indexed claimedAtTimestamp, uint256 indexed claimedAtNonce
+    );
     event CreatorFeeClaimedBatch(bytes32[] indexed subscribers, uint256 totalAmount);
     event SubscriptionPriceUpdated(uint256 newSubscriptionPrice);
     event SubscriptionRevoked(bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime);
@@ -343,7 +345,9 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     }
 
     function claimCreatorFee(bytes32 subscriber) external onlyOwner nonReentrant returns (uint256 creatorFee) {
-        (creatorFee, creatorClaimedAtNonces[subscriber], creatorClaimedAtTimestamps[subscriber]) = _claimable(
+        uint256 claimedAtNonce;
+        uint256 claimedAtTimestamp;
+        (creatorFee, claimedAtNonce, claimedAtTimestamp) = _claimable(
             subscriber,
             creatorClaimedAtTimestamps[subscriber],
             creatorClaimedAtNonces[subscriber],
@@ -356,7 +360,10 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             SafeERC20.safeTransfer(TOKEN_CONTRACT, owner(), creatorFee);
         }
 
-        emit CreatorFeeClaimed(subscriber, creatorFee);
+        creatorClaimedAtTimestamps[subscriber] = claimedAtTimestamp;
+        creatorClaimedAtNonces[subscriber] = claimedAtNonce;
+
+        emit CreatorFeeClaimed(subscriber, creatorFee, claimedAtTimestamp, claimedAtNonce);
 
         return creatorFee;
     }
@@ -365,7 +372,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         external
         onlyOwner
         nonReentrant
-        returns (uint256 claimed)
+        returns (uint256 totalClaimedAmount)
     {
         uint256 timestamp = block.timestamp;
 
@@ -376,7 +383,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                 continue;
             }
 
-            (uint256 creatorFee, uint256 claimedAtNonce, uint256 claimedAtTimestamp) = _claimable(
+            (uint256 claimedAmount, uint256 claimedAtNonce, uint256 claimedAtTimestamp) = _claimable(
                 subscriber,
                 creatorClaimedAtTimestamps[subscriber],
                 creatorClaimedAtNonces[subscriber],
@@ -386,7 +393,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             );
 
             // If the creator fee is 0, continue to the next subscriber
-            if (creatorFee == 0) {
+            if (claimedAmount == 0) {
                 continue;
             }
 
@@ -394,22 +401,27 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
             creatorClaimedAtNonces[subscriber] = claimedAtNonce;
 
-            emit CreatorFeeClaimed(subscriber, creatorFee);
+            emit CreatorFeeClaimed(subscriber, claimedAmount, claimedAtTimestamp, claimedAtNonce);
 
-            claimed += creatorFee;
+            totalClaimedAmount += claimedAmount;
         }
 
-        if (claimed != 0) {
-            SafeERC20.safeTransfer(TOKEN_CONTRACT, owner(), claimed);
+        if (totalClaimedAmount != 0) {
+            SafeERC20.safeTransfer(TOKEN_CONTRACT, owner(), totalClaimedAmount);
         }
 
-        emit CreatorFeeClaimedBatch(_subscribers, claimed);
+        emit CreatorFeeClaimedBatch(_subscribers, totalClaimedAmount);
 
-        return claimed;
+        return totalClaimedAmount;
     }
 
-    function claimRegistryFee(bytes32 subscriber) external onlyRegistry nonReentrant returns (uint256 registryFee) {
-        (registryFee, registryClaimedAtNonces[subscriber], registryClaimedAtTimestamps[subscriber]) = _claimable(
+    function claimRegistryFee(bytes32 subscriber)
+        external
+        onlyRegistry
+        nonReentrant
+        returns (uint256 claimedAmount, uint256 claimedAtTimestamp, uint256 claimedAtNonce)
+    {
+        (claimedAmount, claimedAtNonce, claimedAtTimestamp) = _claimable(
             subscriber,
             registryClaimedAtTimestamps[subscriber],
             registryClaimedAtNonces[subscriber],
@@ -418,18 +430,21 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             block.timestamp
         );
 
-        if (registryFee != 0) {
-            SafeERC20.safeTransfer(TOKEN_CONTRACT, ASSET_REGISTRY.getOwner(), registryFee);
+        if (claimedAmount != 0) {
+            SafeERC20.safeTransfer(TOKEN_CONTRACT, ASSET_REGISTRY.getOwner(), claimedAmount);
         }
 
-        return registryFee;
+        registryClaimedAtTimestamps[subscriber] = claimedAtTimestamp;
+        registryClaimedAtNonces[subscriber] = claimedAtNonce;
+
+        return (claimedAmount, claimedAtTimestamp, claimedAtNonce);
     }
 
     function claimRegistryFee(bytes32[] calldata _subscribers)
         external
         onlyRegistry
         nonReentrant
-        returns (uint256 claimed)
+        returns (uint256 totalClaimedAmount)
     {
         uint256 timestamp = block.timestamp;
 
@@ -440,7 +455,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                 continue;
             }
 
-            (uint256 registryFee, uint256 claimedAtNonce, uint256 claimedAtTimestamp) = _claimable(
+            (uint256 claimedAmount, uint256 claimedAtNonce, uint256 claimedAtTimestamp) = _claimable(
                 subscriber,
                 registryClaimedAtTimestamps[subscriber],
                 registryClaimedAtNonces[subscriber],
@@ -450,7 +465,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             );
 
             // If the registry fee is 0, continue to the next subscriber
-            if (registryFee == 0) {
+            if (claimedAmount == 0) {
                 continue;
             }
 
@@ -458,14 +473,18 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
             registryClaimedAtNonces[subscriber] = claimedAtNonce;
 
-            claimed += registryFee;
+            totalClaimedAmount += claimedAmount;
+
+            ASSET_REGISTRY.emitRegistryFeeClaimedEvent(
+                ASSET_ID, subscriber, claimedAmount, claimedAtTimestamp, claimedAtNonce
+            );
         }
 
-        if (claimed != 0) {
-            SafeERC20.safeTransfer(TOKEN_CONTRACT, ASSET_REGISTRY.getOwner(), claimed);
+        if (totalClaimedAmount != 0) {
+            SafeERC20.safeTransfer(TOKEN_CONTRACT, ASSET_REGISTRY.getOwner(), totalClaimedAmount);
         }
 
-        return claimed;
+        return totalClaimedAmount;
     }
 
     function _removeSubscription(bytes32 subscriber) internal {
