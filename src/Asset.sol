@@ -23,6 +23,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
     bytes32 internal immutable ASSET_ID;
     address internal immutable REGISTRY_ADDRESS;
+    uint256 internal immutable SUBSCRIPTION_DURATION;
 
     IAssetRegistry internal immutable ASSET_REGISTRY;
 
@@ -51,6 +52,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
     error InvalidOwner();
     error InvalidTokenAddress();
+    error InvalidSubscriptionDuration();
     error InvalidSpender();
     error PermitFailed();
     error InsufficientFunds();
@@ -92,12 +94,24 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     /// @notice Initializes the asset with id, price, payment token, and owner.
     ///         Callable only by the registry (msg.sender).
     /// @param _assetId Unique identifier for this asset.
-    /// @param _subscriptionPrice Price per subscription period in seconds.
+    /// @param _subscriptionPrice Price per subscription period.
+    /// @param _subscriptionDuration Fixed subscription period length in seconds; subscriptions must be whole multiples.
     /// @param _tokenAddress ERC20 (with permit) used for subscription payments.
     /// @param _owner Creator/owner of the asset; receives creator share of subscription fees.
-    constructor(bytes32 _assetId, uint256 _subscriptionPrice, address _tokenAddress, address _owner) Ownable(_owner) {
+    constructor(
+        bytes32 _assetId,
+        uint256 _subscriptionPrice,
+        uint256 _subscriptionDuration,
+        address _tokenAddress,
+        address _owner
+    ) Ownable(_owner) {
+        if (_subscriptionDuration == 0) {
+            revert InvalidSubscriptionDuration();
+        }
+
         ASSET_ID = _assetId;
         subscriptionPrice = _subscriptionPrice;
+        SUBSCRIPTION_DURATION = _subscriptionDuration;
 
         if (_owner == address(0)) {
             revert InvalidOwner();
@@ -132,12 +146,22 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         emit SubscriptionPriceUpdated(newSubscriptionPrice);
     }
 
-    function getSubscriptionPrice(uint256 duration) external view returns (uint256) {
-        return subscriptionPrice * duration;
+    function getSubscriptionPrice(uint256 count) external view returns (uint256) {
+        return count * subscriptionPrice;
+    }
+
+    function getSubscriptionDuration() external view returns (uint256) {
+        return SUBSCRIPTION_DURATION;
+    }
+
+    function getSubscriptionPriceAndDuration(uint256 count) external view returns (uint256 price, uint256 duration) {
+        price = count * subscriptionPrice;
+        duration = count * SUBSCRIPTION_DURATION;
     }
 
     function _getSubscription(bytes32 subscriber) internal view returns (uint256) {
-        return subscriptions[_hash(subscriber, nonces[subscriber])].endTime;
+        bytes32 id = _hash(subscriber, nonces[subscriber]);
+        return subscriptions[id].endTime;
     }
 
     function getSubscription(bytes32 subscriber) external view returns (uint256) {
@@ -152,19 +176,23 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         bytes32 subscriber,
         address payer,
         address spender,
-        uint256 value,
+        uint256 count,
         uint256 deadline,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external nonReentrant returns (uint256) {
-        _validatePermit(payer, spender, value, deadline, v, r, s);
+        if (count == 0) {
+            revert InsufficientFunds();
+        }
 
-        return _subscribe(subscriber, payer, value);
+        _validatePermit(payer, spender, count * subscriptionPrice, deadline, v, r, s);
+
+        return _subscribe(subscriber, payer, count);
     }
 
-    function _subscribe(bytes32 subscriber, address payer, uint256 value) internal returns (uint256 endTime) {
-        uint256 duration = value / subscriptionPrice;
+    function _subscribe(bytes32 subscriber, address payer, uint256 count) internal returns (uint256 endTime) {
+        uint256 duration = count * SUBSCRIPTION_DURATION;
 
         uint256 startTime = block.timestamp;
 
@@ -252,12 +280,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         }
 
         try IERC20Permit(TOKEN_ADDRESS).permit(owner, address(this), value, deadline, v, r, s) {
-            value -= value % subscriptionPrice;
-
-            if (value < subscriptionPrice) {
-                revert InsufficientFunds();
-            }
-
             SafeERC20.safeTransferFrom(TOKEN_CONTRACT, owner, address(this), value);
         } catch {
             revert PermitFailed();
@@ -271,12 +293,12 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         bool isOwner,
         bool isRegistry,
         uint256 timestamp
-    ) internal view returns (uint256 claimable, uint256 claimedNonce) {
-        uint256 count = nonces[subscriber] + 1;
+    ) internal view returns (uint256, uint256, uint256) {
+        uint256 claimable = 0;
 
-        claimedNonce = claimedAtNonce;
+        uint256 nonce = nonces[subscriber] + 1;
 
-        for (uint256 i = claimedAtNonce; i < count; i++) {
+        for (uint256 i = claimedAtNonce; i < nonce; i++) {
             bytes32 id = _hash(subscriber, i);
 
             Subscription memory subscription = subscriptions[id];
@@ -292,14 +314,21 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                 continue;
             }
 
-            claimedNonce = i;
+            claimedAtNonce = i;
 
+            // startTime is aligned to this record's period grid (invariant: claimedAtTimestamp is
+            // either 0, a previous snappedEnd on this record's grid, or <= subscription.startTime).
             uint256 startTime = Math.max(subscription.startTime, claimedAtTimestamp);
-
             uint256 endTime = Math.min(subscription.endTime, timestamp);
 
-            uint256 fee = (endTime - startTime) * subscription.subscriptionPrice;
+            // Count of fully-passed periods since startTime. No dust: endTime may be mid-period
+            uint256 count = (endTime - startTime) / SUBSCRIPTION_DURATION;
 
+            if (count == 0) {
+                continue;
+            }
+
+            uint256 fee = count * subscription.subscriptionPrice;
             uint256 registryFee = (fee * subscription.registryFeeShare) / 100;
 
             if (isOwner) {
@@ -307,33 +336,34 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             } else if (isRegistry) {
                 claimable += registryFee;
             }
+
+            // Update the new claimed at timestamp to the end time of the last fully-passed period
+            claimedAtTimestamp = startTime + count * SUBSCRIPTION_DURATION;
         }
 
-        return (claimable, claimedNonce);
+        return (claimable, claimedAtNonce, claimedAtTimestamp);
     }
 
     function claimCreatorFee(bytes32 subscriber) external onlyOwner nonReentrant returns (uint256 creatorFee) {
-        uint256 timestamp = block.timestamp;
-
-        uint256 claimedAtNonce = creatorClaimedAtNonces[subscriber];
-
-        (creatorFee, claimedAtNonce) = _claimable(
+        uint256 claimedAtNonce;
+        uint256 claimedAtTimestamp;
+        (creatorFee, claimedAtNonce, claimedAtTimestamp) = _claimable(
             subscriber,
             creatorClaimedAtTimestamps[subscriber],
             creatorClaimedAtNonces[subscriber],
             true,
             false,
-            timestamp
+            block.timestamp
         );
 
         if (creatorFee != 0) {
             SafeERC20.safeTransfer(TOKEN_CONTRACT, owner(), creatorFee);
         }
 
-        creatorClaimedAtTimestamps[subscriber] = timestamp;
+        creatorClaimedAtTimestamps[subscriber] = claimedAtTimestamp;
         creatorClaimedAtNonces[subscriber] = claimedAtNonce;
 
-        emit CreatorFeeClaimed(subscriber, creatorFee, timestamp, claimedAtNonce);
+        emit CreatorFeeClaimed(subscriber, creatorFee, claimedAtTimestamp, claimedAtNonce);
 
         return creatorFee;
     }
@@ -353,7 +383,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                 continue;
             }
 
-            (uint256 claimedAmount, uint256 claimedAtNonce) = _claimable(
+            (uint256 claimedAmount, uint256 claimedAtNonce, uint256 claimedAtTimestamp) = _claimable(
                 subscriber,
                 creatorClaimedAtTimestamps[subscriber],
                 creatorClaimedAtNonces[subscriber],
@@ -367,11 +397,11 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                 continue;
             }
 
-            creatorClaimedAtTimestamps[subscriber] = timestamp;
+            creatorClaimedAtTimestamps[subscriber] = claimedAtTimestamp;
 
             creatorClaimedAtNonces[subscriber] = claimedAtNonce;
 
-            emit CreatorFeeClaimed(subscriber, claimedAmount, timestamp, claimedAtNonce);
+            emit CreatorFeeClaimed(subscriber, claimedAmount, claimedAtTimestamp, claimedAtNonce);
 
             totalClaimedAmount += claimedAmount;
         }
@@ -391,15 +421,13 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         nonReentrant
         returns (uint256 claimedAmount, uint256 claimedAtTimestamp, uint256 claimedAtNonce)
     {
-        claimedAtTimestamp = block.timestamp;
-
-        (claimedAmount, claimedAtNonce) = _claimable(
+        (claimedAmount, claimedAtNonce, claimedAtTimestamp) = _claimable(
             subscriber,
             registryClaimedAtTimestamps[subscriber],
             registryClaimedAtNonces[subscriber],
             false,
             true,
-            claimedAtTimestamp
+            block.timestamp
         );
 
         if (claimedAmount != 0) {
@@ -427,7 +455,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                 continue;
             }
 
-            (uint256 claimedAmount, uint256 claimedAtNonce) = _claimable(
+            (uint256 claimedAmount, uint256 claimedAtNonce, uint256 claimedAtTimestamp) = _claimable(
                 subscriber,
                 registryClaimedAtTimestamps[subscriber],
                 registryClaimedAtNonces[subscriber],
@@ -441,13 +469,15 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                 continue;
             }
 
-            registryClaimedAtTimestamps[subscriber] = timestamp;
+            registryClaimedAtTimestamps[subscriber] = claimedAtTimestamp;
 
             registryClaimedAtNonces[subscriber] = claimedAtNonce;
 
             totalClaimedAmount += claimedAmount;
 
-            ASSET_REGISTRY.emitRegistryFeeClaimedEvent(ASSET_ID, subscriber, claimedAmount, timestamp, claimedAtNonce);
+            ASSET_REGISTRY.emitRegistryFeeClaimedEvent(
+                ASSET_ID, subscriber, claimedAmount, claimedAtTimestamp, claimedAtNonce
+            );
         }
 
         if (totalClaimedAmount != 0) {
@@ -464,41 +494,42 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
         uint256 nonce = nonces[subscriber];
 
-        uint256 deleted = 0;
+        uint256 length = nonce + 1;
 
-        uint256 count = nonce + 1;
+        uint256 deleted = 0;
 
         uint256 timestamp = block.timestamp;
 
-        for (uint256 i = count; i > 0; i--) {
+        for (uint256 i = length; i > 0; i--) {
             bytes32 id = _hash(subscriber, i - 1);
 
             Subscription memory subscription = subscriptions[id];
 
-            // If the subscription has already expired, break the loop since all subsequent subscriptions
-            // will also have expired
+            // Skip expired subscriptions — all prior ones will also be expired
             if (subscription.endTime <= timestamp) {
                 break;
             }
 
-            uint256 returnable = 0;
+            uint256 returnable;
 
-            // If the subscription has not started yet, delete it, add the returnable amount to the returnable total and
-            // update the nonce
+            uint256 count;
+
+            // If the subscription has not started yet, return the full refund
             if (subscription.startTime >= timestamp) {
-                returnable = (subscription.endTime - subscription.startTime) * subscription.subscriptionPrice;
+                count = (subscription.endTime - subscription.startTime) / SUBSCRIPTION_DURATION;
 
                 delete subscriptions[id];
 
                 deleted++;
             }
-            // If the subscription is active, add the returnable amount to the returnable total and update the
-            // subscription
-            else if (subscription.endTime > timestamp) {
-                returnable = (subscription.endTime - timestamp) * subscription.subscriptionPrice;
+            // If the subscription has started (is active), return the remaining time
+            else {
+                count = (subscription.endTime - timestamp) / SUBSCRIPTION_DURATION;
 
-                subscriptions[id].endTime = timestamp;
+                subscriptions[id].endTime = subscription.endTime - (count * SUBSCRIPTION_DURATION);
             }
+
+            returnable = count * subscription.subscriptionPrice;
 
             if (returnable != 0) {
                 SafeERC20.safeTransfer(TOKEN_CONTRACT, subscription.payer, returnable);
@@ -507,7 +538,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
         // If the user has deleted all of their subscriptions, delete the nonce and remove the user from the
         // subscribers set
-        if (deleted == count) {
+        if (deleted == length) {
             delete nonces[subscriber];
             delete creatorClaimedAtNonces[subscriber];
             delete creatorClaimedAtTimestamps[subscriber];
@@ -527,7 +558,9 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         _removeSubscription(subscriber);
 
         uint256 nonce = nonces[subscriber];
+
         bytes32 id = _hash(subscriber, nonce);
+
         emit SubscriptionRevoked(subscriber, nonce, subscriptions[id].endTime);
     }
 
@@ -544,9 +577,10 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
         _removeSubscription(subscriber);
 
-        // If the user has subscriptions left, emit the SubscriptionCancelled event
         uint256 nonce = nonces[subscriber];
+
         bytes32 id = _hash(subscriber, nonce);
+
         emit SubscriptionCancelled(subscriber, nonce, subscriptions[id].endTime);
     }
 

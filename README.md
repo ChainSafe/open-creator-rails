@@ -75,33 +75,34 @@ Deployments are recorded in `deployments/registries_<chain_id>.json`, where `cha
 Create an asset in a registry (registry owner only):
 
 ```bash
-./scripts/createAsset.sh <registry_index> <asset_id> <subscription_price> <token_address> <owner>
+./scripts/createAsset.sh <registry_index> <asset_id> <subscription_price> <subscription_duration> <token_address> <owner>
 ```
 
 | Input | Description |
 |-------|--------------|
 | `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json` (e.g. `0` for the first registry). |
 | `asset_id` | Human-readable identifier for the asset. The script hashes it with keccak256 to get the bytes32 used on-chain. |
-| `subscription_price` | Price per subscription unit per second in the token's smallest unit. |
+| `subscription_price` | Price for one subscription period, in the token's smallest unit. Total payment for `n` periods is `n * subscription_price` (see `getSubscriptionPrice`). |
+| `subscription_duration` | Length of one subscription period in seconds (non-zero). Subscriptions are always whole multiples of this duration. |
 | `token_address` | Address of the ERC20 contract used for subscription payments. Must implement ERC-2612 (Permits), as subscription payments use gasless permit approvals. |
 | `owner` | Creator/owner address of the asset; receives the creator share of subscription fees. |
 
 Example:
 
 ```bash
-./scripts/createAsset.sh 0 "default_asset_id" 4 0x1234... 0xabcd...
+./scripts/createAsset.sh 0 "default_asset_id" 4 3600 0x1234... 0xabcd...
 ```
 
 The token address must implement ERC-2612 / IERC20Permit, as subscription payments use gasless permit approvals.
 
-New assets are appended to the `assets` array of the corresponding registry in `deployments/registries_<chain_id>.json`. Each asset entry includes `address`, `assetId`, `assetIdHash`, `subscriptionPrice`, `tokenAddress`, and `owner`.
+New assets are appended to the `assets` array of the corresponding registry in `deployments/registries_<chain_id>.json`. Each asset entry includes `address`, `assetId`, `assetIdHash`, `subscriptionPrice`, `subscriptionDuration`, `tokenAddress`, and `owner`.
 
 ### Subscribe
 
 Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs the permit and pays with tokens; the subscription is associated with a **subscriber** identity (a `bytes32` hash). For cancellation, the subscriber identity should be derived as `keccak256(abi.encode(subscriberId, subscriberAddress))`, so only that `subscriberAddress` can cancel by signing an off-chain message and calling `cancelSubscription` in one step (no on-chain commit or timestamp binding). The payer and the subscriber can be the same or different (e.g. "pay for someone else"). The **payer** is the address entitled to refunds if the subscription is later cancelled or revoked (unearned time is refunded to the payer).
 
 ```bash
-./scripts/subscribe.sh <registry_index> <asset_id> <subscriber_id> <value> <payer_private_key>
+./scripts/subscribe.sh <registry_index> <asset_id> <subscriber_id> <count> <payer_private_key>
 ```
 
 | Input | Description |
@@ -109,13 +110,13 @@ Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs 
 | `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). The script hashes it with keccak256 for the on-chain call. |
 | `subscriber_id` | Human-readable subscriber identity (e.g. user id, wallet-derived id). For cancellation-compatible identity, the subscriber hash should be computed as `keccak256(abi.encode(subscriber_id, subscriber_address))`, where `subscriber_address` is the address that is allowed to cancel. Access and subscription queries use this resulting `bytes32` identity. |
-| `value` | Payment amount in the token's smallest unit. Must be a multiple of the asset's subscription price; excess is rounded down. |
+| `count` | Number of full subscription periods to buy (must be at least 1). The script queries `getSubscriptionPrice(count)` on the asset for the ERC-2612 permit `value` and passes `count` to `subscribe`. |
 | `payer_private_key` | Private key of the token owner. Used only to sign the ERC-2612 permit (this address’s tokens are spent). The subscribe transaction is sent using `PRIVATE_KEY` from `.env`. |
 
 Example:
 
 ```bash
-./scripts/subscribe.sh 0 "default_asset_id" "user_123" 10368000 0x1b97...
+./scripts/subscribe.sh 0 "default_asset_id" "user_123" 12 0x1b97...
 ```
 
 ### Set Subscription Price
@@ -130,7 +131,7 @@ Update the subscription price for an asset (asset owner only):
 |-------|--------------|
 | `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
-| `new_subscription_price` | New price per subscription unit (e.g. per second) in the token's smallest unit. |
+| `new_subscription_price` | New price per subscription duration in the token's smallest unit. |
 | `asset_owner_private_key` | Private key of the asset owner. Used to send the transaction. |
 
 Example:
@@ -202,7 +203,8 @@ All external functions for the registry and asset contracts, for use with JSON-R
 - Permission: `onlyOwner`
 - Parameters:
   - `bytes32 _assetId` : Unique identifier for the asset.
-  - `uint256 _subscriptionPrice` : Price per subscription unit for the asset.
+  - `uint256 _subscriptionPrice` : Price per subscription period for the asset.
+  - `uint256 _subscriptionDuration` : Fixed period length in seconds (non-zero). Subscriptions are whole multiples of this duration.
   - `address _tokenAddress` : ERC20 (with permit) used for subscription payments.
   - `address _owner` : Creator/owner of the new asset.
 - Returns:
@@ -257,19 +259,43 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**getSubscriptionPrice** : Returns the subscription price for the given asset and duration.
+**getSubscriptionPrice** : Returns the total price for a given number of subscription periods for the asset.
 - Type: read
 - Permission: none
 - Parameters:
   - `bytes32 _assetId` : Asset identifier.
-  - `uint256 _duration` : Subscription duration in seconds.
+  - `uint256 _count` : Number of subscription periods.
 - Returns:
-  - `uint256` : Total price for the duration.
+  - `uint256` : Total price (`_count *` per-period price).
 
 
 ---
 
-**subscribe** : Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract. The permit is signed by the payer; the subscription is attributed to `_subscriber` (payer and subscriber can differ). The payer is the refund beneficiary on cancel/revoke. For cancellation-compatible identity, `_subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will call `cancelSubscription` and sign the cancellation payload.
+**getSubscriptionDuration** : Returns the asset's fixed subscription period length in seconds.
+- Type: read
+- Permission: none
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier.
+- Returns:
+  - `uint256` : Duration of one period in seconds.
+
+
+---
+
+**getSubscriptionPriceAndDuration** : Returns total token cost and total time for a given number of periods.
+- Type: read
+- Permission: none
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier.
+  - `uint256 _count` : Number of subscription periods.
+- Returns:
+  - `uint256 price` : Total price for `_count` periods.
+  - `uint256 duration` : Total subscription time in seconds (`_count *` period length).
+
+
+---
+
+**subscribe** : Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract. The permit is signed by the payer; the subscription is attributed to `_subscriber` (payer and subscriber can differ). The payer is the refund beneficiary on cancel/revoke. The permit `value` must equal `getSubscriptionPrice(_count)`. For cancellation-compatible identity, `_subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will call `cancelSubscription` and sign the cancellation payload.
 - Type: write
 - Permission: none
 - Parameters:
@@ -277,7 +303,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
   - `bytes32 _subscriber` : Hash of the subscriber identity (who gets the access). Recommended canonical form: `keccak256(abi.encode(subscriberId, subscriberAddress))`.
   - `address _payer` : Payer; signs the permit and pays. Receives refunds on cancel/revoke. Can be the same or different from the subscriber (e.g. gifting).
   - `address _spender` : Must be the asset contract address for the permit.
-  - `uint256 _value` : Permit allowance / payment amount.
+  - `uint256 _count` : Number of full subscription periods to subscribe for (must be at least 1).
   - `uint256 _deadline` : Permit signature expiry.
   - `uint8 _v` : Signature v.
   - `bytes32 _r` : Signature r.
@@ -448,13 +474,35 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**getSubscriptionPrice** : Returns the total price for a subscription of the given duration.
+**getSubscriptionPrice** : Returns the total price for a given number of subscription periods.
 - Type: read
 - Permission: none
 - Parameters:
-  - `uint256 duration` : Length of the subscription in seconds.
+  - `uint256 count` : Number of subscription periods.
 - Returns:
-  - `uint256` : Total price for the duration.
+  - `uint256` : Total price (`count *` per-period price).
+
+
+---
+
+**getSubscriptionDuration** : Returns the fixed subscription period length in seconds.
+- Type: read
+- Permission: none
+- Parameters: none
+- Returns:
+  - `uint256` : Duration of one period in seconds.
+
+
+---
+
+**getSubscriptionPriceAndDuration** : Returns total price and total duration for a given number of periods.
+- Type: read
+- Permission: none
+- Parameters:
+  - `uint256 count` : Number of subscription periods.
+- Returns:
+  - `uint256 price` : Total cost for `count` periods.
+  - `uint256 duration` : Total time in seconds (`count *` period length).
 
 
 ---
@@ -491,14 +539,14 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**subscribe** : Subscribes a subscriber using ERC-2612 permit: payer signs permit, then payment is pulled and subscription is attributed to the given subscriber. Payer and subscriber can differ (e.g. pay for someone else). The payer is the refund beneficiary on cancel/revoke. For cancellation-compatible identity, `subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will call `cancelSubscription` and sign the cancellation payload.
+**subscribe** : Subscribes a subscriber using ERC-2612 permit: payer signs permit, then payment is pulled and subscription is attributed to the given subscriber. Payer and subscriber can differ (e.g. pay for someone else). The payer is the refund beneficiary on cancel/revoke. The permit `value` must equal `getSubscriptionPrice(count)`. For cancellation-compatible identity, `subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will call `cancelSubscription` and sign the cancellation payload.
 - Type: write
 - Permission: none
 - Parameters:
   - `bytes32 subscriber` : Hash of the subscriber identity (who gets the access). Recommended canonical form: `keccak256(abi.encode(subscriberId, subscriberAddress))`.
   - `address payer` : Payer; signs the permit and pays. Receives refunds on cancel/revoke.
   - `address spender` : Must be this asset contract for the permit to be accepted.
-  - `uint256 value` : Permit allowance / payment amount (will be rounded down to subscription price units).
+  - `uint256 count` : Number of full subscription periods to subscribe for (must be at least 1).
   - `uint256 deadline` : Permit signature expiry.
   - `uint8 v` : Signature recovery id.
   - `bytes32 r` : Signature r.
@@ -588,7 +636,8 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
 - Parameters:
   - `bytes32 indexed assetId` : Unique identifier for the asset.
   - `address indexed asset` : Address of the newly deployed Asset contract.
-  - `uint256 subscriptionPrice` : Price per subscription unit for the asset.
+  - `uint256 subscriptionPrice` : Price per subscription period for the asset.
+  - `uint256 subscriptionDuration` : Fixed period length in seconds.
   - `address tokenAddress` : ERC20 (with permit) used for subscription payments.
   - `address indexed owner` : Creator/owner of the new asset.
 
@@ -636,7 +685,7 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
   - `uint256 indexed startTime` : Subscription start time (Unix timestamp).
   - `uint256 indexed endTime` : Subscription expiry time (Unix timestamp).
   - `address payer` : Payer for this subscription (refund beneficiary on cancel/revoke).
-  - `uint256 subscriptionPrice` : Per-second subscription price snapshot used for this subscription record.
+  - `uint256 subscriptionPrice` : Per-period subscription price snapshot used for this subscription record.
   - `uint256 registryFeeShare` : Registry fee share snapshot (0-100) used for this subscription record.
 
 
@@ -650,7 +699,7 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
   - `uint256 indexed endTime` : New subscription record expiry time (Unix timestamp).
   - `uint256 nonce` : New subscription nonce for this subscriber.
   - `address payer` : Payer for this subscription (refund beneficiary on cancel/revoke).
-  - `uint256 subscriptionPrice` : Per-second subscription price snapshot used for this subscription record.
+  - `uint256 subscriptionPrice` : Per-period subscription price snapshot used for this subscription record.
   - `uint256 registryFeeShare` : Registry fee share snapshot (0-100) used for this subscription record.
 
 
@@ -688,7 +737,7 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
 **SubscriptionPriceUpdated** : Emitted when the subscription price is updated.
 - Contract: `Asset`
 - Parameters:
-  - `uint256 newSubscriptionPrice` : New subscription price per unit.
+  - `uint256 newSubscriptionPrice` : New price per subscription period.
 
 
 ---

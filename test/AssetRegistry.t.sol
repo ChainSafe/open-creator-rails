@@ -8,35 +8,35 @@ import {BaseTest} from "./Base.t.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract AssetRegistryTest is BaseTest {
-    function _subscribe(uint256 duration) internal returns (uint256 subscription) {
+    function _subscribe(uint256 count) internal returns (uint256 subscription) {
         test_createAsset();
 
         address payer = signer;
         address spender = address(asset);
-        uint256 value = asset.getSubscriptionPrice(duration);
-        uint256 deadline = block.timestamp + duration;
+        uint256 value = asset.getSubscriptionPrice(count);
+        uint256 deadline = block.timestamp;
 
         (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
 
         vm.startPrank(signer);
-        subscription = assetRegistry.subscribe(ASSET_ID, _subscriber, payer, spender, value, deadline, v, r, s);
+        subscription = assetRegistry.subscribe(ASSET_ID, _subscriber, payer, spender, count, deadline, v, r, s);
         vm.stopPrank();
 
         return subscription;
     }
 
-    function _subscribeFor(bytes32 subscriber, uint256 duration) internal returns (uint256 subscription) {
+    function _subscribeFor(bytes32 subscriber, uint256 count) internal returns (uint256 subscription) {
         test_createAsset();
 
         address payer = signer;
         address spender = address(asset);
-        uint256 value = asset.getSubscriptionPrice(duration);
-        uint256 deadline = block.timestamp + duration;
+        uint256 value = asset.getSubscriptionPrice(count);
+        uint256 deadline = block.timestamp;
 
         (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
 
         vm.startPrank(signer);
-        subscription = assetRegistry.subscribe(ASSET_ID, subscriber, payer, spender, value, deadline, v, r, s);
+        subscription = assetRegistry.subscribe(ASSET_ID, subscriber, payer, spender, count, deadline, v, r, s);
         vm.stopPrank();
 
         return subscription;
@@ -57,8 +57,14 @@ contract AssetRegistryTest is BaseTest {
 
         vm.startPrank(registryOwner);
         vm.expectEmit(true, false, true, true);
-        emit AssetRegistry.AssetCreated(ASSET_ID, address(0), SUBSCRIPTION_PRICE, address(testToken), assetOwner);
-        asset = IAsset(assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner));
+        emit AssetRegistry.AssetCreated(
+            ASSET_ID, address(0), SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner
+        );
+        asset = IAsset(
+            assetRegistry.createAsset(
+                ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner
+            )
+        );
         vm.stopPrank();
 
         assertEq(asset.getAssetId(), ASSET_ID);
@@ -77,11 +83,11 @@ contract AssetRegistryTest is BaseTest {
 
         address payer = signer;
         address spender = address(asset);
-        uint256 value = asset.getSubscriptionPrice(DURATION);
-        uint256 deadline = block.timestamp + DURATION;
+        uint256 value = asset.getSubscriptionPrice(COUNT);
+        uint256 deadline = block.timestamp;
         (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
 
-        uint256 subscription = assetRegistry.subscribe(ASSET_ID, _subscriber, payer, spender, value, deadline, v, r, s);
+        uint256 subscription = assetRegistry.subscribe(ASSET_ID, _subscriber, payer, spender, COUNT, deadline, v, r, s);
 
         assertTrue(subscription > block.timestamp);
         assertEq(assetRegistry.getSubscription(ASSET_ID, _subscriber), subscription);
@@ -135,7 +141,7 @@ contract AssetRegistryTest is BaseTest {
 
         vm.startPrank(registryOwner);
         vm.expectRevert(AssetRegistry.AssetAlreadyExists.selector);
-        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner);
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner);
         vm.stopPrank();
     }
 
@@ -149,7 +155,7 @@ contract AssetRegistryTest is BaseTest {
     function test_createAsset_invalidOwner() public {
         vm.prank(registryOwner);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0)));
-        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), address(0));
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), address(0));
     }
 
     function test_constructor_registryFeeShareOutOfBounds() public {
@@ -166,7 +172,14 @@ contract AssetRegistryTest is BaseTest {
     function test_createAsset_invalidTokenAddress() public {
         vm.prank(registryOwner);
         vm.expectRevert(Asset.InvalidTokenAddress.selector);
-        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(0), assetOwner);
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(0), assetOwner);
+    }
+
+    function test_createAsset_invalidSubscriptionDuration() public {
+        bytes32 zeroDurationId = keccak256(abi.encodePacked("zero_duration_asset"));
+        vm.prank(registryOwner);
+        vm.expectRevert(Asset.InvalidSubscriptionDuration.selector);
+        assetRegistry.createAsset(zeroDurationId, SUBSCRIPTION_PRICE, 0, address(testToken), assetOwner);
     }
 
     function test_getSubscriptionPrice_assetNotFound() public {
@@ -179,7 +192,7 @@ contract AssetRegistryTest is BaseTest {
     function test_claimRegistryFee_unauthorized() public {
         test_createAsset();
         test_subscribe();
-        vm.warp(block.timestamp + DURATION);
+        vm.warp(block.timestamp + SUBSCRIPTION_DURATION * COUNT);
 
         vm.prank(UNAUTHORIZED);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, UNAUTHORIZED));
@@ -189,7 +202,7 @@ contract AssetRegistryTest is BaseTest {
     function test_createAsset_unauthorized() public {
         vm.prank(UNAUTHORIZED);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, UNAUTHORIZED));
-        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, address(testToken), assetOwner);
+        assetRegistry.createAsset(ASSET_ID, SUBSCRIPTION_PRICE, SUBSCRIPTION_DURATION, address(testToken), assetOwner);
     }
 
     function test_updateRegistryFeeShare_unauthorized() public {
@@ -218,9 +231,9 @@ contract AssetRegistryTest is BaseTest {
         uint256 tokenBalance = testToken.balanceOf(registryOwner);
         test_subscribe();
 
-        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, COUNT);
         uint256 registryFee = assetRegistry.getRegistryFee(value);
-        vm.warp(block.timestamp + DURATION);
+        vm.warp(block.timestamp + SUBSCRIPTION_DURATION * COUNT);
 
         vm.prank(registryOwner);
         vm.expectEmit(true, true, true, true);
@@ -233,17 +246,17 @@ contract AssetRegistryTest is BaseTest {
     function test_claimRegistryFee_multiple() public {
         uint256 tokenBalance = testToken.balanceOf(registryOwner);
         for (uint256 i = 0; i < 10; i++) {
-            _subscribe(DURATION);
+            _subscribe(1);
         }
 
         uint256 endTime = assetRegistry.getSubscription(ASSET_ID, _subscriber);
-        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, endTime - block.timestamp);
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, 10);
         uint256 registryFee = assetRegistry.getRegistryFee(value);
-        vm.warp(endTime);
+        vm.warp(endTime + 1);
 
         vm.prank(registryOwner);
         vm.expectEmit(true, true, true, true);
-        emit AssetRegistry.RegistryFeeClaimed(ASSET_ID, _subscriber, registryFee, block.timestamp, 0);
+        emit AssetRegistry.RegistryFeeClaimed(ASSET_ID, _subscriber, registryFee, endTime, 0);
         assetRegistry.claimRegistryFee(ASSET_ID, _subscriber);
 
         assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
@@ -253,14 +266,14 @@ contract AssetRegistryTest is BaseTest {
         uint256 registryFeeShare = assetRegistry.getRegistryFeeShare();
         uint256 tokenBalance = testToken.balanceOf(registryOwner);
 
-        _subscribe(DURATION);
+        _subscribe(COUNT);
 
         vm.prank(registryOwner);
         assetRegistry.updateRegistryFeeShare(40);
 
-        uint256 endTime = _subscribe(DURATION);
+        uint256 endTime = _subscribe(COUNT);
 
-        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, COUNT);
         uint256 registryFee = assetRegistry.getRegistryFee(value) + ((value * registryFeeShare) / 100);
         vm.warp(endTime);
 
@@ -275,14 +288,14 @@ contract AssetRegistryTest is BaseTest {
         uint256 registryFeeShare = assetRegistry.getRegistryFeeShare();
         uint256 tokenBalance = testToken.balanceOf(registryOwner);
 
-        _subscribe(DURATION);
+        _subscribe(COUNT);
 
         vm.prank(registryOwner);
         assetRegistry.updateRegistryFeeShare(50);
 
-        uint256 endTime = _subscribe(DURATION);
+        uint256 endTime = _subscribe(COUNT);
 
-        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, COUNT);
         uint256 registryFee = assetRegistry.getRegistryFee(value) + ((value * registryFeeShare) / 100);
         vm.warp(endTime);
 
@@ -295,17 +308,17 @@ contract AssetRegistryTest is BaseTest {
 
     function test_claimRegistryFee_multiple_subscriptionPrice() public {
         uint256 tokenBalance = testToken.balanceOf(registryOwner);
-        _subscribe(DURATION);
+        _subscribe(COUNT);
 
-        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, COUNT);
 
         vm.prank(assetOwner);
         asset.setSubscriptionPrice(SUBSCRIPTION_PRICE * 2);
-        _subscribe(DURATION);
+        _subscribe(COUNT);
 
-        value += assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        value += assetRegistry.getSubscriptionPrice(ASSET_ID, COUNT);
         uint256 registryFee = assetRegistry.getRegistryFee(value);
-        vm.warp(block.timestamp + (DURATION * 2));
+        vm.warp(block.timestamp + (SUBSCRIPTION_DURATION * COUNT * 2));
 
         vm.prank(registryOwner);
         vm.expectEmit(true, true, true, true);
@@ -316,27 +329,26 @@ contract AssetRegistryTest is BaseTest {
     }
 
     function test_claimRegistryFee_midSubscription() public {
+        // Should claim 0 in the middle of the period
         uint256 tokenBalance = testToken.balanceOf(registryOwner);
-        _subscribe(DURATION);
+        _subscribe(1);
 
-        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
-        uint256 registryFee = assetRegistry.getRegistryFee(value) / 2;
-        vm.warp(block.timestamp + (DURATION / 2));
+        vm.warp(block.timestamp + SUBSCRIPTION_DURATION / 2);
 
         vm.prank(registryOwner);
         vm.expectEmit(true, true, true, true);
-        emit AssetRegistry.RegistryFeeClaimed(ASSET_ID, _subscriber, registryFee, block.timestamp, 0);
+        emit AssetRegistry.RegistryFeeClaimed(ASSET_ID, _subscriber, 0, 0, 0);
         assetRegistry.claimRegistryFee(ASSET_ID, _subscriber);
 
-        assertEq(testToken.balanceOf(registryOwner), tokenBalance + registryFee);
+        assertEq(testToken.balanceOf(registryOwner), tokenBalance);
     }
 
     function test_claimRegistryFee_startOfNextSubscription() public {
         uint256 tokenBalance = testToken.balanceOf(registryOwner);
-        uint256 endTime = _subscribe(DURATION);
-        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        uint256 endTime = _subscribe(COUNT);
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, COUNT);
 
-        _subscribe(DURATION);
+        _subscribe(COUNT);
 
         vm.warp(endTime);
 
@@ -384,12 +396,12 @@ contract AssetRegistryTest is BaseTest {
         bytes32 nonexistentId = keccak256("nonexistent");
         address payer = signer;
         address spender = address(asset);
-        uint256 value = asset.getSubscriptionPrice(DURATION);
-        uint256 deadline = block.timestamp + DURATION;
+        uint256 value = asset.getSubscriptionPrice(COUNT);
+        uint256 deadline = block.timestamp;
         (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
 
         vm.expectRevert(AssetRegistry.AssetNotFound.selector);
-        assetRegistry.subscribe(nonexistentId, _subscriber, payer, spender, value, deadline, v, r, s);
+        assetRegistry.subscribe(nonexistentId, _subscriber, payer, spender, COUNT, deadline, v, r, s);
     }
 
     function test_isSubscriptionActive_assetNotFound() public {
@@ -424,12 +436,12 @@ contract AssetRegistryTest is BaseTest {
 
     function test_claimRegistryFee_batch() public {
         bytes32 subscriber2 = keccak256("subscriber_2");
-        _subscribe(DURATION);
-        _subscribeFor(subscriber2, DURATION);
+        _subscribe(COUNT);
+        _subscribeFor(subscriber2, COUNT);
 
-        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, COUNT);
         uint256 registryFeePerSubscriber = assetRegistry.getRegistryFee(value);
-        vm.warp(block.timestamp + DURATION);
+        vm.warp(block.timestamp + SUBSCRIPTION_DURATION * COUNT);
 
         bytes32[] memory subs = new bytes32[](2);
         subs[0] = _subscriber;
@@ -449,8 +461,8 @@ contract AssetRegistryTest is BaseTest {
     }
 
     function test_claimRegistryFee_batch_unauthorized() public {
-        _subscribe(DURATION);
-        vm.warp(block.timestamp + DURATION);
+        _subscribe(COUNT);
+        vm.warp(block.timestamp + COUNT);
 
         bytes32[] memory subs = new bytes32[](1);
         subs[0] = _subscriber;
@@ -475,9 +487,9 @@ contract AssetRegistryTest is BaseTest {
 
     function test_cancelSubscription() public {
         uint256 tokenBalanceBefore = testToken.balanceOf(signer);
-        _subscribe(DURATION);
+        _subscribe(COUNT);
 
-        assertEq(testToken.balanceOf(signer), tokenBalanceBefore - asset.getSubscriptionPrice(DURATION));
+        assertEq(testToken.balanceOf(signer), tokenBalanceBefore - asset.getSubscriptionPrice(COUNT));
 
         bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
 
@@ -489,7 +501,7 @@ contract AssetRegistryTest is BaseTest {
     }
 
     function test_cancelSubscription_unauthorized() public {
-        _subscribe(DURATION);
+        _subscribe(COUNT);
 
         bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
 
@@ -510,15 +522,15 @@ contract AssetRegistryTest is BaseTest {
 
     function test_claimRegistryFee_batch_emitsRegistryFeeClaimedBatch() public {
         bytes32 subscriber2 = keccak256("subscriber_2");
-        _subscribe(DURATION);
-        _subscribeFor(subscriber2, DURATION);
-        vm.warp(block.timestamp + DURATION);
+        _subscribe(COUNT);
+        _subscribeFor(subscriber2, COUNT);
+        vm.warp(block.timestamp + SUBSCRIPTION_DURATION * COUNT);
 
         bytes32[] memory subs = new bytes32[](2);
         subs[0] = _subscriber;
         subs[1] = subscriber2;
 
-        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, DURATION);
+        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, COUNT);
         uint256 totalFee = assetRegistry.getRegistryFee(value) * 2;
 
         vm.prank(registryOwner);
@@ -528,7 +540,7 @@ contract AssetRegistryTest is BaseTest {
     }
 
     function test_claimRegistryFee_batch_emitsRegistryFeeClaimedBatch_zeroFee() public {
-        _subscribe(DURATION);
+        _subscribe(COUNT);
 
         bytes32[] memory subs = new bytes32[](1);
         subs[0] = _subscriber;
@@ -545,17 +557,17 @@ contract AssetRegistryTest is BaseTest {
     // --- Expired subscription creates a new nonce (integration via registry) ---
 
     function test_subscribe_expiredSubscription_createsNewNonce_viaRegistry() public {
-        uint256 endTime = _subscribe(DURATION);
+        uint256 endTime = _subscribe(COUNT);
 
         vm.warp(endTime + 1);
 
         // Re-subscribe with same terms after expiry — should produce a new nonce, not extend.
-        uint256 newEnd = block.timestamp + DURATION;
+        uint256 newEnd = block.timestamp + SUBSCRIPTION_DURATION * COUNT;
         vm.expectEmit(true, true, true, true);
         emit Asset.SubscriptionRenewed(
             _subscriber, block.timestamp, newEnd, 1, signer, SUBSCRIPTION_PRICE, assetRegistry.getRegistryFeeShare()
         );
-        _subscribe(DURATION);
+        _subscribe(COUNT);
 
         assertEq(assetRegistry.getSubscription(ASSET_ID, _subscriber), newEnd);
     }

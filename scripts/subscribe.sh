@@ -9,7 +9,7 @@ source ./scripts/utils.sh
 registry_index=$1
 asset_id=$(cast keccak "$2")
 subscriber=$(cast keccak "$3")
-value=$4
+count=$4
 payer_private_key=$5
 
 registry_address=$(get_address $registry_index)
@@ -17,12 +17,14 @@ registry_address=$(get_address $registry_index)
 # Asset address is the spender for the permit
 spender=$(cast call $registry_address "getAsset(bytes32)(address)" $asset_id --rpc-url $RPC_URL --private-key $PRIVATE_KEY)
 
-# 30 minutes
-duration=1800
+# Permit validity window (seconds from now), not to be confused with on-chain subscription period length
+permit_validity_window=1800
 
 token_address=$(cast call $spender "getTokenAddress()(address)" --rpc-url $RPC_URL --private-key $PRIVATE_KEY)
 
-signed_permit=$(forge script scripts/Utils.s.sol:UtilsScript --sig "signPermit(uint256,address,uint256,address,uint256)" $value $spender $duration $token_address $payer_private_key --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
+payment=$(cast call $spender "getSubscriptionPrice(uint256)(uint256)" $count --rpc-url $RPC_URL --private-key $PRIVATE_KEY)
+
+signed_permit=$(forge script scripts/Utils.s.sol:UtilsScript --sig "signPermit(uint256,address,uint256,address,uint256)" $payment $spender $permit_validity_window $token_address $payer_private_key --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
@@ -35,7 +37,7 @@ s=$(echo $signed_permit | jq -r '.returns.s.value')
 deadline=$(echo $signed_permit | jq -r '.returns.deadline.value')
 payer=$(echo $signed_permit | jq -r '.returns.owner.value')
 
-result=$(cast send $registry_address "subscribe(bytes32,bytes32,address,address,uint256,uint256,uint8,bytes32,bytes32)" $asset_id $subscriber $payer $spender $value $deadline $v $r $s --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
+result=$(cast send $registry_address "subscribe(bytes32,bytes32,address,address,uint256,uint256,uint8,bytes32,bytes32)" $asset_id $subscriber $payer $spender $count $deadline $v $r $s --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
@@ -52,6 +54,7 @@ subscription_date=$(date -r $(echo $subscription | jq -r '.[0]'))
 echo "Asset Registry: $registry_address
 Asset ID: $2
 Subscriber: $3
+Subscription Durations: $count
 payer: $payer
 Subscription: $subscription_date
 Transaction Hash: $transaction_hash"

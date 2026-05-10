@@ -20,12 +20,15 @@ echo "2. Deploying Registry (80% Creator / 20% Registry)..."
 echo "3. Creating Demo Assets..."
 TOKEN_ADDR=$(jq -r '.["31337"]' packages/config/src/deployments/token_addresses.json)
 
-# Create 5 distinct assets with different prices and IDs for User 0 (Deployer)
+# Fixed on-chain subscription period length (seconds). Demo subscribe counts below are numbers of these periods.
+LOCAL_SUBSCRIPTION_DURATION=3600
+
+# Create 5 distinct assets with different per-period prices and IDs for User 0 (Deployer)
 for i in {1..5}; do
   asset_id="local_asset_$i"
-  price=$((i * 2)) # Prices: 2, 4, 6, 8, 10 tokens/sec
-  echo "  Creating Asset $asset_id (Price: $price)"
-  ./scripts/createAsset.sh 0 "$asset_id" $price $TOKEN_ADDR 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 > /dev/null
+  price=$((i * 2)) # Per-period prices: 2, 4, 6, 8, 10 (token smallest units)
+  echo "  Creating Asset $asset_id (price per period: $price, period length: ${LOCAL_SUBSCRIPTION_DURATION}s)"
+  ./scripts/createAsset.sh 0 "$asset_id" $price $LOCAL_SUBSCRIPTION_DURATION $TOKEN_ADDR 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 > /dev/null
 done
 
 echo "4. Distributing Test Tokens to Subscribers..."
@@ -43,19 +46,19 @@ SUB1_ADDR="0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
 SUB2_ADDR="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 
 # Subscriber 1 Subscribes to Asset 1 and 2
-echo "  Subscriber 1: Subscribing to local_asset_1 for 1 hour"
-./scripts/subscribe.sh 0 "local_asset_1" $SUB1_ADDR 7200 $SUB1_PK > /dev/null
-echo "  Subscriber 1: Subscribing to local_asset_2 for 2 hours"
-./scripts/subscribe.sh 0 "local_asset_2" $SUB1_ADDR 28800 $SUB1_PK > /dev/null
+echo "  Subscriber 1: Subscribing to local_asset_1 for 1 period"
+./scripts/subscribe.sh 0 "local_asset_1" $SUB1_ADDR 1 $SUB1_PK > /dev/null
+echo "  Subscriber 1: Subscribing to local_asset_2 for 2 periods"
+./scripts/subscribe.sh 0 "local_asset_2" $SUB1_ADDR 2 $SUB1_PK > /dev/null
 
 # Subscriber 2 Subscribes to Asset 3 and 1
-echo "  Subscriber 2: Subscribing to local_asset_3 for 5 hours"
-./scripts/subscribe.sh 0 "local_asset_3" $SUB2_ADDR 108000 $SUB2_PK > /dev/null
-echo "  Subscriber 2: Subscribing to local_asset_1 for 10 hours"
-./scripts/subscribe.sh 0 "local_asset_1" $SUB2_ADDR 72000 $SUB2_PK > /dev/null
+echo "  Subscriber 2: Subscribing to local_asset_3 for 5 periods"
+./scripts/subscribe.sh 0 "local_asset_3" $SUB2_ADDR 5 $SUB2_PK > /dev/null
+echo "  Subscriber 2: Subscribing to local_asset_1 for 10 periods"
+./scripts/subscribe.sh 0 "local_asset_1" $SUB2_ADDR 10 $SUB2_PK > /dev/null
 
 # Let Subscriber 1 "Top Up" their asset 1 subscription
-echo "  Subscriber 1: Topping up local_asset_1 for an additional hour"
-./scripts/subscribe.sh 0 "local_asset_1" $SUB1_ADDR 7200 $SUB1_PK > /dev/null
+echo "  Subscriber 1: Topping up local_asset_1 with 1 more period"
+./scripts/subscribe.sh 0 "local_asset_1" $SUB1_ADDR 1 $SUB1_PK > /dev/null
 
 echo "Local seeding complete! ✨ Generated 5 assets and 5 active subscriptions with top-ups."
