@@ -333,7 +333,6 @@ contract AssetRegistryTest is BaseTest {
         uint256 tokenBalance = testToken.balanceOf(registryOwner);
         _subscribe(1);
 
-        uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, 1);
         vm.warp(block.timestamp + SUBSCRIPTION_DURATION / 2);
 
         vm.prank(registryOwner);

@@ -3,8 +3,6 @@ pragma solidity ^0.8.0;
 
 import {BaseTest} from "./Base.t.sol";
 import {Asset} from "../src/Asset.sol";
-import {IAsset} from "../src/IAsset.sol";
-import {AssetRegistry} from "../src/AssetRegistry.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract AssetTest is BaseTest {
@@ -233,11 +231,9 @@ contract AssetTest is BaseTest {
         uint256 tokenBalance = testToken.balanceOf(assetOwner);
         test_subscribe();
 
-        uint256 value = asset.getSubscriptionPrice(1);
         vm.warp(block.timestamp + (SUBSCRIPTION_DURATION / 2));
 
         vm.startPrank(assetOwner);
-        uint256 creatorFee = (value * (100 - REGISTRY_FEE_SHARE) / 100) / 2; // 70% creator fee share / 2;
         vm.expectEmit(true, true, true, true);
         emit Asset.CreatorFeeClaimed(_subscriber, 0);
         uint256 claimedCreatorFee = asset.claimCreatorFee(_subscriber);
@@ -627,7 +623,6 @@ contract AssetTest is BaseTest {
     }
 
     function test_cancelSubscription_sameSubscriberIdDifferentAddress_storesIndependently() public {
-        uint256 otherKey = vm.deriveKey(MNEMONIC, 1);
         address otherAddress = vm.addr(otherKey);
         bytes32 otherSubscriber = _subscriberHash(SUBSCRIBER_ID, otherAddress);
 
