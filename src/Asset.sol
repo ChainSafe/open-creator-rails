@@ -481,9 +481,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
         uint256 timestamp = block.timestamp;
 
-        // Explicit assignment for clarity
-        uint256 endTime = 0;
-
         for (uint256 i = length; i > 0; i--) {
             bytes32 id = _hash(subscriber, i - 1);
 
@@ -512,9 +509,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                 
                 count = (subscription.endTime - timestamp) / SUBSCRIPTION_DURATION;
                 
-                endTime = subscription.endTime - (count * SUBSCRIPTION_DURATION);
-                
-                subscriptions[id].endTime = endTime;
+                subscriptions[id].endTime = subscription.endTime - (count * SUBSCRIPTION_DURATION);
             }
 
             returnable = count * subscription.subscriptionPrice;

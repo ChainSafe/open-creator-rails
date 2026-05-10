@@ -18,18 +18,18 @@ interface IAsset {
     function getTokenAddress() external view returns (address);
 
     /// @notice Returns the total price for a given number of subscription periods.
-    /// @param count Number of periods to subscribe for.
-    /// @return Total price for the number of periods.
+    /// @param count Number of subscription durations to subscribe for.
+    /// @return Total price for the number of subscription durations.
     function getSubscriptionPrice(uint256 count) external view returns (uint256);
 
-    /// @notice Returns the asset's fixed subscription period length in seconds.
-    /// @return Period length in seconds.
+    /// @notice Returns the asset's fixed subscription duration.
+    /// @return Subscription duration in seconds.
     function getSubscriptionDuration() external view returns (uint256);
 
-    /// @notice Returns both price and duration for a given number of periods.
-    /// @param count Number of periods.
-    /// @return price Total cost.
-    /// @return duration Total duration in seconds (whole periods only).
+    /// @notice Returns both price and duration for a given number of subscription durations.
+    /// @param count Number of subscription durations.
+    /// @return price Total cost for the number of subscription durations.
+    /// @return duration Total duration for the number of subscription durations in seconds.
     function getSubscriptionPriceAndDuration(uint256 count) external view returns (uint256 price, uint256 duration);
 
     /// @notice Sets the subscription price for the asset.
@@ -54,7 +54,7 @@ interface IAsset {
     ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @param payer Subscription payer and subscription refund beneficiary.
     /// @param spender Must be this asset contract for the permit to be accepted.
-    /// @param count Number of full subscription periods to subscribe for. Must be > 0.
+    /// @param count Number of full subscription durations to subscribe for. Must be > 0.
     /// @param deadline Permit signature expiry.
     /// @param v Signature recovery id.
     /// @param r Signature r.

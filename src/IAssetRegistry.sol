@@ -44,22 +44,22 @@ interface IAssetRegistry {
     /// @return Expiry timestamp in seconds; 0 if no subscription.
     function getSubscription(bytes32 _assetId, bytes32 _subscriber) external view returns (uint256);
 
-    /// @notice Returns the total price for a given number of subscription periods for the given asset.
+    /// @notice Returns the total price for a given number of subscription durations for the given asset.
     /// @param _assetId Asset identifier.
-    /// @param _count Number of periods.
-    /// @return Total price for the number of periods.
+    /// @param _count Number of subscription durations.
+    /// @return Total price for the number of subscription durations.
     function getSubscriptionPrice(bytes32 _assetId, uint256 _count) external view returns (uint256);
 
-    /// @notice Returns the asset's fixed subscription period length in seconds.
+    /// @notice Returns the asset's fixed subscription duration in seconds.
     /// @param _assetId Asset identifier.
-    /// @return Period length in seconds.
+    /// @return Subscription duration in seconds.
     function getSubscriptionDuration(bytes32 _assetId) external view returns (uint256);
 
-    /// @notice Returns both price and duration for a given number of periods for the given asset.
+    /// @notice Returns both price and duration for a given number of subscription durations for the given asset.
     /// @param _assetId Asset identifier.
-    /// @param _count Number of periods.
-    /// @return price Total cost.
-    /// @return duration Total duration in seconds (whole periods only).
+    /// @param _count Number of subscription durations.
+    /// @return price Total price for the number of subscription durations.
+    /// @return duration Total subscription duration for the number of subscription durations in seconds.
     function getSubscriptionPriceAndDuration(bytes32 _assetId, uint256 _count)
         external
         view
@@ -72,7 +72,7 @@ interface IAssetRegistry {
     ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @param _payer Payer; signs the permit and receives refunds on cancel/revoke.
     /// @param _spender Must be the asset contract address for the permit.
-    /// @param _count Number of full subscription periods to subscribe for. Must be > 0.
+    /// @param _count Number of full subscription durations to subscribe for. Must be > 0.
     /// @param _deadline Permit signature expiry.
     /// @param _v Signature v.
     /// @param _r Signature r.
