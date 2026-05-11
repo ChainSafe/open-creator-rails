@@ -1,9 +1,5 @@
 #!/bin/bash
 
-if [ -f .env ]; then
-    source .env
-fi
-
 source ./scripts/utils.sh
 
 token_address=$(get_token_address)
@@ -11,7 +7,7 @@ token_address=$(get_token_address)
 to=$1
 amount=$2
 
-result=$(cast send $token_address "mint(address,uint256)" $to $amount --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
+result=$(cast send $token_address "mint(address,uint256)" $to $amount --rpc-url $RPC_URL --private-key $(get_private_key 0) --json)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then

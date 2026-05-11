@@ -9,7 +9,7 @@ contract UtilsScript is Script {
 
     bytes32 internal constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
-    function signPermit(uint256 value, address spender, uint256 duration, address tokenAddress, uint256 privateKey) public view returns (uint8 v, bytes32 r, bytes32 s, uint256 deadline, address owner) {
+    function signPermit(uint256 value, address spender, uint256 validityWindow, address tokenAddress, uint256 privateKey) public view returns (uint8 v, bytes32 r, bytes32 s, uint256 deadline, address owner) {
         
         owner = vm.addr(privateKey);
 
@@ -17,7 +17,7 @@ contract UtilsScript is Script {
 
         uint256 nonce = token.nonces(owner);
 
-        deadline = block.timestamp + duration;
+        deadline = block.timestamp + validityWindow;
 
         bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonce, deadline));
 

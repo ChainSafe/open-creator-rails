@@ -1,8 +1,12 @@
-if [ -f .env ]; then
-    source .env
-fi
-
 target_dir="deployments"
+
+function get_wallet_address() {
+    echo $(cast wallet address --mnemonic "$MNEMONIC" --mnemonic-index $1)
+}
+
+function get_private_key() {
+    echo $(cast wallet private-key --mnemonic "$MNEMONIC" --mnemonic-index $1)
+}
 
 function get_deployments_file() {
     chain_id=$(cast chain-id --rpc-url $RPC_URL)

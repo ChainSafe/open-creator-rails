@@ -1,16 +1,13 @@
 #!/bin/bash
 
-if [ -f .env ]; then
-    source .env
-fi
-
 source ./scripts/utils.sh
 
 registry_fee_share=$1
+registry_owner_private_key=$2
 
 shift 1
 
-result=$(./scripts/deploy.sh "AssetRegistry" $registry_fee_share)
+result=$(./scripts/deploy.sh "AssetRegistry" $registry_owner_private_key $registry_fee_share)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
@@ -19,7 +16,7 @@ fi
 
 address=$(echo "$result" | jq -r '.deployedTo')
 
-owner=$(cast call $address "owner()(address)" --rpc-url $RPC_URL --private-key $PRIVATE_KEY)
+owner=$(cast call $address "owner()(address)" --rpc-url $RPC_URL --from $(get_wallet_address 0))
 
 deployments_file=$(get_deployments_file)
 
