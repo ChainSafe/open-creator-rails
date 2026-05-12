@@ -3,7 +3,7 @@
 version=$1
 notes=$2
 
-if [ git branch --show-current != "main" ]; then
+if [ "$(git branch --show-current)" != "main" ]; then
   git checkout main
 fi
 

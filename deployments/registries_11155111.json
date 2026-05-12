@@ -1,16 +1,35 @@
 [
   {
-    "address": "0x5C586A28a97551f8f4f76c933450AC175FdC04a5",
+    "address": "0xc0d50de52644ACaB7A2D993Aa55c693d8312aCD5",
     "registryFeeShare": 30,
-    "owner": "0xFDA455DEff45bB92E79E705FDEc698c32a952aDE",
+    "owner": "0x955e8C8ECE46D8e16528b9a1174573382455BEaD",
     "assets": [
       {
-        "address": "0x5c6b0e6170464d7460bd1925fb28720117ffdd44",
-        "assetId": "default_asset_id",
-        "assetIdHash": "0x973fa65fcf47830442fffbe790bfa4161c5efc1834fb2e63c64429c74cf61805",
-        "subscriptionPrice": 4,
-        "tokenAddress": "0xc1863De12DE6b1A14a3695D48b85B692578ce8c7",
-        "owner": "0x0831689336bC17BD901aa93FD7525d4182574326"
+        "address": "0xb2f3480f98a852356c3c4efb9c1d16a2b6f874d1",
+        "assetId": "default_asset_id_0",
+        "assetIdHash": "0xfdce20200a97e819e3680da5bf19dee8339db0b3e334cfe57aa03ee60597bb53",
+        "subscriptionPrice": 1,
+        "subscriptionDuration": 1,
+        "tokenAddress": "0x1a7984c899c2d5C1b9096bd923A38388B010072b",
+        "owner": "0x11105E241B374C2cFdF5eb9b96980C1214351Ca5"
+      },
+      {
+        "address": "0x7cb8aa00c3fa792d62d59d168dc41e221ad92c8c",
+        "assetId": "default_asset_id_1",
+        "assetIdHash": "0x0269d0dca95eb3299ac588d108ff7b0cf4a69f286751b7d4f95ce113bfea7716",
+        "subscriptionPrice": 1000000,
+        "subscriptionDuration": 2592000,
+        "tokenAddress": "0x1a7984c899c2d5C1b9096bd923A38388B010072b",
+        "owner": "0xaa6e8f21045C7C5f1BDB0B2D1F8102d2E2D5204f"
+      },
+      {
+        "address": "0x050f95dea40688b733899ef7820faf513f968525",
+        "assetId": "default_asset_id_2",
+        "assetIdHash": "0x37a0d545da39d8f3aa672283d7443f9ebab7c2ed822cccc4187f9ac29967893e",
+        "subscriptionPrice": 2000000,
+        "subscriptionDuration": 7776000,
+        "tokenAddress": "0x1a7984c899c2d5C1b9096bd923A38388B010072b",
+        "owner": "0x6DFcbA8bcc27595fD4782215fda1504c688b3d06"
       }
     ]
   }
