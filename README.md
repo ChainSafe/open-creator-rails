@@ -27,12 +27,28 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
 
 2. **Environment variables**
 
-   Create a `.env` file in the project root. Scripts load it automatically when present.
+   Create a `.env` or a `.env.local` file in the project root with the following variables:
 
-   | Variable      | Description |
-   |---------------|-------------|
-   | `PRIVATE_KEY` | Private key used to deploy and send transactions (e.g. `0x...`). |
-   | `RPC_URL`     | JSON-RPC URL of the network (e.g. `https://sepolia.infura.io/v3/YOUR_KEY` or `http://127.0.0.1:8545` for local). |
+   | Variable   | Description |
+   |------------|-------------|
+   | `MNEMONIC` | BIP-39 mnemonic phrase used to derive all wallets via an index. |
+   | `RPC_URL`  | JSON-RPC URL of the network (e.g. `https://sepolia.infura.io/v3/YOUR_KEY` for Sepolia, or `http://127.0.0.1:8545` for local Anvil). |
+
+   **For testnet / mainnet** — create `.env`:
+
+   ```bash
+   export MNEMONIC='your twelve word mnemonic phrase here ...'
+   export RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
+   ```
+
+   **For local development** — create `.env.local` instead:
+
+   ```bash
+   export MNEMONIC='test test test test test test test test test test test junk'
+   export RPC_URL=http://127.0.0.1:8545
+   ```
+
+   > **Note:** Scripts do **not** auto-source the env file themselves — you must source it before running individual scripts (`source .env` or `source .env.local`), or use `seed.sh` which handles this automatically.
 
 3. **Build**
 
@@ -55,17 +71,18 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
 Deploy an AssetRegistry with the specified registry fee share:
 
 ```bash
-./scripts/deployRegistry.sh <registry_fee_share>
+./scripts/deployRegistry.sh <registry_fee_share> <registry_owner_private_key>
 ```
 
 | Input | Description |
 |-------|--------------|
 | `registry_fee_share` | Percentage of subscription payments allocated to the registry. Must be 0–100. The creator receives the remainder (`100 - registry_fee_share`). |
+| `registry_owner_private_key` | Private key of the registry owner; used to deploy the contract and send transactions. |
 
 Example:
 
 ```bash
-./scripts/deployRegistry.sh 20
+./scripts/deployRegistry.sh 20 0x1b97...
 ```
 
 Deployments are recorded in `deployments/registries_<chain_id>.json`, where `chain_id` is the chain ID of the network from `RPC_URL` (e.g. `registries_11155111.json` for Sepolia, `registries_84532.json` for Base Sepolia). The file is an array of registry objects with `address`, `registryFeeShare`, `owner`, and `assets`.
@@ -75,22 +92,23 @@ Deployments are recorded in `deployments/registries_<chain_id>.json`, where `cha
 Create an asset in a registry (registry owner only):
 
 ```bash
-./scripts/createAsset.sh <registry_index> <asset_id> <subscription_price> <subscription_duration> <token_address> <owner>
+./scripts/createAsset.sh <registry_index> <asset_id> <subscription_price> <subscription_duration> <token_address> <owner> <registry_owner_private_key>
 ```
 
 | Input | Description |
 |-------|--------------|
 | `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json` (e.g. `0` for the first registry). |
 | `asset_id` | Human-readable identifier for the asset. The script hashes it with keccak256 to get the bytes32 used on-chain. |
-| `subscription_price` | Price for one subscription period, in the token's smallest unit. Total payment for `n` periods is `n * subscription_price` (see `getSubscriptionPrice`). |
+| `subscription_price` | Price for one subscription period, in the token’s smallest unit. Total payment for `n` periods is `n * subscription_price` (see `getSubscriptionPrice`). |
 | `subscription_duration` | Length of one subscription period in seconds (non-zero). Subscriptions are always whole multiples of this duration. |
 | `token_address` | Address of the ERC20 contract used for subscription payments. Must implement ERC-2612 (Permits), as subscription payments use gasless permit approvals. |
 | `owner` | Creator/owner address of the asset; receives the creator share of subscription fees. |
+| `registry_owner_private_key` | Private key of the registry owner; used to authorize the `createAsset` transaction. |
 
 Example:
 
 ```bash
-./scripts/createAsset.sh 0 "default_asset_id" 4 3600 0x1234... 0xabcd...
+./scripts/createAsset.sh 0 "default_asset_id" 4 3600 0x1234... 0xabcd... 0x1b97...
 ```
 
 The token address must implement ERC-2612 / IERC20Permit, as subscription payments use gasless permit approvals.
@@ -99,24 +117,25 @@ New assets are appended to the `assets` array of the corresponding registry in `
 
 ### Subscribe
 
-Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs the permit and pays with tokens; the subscription is associated with a **subscriber** identity (a `bytes32` hash). For cancellation, the subscriber identity should be derived as `keccak256(abi.encode(subscriberId, subscriberAddress))`, so only that `subscriberAddress` can cancel by signing an off-chain message and calling `cancelSubscription` in one step (no on-chain commit or timestamp binding). The payer and the subscriber can be the same or different (e.g. "pay for someone else"). The **payer** is the address entitled to refunds if the subscription is later cancelled or revoked (unearned time is refunded to the payer).
+Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs the permit and pays with tokens; the subscription is associated with a **subscriber** identity (a `bytes32` hash). The subscriber hash is computed as `keccak256(abi.encode(subscriber_id, subscriber_address))`, so only that `subscriber_address` can cancel by signing an off-chain message and calling `cancelSubscription` in one step (no on-chain commit or timestamp binding). The payer and the subscriber can be the same or different (e.g. “pay for someone else”). The **payer** is the address entitled to refunds if the subscription is later cancelled or revoked (unearned time is refunded to the payer).
 
 ```bash
-./scripts/subscribe.sh <registry_index> <asset_id> <subscriber_id> <count> <payer_private_key>
+./scripts/subscribe.sh <registry_index> <asset_id> <subscriber_id> <subscriber_address> <count> <payer_private_key>
 ```
 
 | Input | Description |
 |-------|--------------|
 | `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). The script hashes it with keccak256 for the on-chain call. |
-| `subscriber_id` | Human-readable subscriber identity (e.g. user id, wallet-derived id). For cancellation-compatible identity, the subscriber hash should be computed as `keccak256(abi.encode(subscriber_id, subscriber_address))`, where `subscriber_address` is the address that is allowed to cancel. Access and subscription queries use this resulting `bytes32` identity. |
+| `subscriber_id` | Human-readable subscriber identity (e.g. user id, wallet-derived id). Combined with `subscriber_address` to derive the on-chain `bytes32` subscriber hash: `keccak256(abi.encode(subscriber_id, subscriber_address))`. |
+| `subscriber_address` | Address of the subscriber; the only address permitted to call `cancelSubscription` for this identity. |
 | `count` | Number of full subscription periods to buy (must be at least 1). The script queries `getSubscriptionPrice(count)` on the asset for the ERC-2612 permit `value` and passes `count` to `subscribe`. |
-| `payer_private_key` | Private key of the token owner. Used only to sign the ERC-2612 permit (this address’s tokens are spent). The subscribe transaction is sent using `PRIVATE_KEY` from `.env`. |
+| `payer_private_key` | Private key of the token owner. Used only to sign the ERC-2612 permit (this address’s tokens are spent). The subscribe transaction is sent from the deployer wallet (mnemonic index 0). |
 
 Example:
 
 ```bash
-./scripts/subscribe.sh 0 "default_asset_id" "user_123" 12 0x1b97...
+./scripts/subscribe.sh 0 "default_asset_id" "user_123" 0xabcd... 12 0x1b97...
 ```
 
 ### Set Subscription Price
@@ -165,6 +184,49 @@ Example:
 
 The script updates the `owner` for the asset in `deployments/registries_<chain_id>.json`.
 
+### Local Development
+
+Use `seed.sh` to spin up a fully seeded local environment in one command. The script detects `.env.local` and auto-starts Anvil before running the full seed sequence. When `.env.local` is absent it sources `.env` instead and targets whatever `RPC_URL` is configured there.
+
+```bash
+./scripts/seed.sh
+```
+
+**Setup steps:**
+
+1. Create `.env.local` with the standard Anvil test mnemonic:
+
+   ```bash
+   export MNEMONIC='test test test test test test test test test test test junk'
+   export RPC_URL=http://127.0.0.1:8545
+   ```
+
+2. Run the seed script from the project root:
+
+   ```bash
+   ./scripts/seed.sh
+   ```
+
+   This will:
+   - Start Anvil in the background
+   - Deploy a test ERC-2612 token
+   - Deploy an Asset Registry with a 30% Registry Fee Share (Asset Registry Owners derived from the mnemonic at index 0)
+   - Create three Assets with different prices and durations (Asset Owners derived from the mnemonic at indices 1 - 3)
+   - Mint Test Tokens to six subscriber wallets (Subscribers derived from the mnemonic at indices 4 - 9)
+   - Subscribe each wallet to one or more Assets
+
+   Anvil remains running after seeding completes (kept alive by the script).
+
+   > **Note:** To seed mainnet/testnet setup `.env` instead of `.env.local`:
+   > ```bash
+   > export MNEMONIC='your twelve word mnemonic phrase here ...'
+   > export RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
+   > ```
+   > Once you've make sure the account at index 0 of the mnemonic has some ETH for gas run:
+   > ```bash
+   > ./scripts/seed.sh
+   > ```
+   > This will seed the specific chain with deployed contracts.
 ---
 
 > ### Test Tokens
