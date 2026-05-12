@@ -3,7 +3,7 @@ name: Deployments
 on:
   push:
     branches:
-      - main
+      - [rob1997/auto-deploy-and-release]
 
 permissions:
   contents: write
