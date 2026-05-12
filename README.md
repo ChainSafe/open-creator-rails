@@ -48,7 +48,7 @@ See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.m
    export RPC_URL=http://127.0.0.1:8545
    ```
 
-   > **Note:** Scripts do **not** auto-source the env file themselves — you must source it before running individual scripts (`source .env` or `source .env.local`), or use `seed.sh` which handles this automatically.
+   > **Note:** Scripts do **not** auto-source the env file themselves — you must source it before running individual scripts (`source .env` or `source .env.local`), or pass the env file path to `seed.sh` as the first argument (e.g. `./scripts/seed.sh .env.local`).
 
 3. **Build**
 
@@ -186,10 +186,10 @@ The script updates the `owner` for the asset in `deployments/registries_<chain_i
 
 ### Local Development
 
-Use `seed.sh` to spin up a fully seeded local environment in one command. The script detects `.env.local` and auto-starts Anvil before running the full seed sequence. When `.env.local` is absent it sources `.env` instead and targets whatever `RPC_URL` is configured there.
+Use `seed.sh` to spin up a fully seeded local environment in one command. Pass the env file as the first argument; if `.env.local` is passed the script auto-starts Anvil before running the full seed sequence.
 
 ```bash
-./scripts/seed.sh
+./scripts/seed.sh <env_file>
 ```
 
 **Setup steps:**
@@ -201,10 +201,10 @@ Use `seed.sh` to spin up a fully seeded local environment in one command. The sc
    export RPC_URL=http://127.0.0.1:8545
    ```
 
-2. Run the seed script from the project root:
+2. Run the seed script from the project root, passing `.env.local` as the argument:
 
    ```bash
-   ./scripts/seed.sh
+   ./scripts/seed.sh .env.local
    ```
 
    This will:
@@ -217,14 +217,14 @@ Use `seed.sh` to spin up a fully seeded local environment in one command. The sc
 
    Anvil remains running after seeding completes (kept alive by the script).
 
-   > **Note:** To seed mainnet/testnet setup `.env` instead of `.env.local`:
+   > **Note:** To seed mainnet/testnet set up `.env` instead of `.env.local`:
    > ```bash
    > export MNEMONIC='your twelve word mnemonic phrase here ...'
    > export RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
    > ```
-   > Once you've make sure the account at index 0 of the mnemonic has some ETH for gas run:
+   > Once you've made sure the account at index 0 of the mnemonic has some ETH for gas, run:
    > ```bash
-   > ./scripts/seed.sh
+   > ./scripts/seed.sh .env
    > ```
    > This will seed the specific chain with deployed contracts.
 ---
