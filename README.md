@@ -6,6 +6,15 @@ The runtime plans to include a subscription engine, core registry and issuer con
 
 See the initial [MVP Architecture and Design](docs/mvp-design-and-architecture.md) document for a detailed flow diagrams and architecture specifications. This is for the MVP (Minimum Viable Product) or core on-chan implementation and doesn't reflect the intended final product.
 
+## Related Projects
+
+| Repository | Description |
+|------------|-------------|
+| [open-creator-rails.indexer](https://github.com/ChainSafe/open-creator-rails.indexer) | Indexer |
+| [open-creator-rails.sdk](https://github.com/ChainSafe/open-creator-rails.sdk) | TypeScript SDK |
+| [open-creator-rails.unity](https://github.com/ChainSafe/open-creator-rails.unity) | Unity Game Engine SDK |
+| [open-creator-rails.demo](https://github.com/ChainSafe/open-creator-rails.demo) | Web Demo |
+
 ---
 
 ## Installation
