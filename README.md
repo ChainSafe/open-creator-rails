@@ -297,19 +297,19 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**isSubscriptionActive** : Checks whether a subscriber has an active subscription for the given asset.
+**isSubscriptionExpired** : Checks whether a subscriber's subscription for the given asset has expired.
 - Type: read
 - Permission: none
 - Parameters:
   - `bytes32 _assetId` : Asset identifier.
   - `bytes32 _subscriber` : Hash of the subscriber identity (e.g. keccak256 of a unique id).
 - Returns:
-  - `bool` : True if the subscriber's subscription is active.
+  - `bool` : True if the subscriber's subscription has expired (or never existed).
 
 
 ---
 
-**getSubscription** : Returns the subscription expiry timestamp for the given subscriber for the given asset.
+**getSubscriptionExpiration** : Returns the subscription expiry timestamp for the given subscriber for the given asset.
 - Type: read
 - Permission: none
 - Parameters:
@@ -579,7 +579,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**getSubscription** : Returns a subscriber's subscription expiry timestamp.
+**getSubscriptionExpiration** : Returns a subscriber's subscription expiry timestamp.
 - Type: read
 - Permission: none
 - Parameters:
@@ -590,13 +590,13 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**isSubscriptionActive** : Checks whether a subscriber has an active subscription (expiry > block.timestamp).
+**isSubscriptionExpired** : Checks whether a subscriber's subscription has expired (expiry <= block.timestamp).
 - Type: read
 - Permission: none
 - Parameters:
   - `bytes32 subscriber` : Hash of the subscriber identity to check.
 - Returns:
-  - `bool` : True if the subscriber's subscription is active.
+  - `bool` : True if the subscriber's subscription has expired (or never existed).
 
 
 ---

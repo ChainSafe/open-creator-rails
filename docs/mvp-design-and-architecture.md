@@ -32,8 +32,8 @@ title Get Subscription
     participant AssetRegistry
     participant Asset
 
-User->>+AssetRegistry: getSubscription(assetId)
-AssetRegistry->>+Asset: getSubscription()
+User->>+AssetRegistry: getSubscriptionExpiration(assetId)
+AssetRegistry->>+Asset: getSubscriptionExpiration()
 Asset-->>-AssetRegistry: { expiryDate }
 AssetRegistry-->-User: { expiryDate }
 ```
@@ -44,8 +44,8 @@ title View Subscription
     participant AssetRegistry
     participant Asset
 
-User->>+AssetRegistry: isSubscriptionActive()
-AssetRegistry->>+Asset: isSubscriptionActive()
+User->>+AssetRegistry: isSubscriptionExpired()
+AssetRegistry->>+Asset: isSubscriptionExpired()
 Asset-->>-AssetRegistry: { bool }
 AssetRegistry-->-User: { bool }
 ```
@@ -69,8 +69,8 @@ classDiagram
     class AssetRegistry{
         -mapping~byte32, address~ assets
         +getSubscriptionPrice(assetId, duration) : uint256
-        +getSubscription(assetId) : expiryDate
-        +isSubscriptionActive(assetId) : boolean
+        +getSubscriptionExpiration(assetId) : expiryDate
+        +isSubscriptionExpired(assetId) : boolean
         +subscribe(assetId, duration) : expiryDate
         +addAsset(address) onlyOwner
         +removeAsset(address) onlyOwner
@@ -83,8 +83,8 @@ classDiagram
         -Asset(tokenAddress)
         +getAssetId() : byte32
         +getSubscriptionPrice(duration) : uint256
-        +getSubscription(address) : expiryDate
-        +isSubscriptionActive(address) : boolean
+        +getSubscriptionExpiration(address) : expiryDate
+        +isSubscriptionExpired(address) : boolean
         +subscribe(duration) : expiryDate
         +revokeSubscription(address) onlyOwner
     }

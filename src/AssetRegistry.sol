@@ -82,16 +82,16 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return asset;
     }
 
-    function isSubscriptionActive(bytes32 _assetId, bytes32 _subscriber) external view returns (bool) {
+    function isSubscriptionExpired(bytes32 _assetId, bytes32 _subscriber) external view returns (bool) {
         address asset = getAsset(_assetId);
 
-        return IAsset(asset).isSubscriptionActive(_subscriber);
+        return IAsset(asset).isSubscriptionExpired(_subscriber);
     }
 
-    function getSubscription(bytes32 _assetId, bytes32 _subscriber) external view returns (uint256) {
+    function getSubscriptionExpiration(bytes32 _assetId, bytes32 _subscriber) external view returns (uint256) {
         address asset = getAsset(_assetId);
 
-        return IAsset(asset).getSubscription(_subscriber);
+        return IAsset(asset).getSubscriptionExpiration(_subscriber);
     }
 
     function getSubscriptionPrice(bytes32 _assetId, uint256 _count) external view returns (uint256) {

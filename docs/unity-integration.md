@@ -174,7 +174,7 @@ Use these to verify behavior (e.g. run subscribe from CLI) and to see exact argu
 
 ## 8. RPC API quick reference
 
-The [README – RPC API Reference](../README.md#rpc-api-reference) lists all external functions for **IAssetRegistry** and **IAsset**: `getAsset`, `getSubscription`, `getSubscriptionPrice`, `subscribe`, fee helpers, etc.
+The [README – RPC API Reference](../README.md#rpc-api-reference) lists all external functions for **IAssetRegistry** and **IAsset**: `getAsset`, `getSubscriptionExpiration`, `getSubscriptionPrice`, `subscribe`, fee helpers, etc.
 
 **In Unity**:
 

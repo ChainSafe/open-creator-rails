@@ -46,7 +46,7 @@ fi
 
 transaction_hash=$(echo $result | jq -r '.transactionHash')
 
-subscription=$(cast call $registry_address "getSubscription(bytes32,bytes32)(uint256)" $asset_id $subscriber --rpc-url $RPC_URL --from $(get_wallet_address 0) --json)
+subscription=$(cast call $registry_address "getSubscriptionExpiration(bytes32,bytes32)(uint256)" $asset_id $subscriber --rpc-url $RPC_URL --from $(get_wallet_address 0) --json)
 
 # Convert subscription (Unix timestamp) to human readable date
 subscription_date=$(date -d @$(echo "$subscription" | jq -r '.[0]'))

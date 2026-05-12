@@ -159,17 +159,17 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         duration = count * SUBSCRIPTION_DURATION;
     }
 
-    function _getSubscription(bytes32 subscriber) internal view returns (uint256) {
+    function _getSubscriptionExpiration(bytes32 subscriber) internal view returns (uint256) {
         bytes32 id = _hash(subscriber, nonces[subscriber]);
         return subscriptions[id].endTime;
     }
 
-    function getSubscription(bytes32 subscriber) external view returns (uint256) {
-        return _getSubscription(subscriber);
+    function getSubscriptionExpiration(bytes32 subscriber) external view returns (uint256) {
+        return _getSubscriptionExpiration(subscriber);
     }
 
-    function isSubscriptionActive(bytes32 subscriber) external view returns (bool) {
-        return _getSubscription(subscriber) > block.timestamp;
+    function isSubscriptionExpired(bytes32 subscriber) external view returns (bool) {
+        return _getSubscriptionExpiration(subscriber) <= block.timestamp;
     }
 
     function subscribe(

@@ -30,19 +30,19 @@ interface IAssetRegistry {
     /// @return The address of the Asset contract. Throws if not found.
     function getAsset(bytes32 _assetId) external view returns (address);
 
-    /// @notice Checks whether a subscriber hash has an active subscription for the given asset.
+    /// @notice Checks whether a subscriber hash's subscription for the given asset has expired.
     /// @param _assetId Asset identifier.
     /// @param _subscriber Subscriber hash (recommended canonical form:
     ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
-    /// @return True if the subscriber's subscription for that asset is active.
-    function isSubscriptionActive(bytes32 _assetId, bytes32 _subscriber) external view returns (bool);
+    /// @return True if the subscriber's subscription for that asset has expired (or never existed).
+    function isSubscriptionExpired(bytes32 _assetId, bytes32 _subscriber) external view returns (bool);
 
     /// @notice Returns the subscription expiry timestamp for the given subscriber hash for the given asset.
     /// @param _assetId Asset identifier.
     /// @param _subscriber Subscriber hash (recommended canonical form:
     ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @return Expiry timestamp in seconds; 0 if no subscription.
-    function getSubscription(bytes32 _assetId, bytes32 _subscriber) external view returns (uint256);
+    function getSubscriptionExpiration(bytes32 _assetId, bytes32 _subscriber) external view returns (uint256);
 
     /// @notice Returns the total price for a given number of subscription durations for the given asset.
     /// @param _assetId Asset identifier.

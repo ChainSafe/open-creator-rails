@@ -40,13 +40,13 @@ interface IAsset {
     /// @param subscriber Subscriber hash to query (recommended canonical form:
     ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @return Expiry timestamp; 0 if no subscription.
-    function getSubscription(bytes32 subscriber) external view returns (uint256);
+    function getSubscriptionExpiration(bytes32 subscriber) external view returns (uint256);
 
-    /// @notice Checks whether a subscriber has an active subscription.
+    /// @notice Checks whether a subscriber's subscription has expired.
     /// @param subscriber Subscriber hash to check (recommended canonical form:
     ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
-    /// @return True if the subscriber's subscription is active.
-    function isSubscriptionActive(bytes32 subscriber) external view returns (bool);
+    /// @return True if the subscriber's subscription has expired (or never existed).
+    function isSubscriptionExpired(bytes32 subscriber) external view returns (bool);
 
     /// @notice Subscribes using ERC-2612 permit: payer signs permit,
     ///         then payment is pulled and subscription is attributed to `subscriber`.

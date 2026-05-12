@@ -90,23 +90,23 @@ contract AssetRegistryTest is BaseTest {
         uint256 subscription = assetRegistry.subscribe(ASSET_ID, _subscriber, payer, spender, COUNT, deadline, v, r, s);
 
         assertTrue(subscription > block.timestamp);
-        assertEq(assetRegistry.getSubscription(ASSET_ID, _subscriber), subscription);
+        assertEq(assetRegistry.getSubscriptionExpiration(ASSET_ID, _subscriber), subscription);
     }
 
-    function test_isMySubscriptionActive() public {
+    function test_isMySubscriptionExpired() public {
         test_createAsset();
-        assertFalse(assetRegistry.isSubscriptionActive(ASSET_ID, _subscriber));
+        assertTrue(assetRegistry.isSubscriptionExpired(ASSET_ID, _subscriber));
 
         test_subscribe();
-        assertTrue(assetRegistry.isSubscriptionActive(ASSET_ID, _subscriber));
+        assertFalse(assetRegistry.isSubscriptionExpired(ASSET_ID, _subscriber));
     }
 
-    function test_getSubscription() public {
+    function test_getSubscriptionExpiration() public {
         test_createAsset();
-        assertEq(assetRegistry.getSubscription(ASSET_ID, _subscriber), 0);
+        assertEq(assetRegistry.getSubscriptionExpiration(ASSET_ID, _subscriber), 0);
 
         test_subscribe();
-        assertTrue(assetRegistry.getSubscription(ASSET_ID, _subscriber) > block.timestamp);
+        assertTrue(assetRegistry.getSubscriptionExpiration(ASSET_ID, _subscriber) > block.timestamp);
     }
 
     function test_getSubscriptionPrice() public {
@@ -211,20 +211,20 @@ contract AssetRegistryTest is BaseTest {
         assetRegistry.updateRegistryFeeShare(20);
     }
 
-    function test_isSubscriptionActive_withUser_ownerCanCall() public {
+    function test_isSubscriptionExpired_withUser_ownerCanCall() public {
         test_createAsset();
         test_subscribe();
 
         vm.prank(registryOwner);
-        assertTrue(assetRegistry.isSubscriptionActive(ASSET_ID, _subscriber));
+        assertFalse(assetRegistry.isSubscriptionExpired(ASSET_ID, _subscriber));
     }
 
-    function test_getSubscription_withUser_ownerCanCall() public {
+    function test_getSubscriptionExpiration_withUser_ownerCanCall() public {
         test_createAsset();
         test_subscribe();
 
         vm.prank(registryOwner);
-        assertTrue(assetRegistry.getSubscription(ASSET_ID, _subscriber) > block.timestamp);
+        assertTrue(assetRegistry.getSubscriptionExpiration(ASSET_ID, _subscriber) > block.timestamp);
     }
 
     function test_claimRegistryFee() public {
@@ -249,7 +249,7 @@ contract AssetRegistryTest is BaseTest {
             _subscribe(1);
         }
 
-        uint256 endTime = assetRegistry.getSubscription(ASSET_ID, _subscriber);
+        uint256 endTime = assetRegistry.getSubscriptionExpiration(ASSET_ID, _subscriber);
         uint256 value = assetRegistry.getSubscriptionPrice(ASSET_ID, 10);
         uint256 registryFee = assetRegistry.getRegistryFee(value);
         vm.warp(endTime + 1);
@@ -404,16 +404,16 @@ contract AssetRegistryTest is BaseTest {
         assetRegistry.subscribe(nonexistentId, _subscriber, payer, spender, COUNT, deadline, v, r, s);
     }
 
-    function test_isSubscriptionActive_assetNotFound() public {
+    function test_isSubscriptionExpired_assetNotFound() public {
         bytes32 nonexistentId = keccak256("nonexistent");
         vm.expectRevert(AssetRegistry.AssetNotFound.selector);
-        assetRegistry.isSubscriptionActive(nonexistentId, _subscriber);
+        assetRegistry.isSubscriptionExpired(nonexistentId, _subscriber);
     }
 
-    function test_getSubscription_assetNotFound() public {
+    function test_getSubscriptionExpiration_assetNotFound() public {
         bytes32 nonexistentId = keccak256("nonexistent");
         vm.expectRevert(AssetRegistry.AssetNotFound.selector);
-        assetRegistry.getSubscription(nonexistentId, _subscriber);
+        assetRegistry.getSubscriptionExpiration(nonexistentId, _subscriber);
     }
 
     function test_claimRegistryFee_assetNotFound() public {
@@ -496,7 +496,7 @@ contract AssetRegistryTest is BaseTest {
         vm.prank(signer);
         asset.cancelSubscription(SUBSCRIBER_ID, signature);
 
-        assertFalse(assetRegistry.isSubscriptionActive(ASSET_ID, _subscriber));
+        assertTrue(assetRegistry.isSubscriptionExpired(ASSET_ID, _subscriber));
         assertEq(testToken.balanceOf(signer), tokenBalanceBefore);
     }
 
@@ -569,6 +569,6 @@ contract AssetRegistryTest is BaseTest {
         );
         _subscribe(COUNT);
 
-        assertEq(assetRegistry.getSubscription(ASSET_ID, _subscriber), newEnd);
+        assertEq(assetRegistry.getSubscriptionExpiration(ASSET_ID, _subscriber), newEnd);
     }
 }
