@@ -1,9 +1,5 @@
 #!/bin/bash
 
-if [ -f .env ]; then
-    source .env
-fi
-
 source ./scripts/utils.sh
 
 registry_index=$1
@@ -13,8 +9,9 @@ subscription_price=$3
 subscription_duration=$4
 token_address=$5
 owner=$6
+registry_owner_private_key=$7
 
-receipt=$(cast send $(get_address $registry_index) "createAsset(bytes32,uint256,uint256,address,address)" $asset_id $subscription_price $subscription_duration $token_address $owner --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
+receipt=$(cast send $(get_address $registry_index) "createAsset(bytes32,uint256,uint256,address,address)" $asset_id $subscription_price $subscription_duration $token_address $owner --rpc-url $RPC_URL --private-key $registry_owner_private_key --json)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then

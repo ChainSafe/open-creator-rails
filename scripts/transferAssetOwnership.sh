@@ -1,9 +1,5 @@
 #!/bin/bash
 
-if [ -f .env ]; then
-    source .env
-fi
-
 source ./scripts/utils.sh
 
 registry_index=$1

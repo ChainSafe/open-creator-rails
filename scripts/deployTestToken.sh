@@ -1,12 +1,8 @@
 #!/bin/bash
 
-if [ -f .env ]; then
-    source .env
-fi
-
 source ./scripts/utils.sh
 
-result=$(./scripts/deploy.sh "TestToken")
+result=$(./scripts/deploy.sh "TestToken" $(get_private_key 0))
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
