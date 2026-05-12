@@ -1,18 +1,20 @@
 #!/bin/bash
 
-if [ -f .env.local ]; then
-    source .env.local
-    
-    anvil &
-    ANVIL_PID=$!
-    
-    cleanup() {
-        kill "$ANVIL_PID" 2>/dev/null || true
-    }
+environment=$1
 
-    trap cleanup EXIT
-elif [ -f .env ]; then
-    source .env
+if [ -f $environment ]; then
+    source $environment
+    
+    if [ $environment == ".env.local" ]; then
+        anvil &
+        ANVIL_PID=$!
+        
+        cleanup() {
+            kill "$ANVIL_PID" 2>/dev/null || true
+        }
+
+        trap cleanup EXIT
+    fi
 fi
 
 source ./scripts/utils.sh
