@@ -25,8 +25,9 @@ jobs:
 
       - name: Seed
         run: |
-          rm -rf deployments/*
-          ./scripts/seed.sh
+          git diff --quiet HEAD^ HEAD -- src/ \
+            && rm -rf deployments/* \
+            && ./scripts/seed.sh
         env:
           RPC_URL: ${{ secrets.RPC_URL }}
           MNEMONIC: ${{ secrets.MNEMONIC }}
