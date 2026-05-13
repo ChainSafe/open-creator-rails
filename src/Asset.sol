@@ -311,7 +311,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         bytes32 subscriber,
         uint256 claimedAtTimestamp,
         uint256 claimedAtNonce,
-        bool isOwner,
+        bool isCreator,
         bool isRegistry,
         uint256 timestamp
     ) internal view returns (uint256, uint256, uint256) {
@@ -362,7 +362,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             uint256 fee = (count * subscription.subscriptionPrice) + dust;
             uint256 registryFee = (fee * subscription.registryFeeShare) / 100;
 
-            if (isOwner) {
+            if (isCreator) {
                 claimable += (fee - registryFee);
             } else if (isRegistry) {
                 claimable += registryFee;
@@ -664,14 +664,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     function _hash(uint256 a, address b, bytes32 c) internal pure returns (bytes32 result) {
         result = keccak256(abi.encodePacked(a, b, c));
         return result;
-    }
-
-    function _isOwner() internal view returns (bool) {
-        return msg.sender == owner();
-    }
-
-    function _isRegistry() internal view returns (bool) {
-        return msg.sender == REGISTRY_ADDRESS;
     }
 
     modifier onlyRegistry() {
