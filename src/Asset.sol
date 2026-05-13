@@ -631,7 +631,11 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         emit SubscriptionUnrevoked(subscriber);
     }
 
-    function cancelSubscription(string memory subscriberId, bytes memory signature) external onlyUnrevokedSubscriberId(subscriberId) nonReentrant {
+    function cancelSubscription(string memory subscriberId, bytes memory signature)
+        external
+        onlyUnrevokedSubscriberId(subscriberId)
+        nonReentrant
+    {
         bytes32 subscriber = _hash(subscriberId, msg.sender);
 
         bytes32 hash = _hash(block.chainid, address(this), subscriber);
