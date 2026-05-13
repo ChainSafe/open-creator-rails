@@ -487,7 +487,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return totalClaimedAmount;
     }
 
-    function _removeSubscription(bytes32 subscriber) internal {
+    function _removeSubscription(bytes32 subscriber, bool isCancellation, bool isRevocation) internal {
         if (!subscribers.contains(subscriber)) {
             revert SubscriptionNotFound();
         }
@@ -511,12 +511,14 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             }
 
             uint256 returnable;
+            
+            uint256 duration = subscription.endTime - subscription.startTime;
 
-            uint256 count;
+            uint256 count = duration / SUBSCRIPTION_DURATION;
 
             // If the subscription has not started yet, return the full refund
             if (subscription.startTime >= timestamp) {
-                count = (subscription.endTime - subscription.startTime) / SUBSCRIPTION_DURATION;
+                returnable = count * subscription.subscriptionPrice;
 
                 delete subscriptions[id];
 
@@ -524,12 +526,31 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             }
             // If the subscription has started (is active), return the remaining time
             else {
-                count = (subscription.endTime - timestamp) / SUBSCRIPTION_DURATION;
+                if (isCancellation) {
+                    uint256 returnablePeriods = (subscription.endTime - timestamp) / SUBSCRIPTION_DURATION;
 
-                subscriptions[id].endTime = subscription.endTime - (count * SUBSCRIPTION_DURATION);
+                    subscriptions[id].endTime = subscription.endTime - (returnablePeriods * SUBSCRIPTION_DURATION);
+
+                    returnable = returnablePeriods * subscription.subscriptionPrice;
+                }
+                // If the subscription is being revoked, return all of the remaining time not just whole periods
+                else if (isRevocation) {
+
+                    uint256 total = count * subscription.subscriptionPrice;
+
+                    uint256 elapsedDuration = timestamp - subscription.startTime;
+
+                    uint256 expiredPeriods = elapsedDuration / SUBSCRIPTION_DURATION;
+
+                    uint256 dustDuration = elapsedDuration - (expiredPeriods * SUBSCRIPTION_DURATION);
+
+                    uint256 dust = (dustDuration * subscription.subscriptionPrice) / SUBSCRIPTION_DURATION;
+
+                    returnable = total - ((expiredPeriods * subscription.subscriptionPrice) + dust);
+                    
+                    subscriptions[id].endTime = timestamp;
+                }
             }
-
-            returnable = count * subscription.subscriptionPrice;
 
             if (returnable != 0) {
                 SafeERC20.safeTransfer(TOKEN_CONTRACT, subscription.payer, returnable);
@@ -555,7 +576,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     }
 
     function revokeSubscription(bytes32 subscriber) external onlyOwner nonReentrant {
-        _removeSubscription(subscriber);
+        _removeSubscription(subscriber, false, true);
 
         uint256 nonce = nonces[subscriber];
 
@@ -575,7 +596,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             revert InvalidSignature();
         }
 
-        _removeSubscription(subscriber);
+        _removeSubscription(subscriber, true, false);
 
         uint256 nonce = nonces[subscriber];
 
