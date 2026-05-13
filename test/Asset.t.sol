@@ -430,19 +430,27 @@ contract AssetTest is BaseTest {
         }
 
         uint256 value = asset.getSubscriptionPrice(1);
-        vm.warp(block.timestamp + SUBSCRIPTION_DURATION + (SUBSCRIPTION_DURATION / 2));
+        uint256 newTimestamp = block.timestamp + SUBSCRIPTION_DURATION + (SUBSCRIPTION_DURATION / 2);
+        vm.warp(newTimestamp);
 
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(_subscriber, 0, block.timestamp + (SUBSCRIPTION_DURATION / 2));
+        emit Asset.SubscriptionRevoked(_subscriber, 0, newTimestamp);
         asset.revokeSubscription(_subscriber);
 
-        assertEq(testToken.balanceOf(signer), tokenBalance - (value * 2));
+        uint256 fullValue = value * 3;
+        uint256 dustDuration = SUBSCRIPTION_DURATION / 2;
+        uint256 dust = (dustDuration * value) / SUBSCRIPTION_DURATION;
+
+
+        uint256 returnable = fullValue - (value + dust);
+
+        assertEq(testToken.balanceOf(signer), tokenBalance - fullValue + returnable);
         // Only the full unstarted period is refunded
         // endTime is truncated to the end of the current period
         // subscription stays active until that point
-        assertEq(asset.getSubscriptionExpiration(_subscriber), block.timestamp + (SUBSCRIPTION_DURATION / 2));
-        assertFalse(asset.isSubscriptionExpired(_subscriber));
+        assertEq(asset.getSubscriptionExpiration(_subscriber), newTimestamp);
+        assertTrue(asset.isSubscriptionExpired(_subscriber));
     }
 
     function test_revokeSubscription_endOfSubscription() public {

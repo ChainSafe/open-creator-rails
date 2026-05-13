@@ -321,14 +321,25 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             uint256 startTime = Math.max(subscription.startTime, claimedAtTimestamp);
             uint256 endTime = Math.min(subscription.endTime, timestamp);
 
-            // Count of fully-passed periods since startTime. No dust: endTime may be mid-period
-            uint256 count = (endTime - startTime) / SUBSCRIPTION_DURATION;
+            uint256 claimableDuration = endTime - startTime;
 
-            if (count == 0) {
+            // Count of fully-passed periods since startTime. No dust: endTime may be mid-period
+            uint256 count = claimableDuration / SUBSCRIPTION_DURATION;
+
+            uint256 dust = 0;
+
+            if (endTime == subscription.endTime) {
+
+                uint256 dustDuration = claimableDuration - (count * SUBSCRIPTION_DURATION);
+
+                dust = (dustDuration * subscription.subscriptionPrice) / SUBSCRIPTION_DURATION;
+            }
+
+            if (count == 0 && dust == 0) {
                 continue;
             }
 
-            uint256 fee = count * subscription.subscriptionPrice;
+            uint256 fee = (count * subscription.subscriptionPrice) + dust;
             uint256 registryFee = (fee * subscription.registryFeeShare) / 100;
 
             if (isOwner) {
