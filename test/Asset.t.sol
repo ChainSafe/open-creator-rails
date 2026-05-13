@@ -106,7 +106,7 @@ contract AssetTest is BaseTest {
 
         assertTrue(subscription > block.timestamp);
 
-        assertEq(asset.getSubscription(_subscriber), subscription);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), subscription);
         assertEq(
             testToken.balanceOf(address(asset)), assetBalanceBefore + expectedFee, "Asset should receive expected fee"
         );
@@ -137,7 +137,7 @@ contract AssetTest is BaseTest {
             _subscribe(1);
         }
 
-        assertEq(asset.getSubscription(_subscriber), block.timestamp + (SUBSCRIPTION_DURATION * COUNT));
+        assertEq(asset.getSubscriptionExpiration(_subscriber), block.timestamp + (SUBSCRIPTION_DURATION * COUNT));
     }
 
     function test_subscribe_multiple_subscriptionPrice() public {
@@ -180,7 +180,7 @@ contract AssetTest is BaseTest {
         test_subscribe_multiple();
 
         vm.prank(signer);
-        uint256 endTime = asset.getSubscription(_subscriber);
+        uint256 endTime = asset.getSubscriptionExpiration(_subscriber);
         uint256 value = asset.getSubscriptionPrice(COUNT);
         vm.warp(endTime);
 
@@ -315,7 +315,7 @@ contract AssetTest is BaseTest {
 
         _subscribe(COUNT);
 
-        uint256 endTime = asset.getSubscription(_subscriber);
+        uint256 endTime = asset.getSubscriptionExpiration(_subscriber);
         uint256 startTime = endTime - COUNT * SUBSCRIPTION_DURATION;
 
         uint256 perPeriodCreator = SUBSCRIPTION_PRICE * (100 - REGISTRY_FEE_SHARE) / 100;
@@ -355,7 +355,7 @@ contract AssetTest is BaseTest {
 
         _subscribe(COUNT);
 
-        uint256 endTime = asset.getSubscription(_subscriber);
+        uint256 endTime = asset.getSubscriptionExpiration(_subscriber);
         uint256 startTime = endTime - COUNT * SUBSCRIPTION_DURATION;
 
         uint256 perPeriodRegistry = SUBSCRIPTION_PRICE * REGISTRY_FEE_SHARE / 100;
@@ -405,7 +405,9 @@ contract AssetTest is BaseTest {
         asset.revokeSubscription(_subscriber);
 
         assertEq(testToken.balanceOf(signer), tokenBalance);
-        assertEq(asset.getSubscription(_subscriber), 0);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+        assertFalse(asset.isSubscriptionActive(_subscriber));
     }
 
     function test_revokeSubscription_multiple() public {
@@ -420,7 +422,9 @@ contract AssetTest is BaseTest {
         asset.revokeSubscription(_subscriber);
 
         assertEq(testToken.balanceOf(signer), tokenBalance);
-        assertEq(asset.getSubscription(_subscriber), 0);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+        assertFalse(asset.isSubscriptionActive(_subscriber));
     }
 
     function test_revokeSubscription_midSubscription() public {
@@ -430,19 +434,27 @@ contract AssetTest is BaseTest {
         }
 
         uint256 value = asset.getSubscriptionPrice(1);
-        vm.warp(block.timestamp + SUBSCRIPTION_DURATION + (SUBSCRIPTION_DURATION / 2));
+        uint256 newTimestamp = block.timestamp + SUBSCRIPTION_DURATION + (SUBSCRIPTION_DURATION / 2);
+        vm.warp(newTimestamp);
 
         vm.prank(assetOwner);
         vm.expectEmit(true, true, true, true);
-        emit Asset.SubscriptionRevoked(_subscriber, 0, block.timestamp + (SUBSCRIPTION_DURATION / 2));
+        emit Asset.SubscriptionRevoked(_subscriber, 0, newTimestamp);
         asset.revokeSubscription(_subscriber);
 
-        assertEq(testToken.balanceOf(signer), tokenBalance - (value * 2));
-        // Only the full unstarted period is refunded
-        // endTime is truncated to the end of the current period
-        // subscription stays active until that point
-        assertEq(asset.getSubscription(_subscriber), block.timestamp + (SUBSCRIPTION_DURATION / 2));
-        assertTrue(asset.isSubscriptionActive(_subscriber));
+        uint256 fullValue = value * 3;
+        uint256 dustDuration = SUBSCRIPTION_DURATION / 2;
+        uint256 dust = (dustDuration * value) / SUBSCRIPTION_DURATION;
+
+        uint256 returnable = fullValue - (value + dust);
+
+        assertEq(testToken.balanceOf(signer), tokenBalance - fullValue + returnable);
+        // Revocation refunds all remaining value including mid-period dust (unlike cancellation which only refunds whole future periods)
+        // endTime is truncated to the current timestamp, immediately terminating the subscription
+        assertEq(asset.getSubscriptionExpiration(_subscriber), newTimestamp);
+        assertTrue(asset.isSubscriptionExpired(_subscriber));
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+        assertFalse(asset.isSubscriptionActive(_subscriber));
     }
 
     function test_revokeSubscription_endOfSubscription() public {
@@ -456,7 +468,9 @@ contract AssetTest is BaseTest {
         asset.revokeSubscription(_subscriber);
 
         assertEq(testToken.balanceOf(signer), tokenBalance - asset.getSubscriptionPrice(1));
-        assertEq(asset.getSubscription(_subscriber), block.timestamp);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), block.timestamp);
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+        assertFalse(asset.isSubscriptionActive(_subscriber));
     }
 
     function test_revokeSubscription_multiple_subscriptionPrice() public {
@@ -472,44 +486,48 @@ contract AssetTest is BaseTest {
         emit Asset.SubscriptionRevoked(_subscriber, 0, 0);
         asset.revokeSubscription(_subscriber);
 
-        assertEq(asset.getSubscription(_subscriber), 0);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
         assertEq(testToken.balanceOf(signer), tokenBalance);
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+        assertFalse(asset.isSubscriptionActive(_subscriber));
     }
 
-    function test_isMySubscriptionActive() public {
+    function test_isMySubscriptionExpired() public {
         test_subscribe();
         vm.prank(signer);
-        assertTrue(asset.isSubscriptionActive(_subscriber));
+        assertFalse(asset.isSubscriptionExpired(_subscriber));
 
         vm.prank(assetOwner);
         asset.revokeSubscription(_subscriber);
 
         vm.prank(signer);
+        assertTrue(asset.isSubscriptionExpired(_subscriber));
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
         assertFalse(asset.isSubscriptionActive(_subscriber));
     }
 
-    function test_isMySubscriptionActive_cancelSubscription() public {
+    function test_isMySubscriptionExpired_cancelSubscription() public {
         test_subscribe();
         vm.prank(signer);
-        assertTrue(asset.isSubscriptionActive(_subscriber));
+        assertFalse(asset.isSubscriptionExpired(_subscriber));
 
         _cancelAsSubscriber();
 
         vm.prank(signer);
-        assertFalse(asset.isSubscriptionActive(_subscriber));
+        assertTrue(asset.isSubscriptionExpired(_subscriber));
     }
 
-    function test_isMySubscriptionActive_cancelSubscription_midPeriod() public {
+    function test_isMySubscriptionExpired_cancelSubscription_midPeriod() public {
         test_subscribe();
         vm.prank(signer);
-        assertTrue(asset.isSubscriptionActive(_subscriber));
+        assertFalse(asset.isSubscriptionExpired(_subscriber));
 
         vm.warp(block.timestamp + (SUBSCRIPTION_DURATION / 2));
 
         _cancelAsSubscriber();
 
         vm.prank(signer);
-        assertTrue(asset.isSubscriptionActive(_subscriber));
+        assertFalse(asset.isSubscriptionExpired(_subscriber));
     }
 
     function test_subscribe_invalidSpender() public {
@@ -572,7 +590,7 @@ contract AssetTest is BaseTest {
         _cancelAsSubscriber();
 
         assertEq(testToken.balanceOf(signer), tokenBalance);
-        assertEq(asset.getSubscription(_subscriber), 0);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
     }
 
     function test_cancelSubscription_multiple() public {
@@ -584,7 +602,7 @@ contract AssetTest is BaseTest {
         _cancelAsSubscriber();
 
         assertEq(testToken.balanceOf(signer), tokenBalance);
-        assertEq(asset.getSubscription(_subscriber), 0);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
     }
 
     function test_cancelSubscription_midSubscription() public {
@@ -602,8 +620,8 @@ contract AssetTest is BaseTest {
         // The first two periods are not refunded since they have already passed or started
         // The remaining half-period is refunded and endTime is truncated to the end of the current period.
         // Subscription stays active until that point.
-        assertEq(asset.getSubscription(_subscriber), block.timestamp + (SUBSCRIPTION_DURATION / 2));
-        assertTrue(asset.isSubscriptionActive(_subscriber));
+        assertEq(asset.getSubscriptionExpiration(_subscriber), block.timestamp + (SUBSCRIPTION_DURATION / 2));
+        assertFalse(asset.isSubscriptionExpired(_subscriber));
     }
 
     function test_cancelSubscription_endOfSubscription() public {
@@ -614,7 +632,7 @@ contract AssetTest is BaseTest {
         _cancelAsSubscriber();
 
         assertEq(testToken.balanceOf(signer), tokenBalance - asset.getSubscriptionPrice(1));
-        assertEq(asset.getSubscription(_subscriber), block.timestamp);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), block.timestamp);
     }
 
     function test_cancelSubscription_multiple_subscriptionPrice() public {
@@ -627,7 +645,7 @@ contract AssetTest is BaseTest {
 
         _cancelAsSubscriber();
 
-        assertEq(asset.getSubscription(_subscriber), 0);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
         assertEq(testToken.balanceOf(signer), tokenBalance);
     }
 
@@ -682,8 +700,8 @@ contract AssetTest is BaseTest {
 
         // Active record is truncated to end of current period,
         // future record is deleted.
-        assertTrue(asset.isSubscriptionActive(_subscriber));
-        assertEq(asset.getSubscription(_subscriber), block.timestamp + SUBSCRIPTION_DURATION / 2);
+        assertFalse(asset.isSubscriptionExpired(_subscriber));
+        assertEq(asset.getSubscriptionExpiration(_subscriber), block.timestamp + SUBSCRIPTION_DURATION / 2);
 
         // Refund:
         //   record 0 (active): 0
@@ -708,12 +726,12 @@ contract AssetTest is BaseTest {
         vm.prank(signer);
         asset.cancelSubscription(SUBSCRIBER_ID, signerSignature);
 
-        assertEq(asset.getSubscription(_subscriber), 0);
-        assertTrue(asset.isSubscriptionActive(otherSubscriber));
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
+        assertFalse(asset.isSubscriptionExpired(otherSubscriber));
 
         vm.prank(otherAddress);
         asset.cancelSubscription(SUBSCRIBER_ID, otherSignature);
-        assertEq(asset.getSubscription(otherSubscriber), 0);
+        assertEq(asset.getSubscriptionExpiration(otherSubscriber), 0);
     }
 
     function test_cancelSubscription_reverts_invalidSignature_whenWrongAddressUsesSignersProof() public {
@@ -754,7 +772,7 @@ contract AssetTest is BaseTest {
 
         vm.prank(signer);
         asset.cancelSubscription(SUBSCRIBER_ID, signature);
-        assertEq(asset.getSubscription(_subscriber), 0);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
 
         vm.prank(signer);
         vm.expectRevert(Asset.SubscriptionNotFound.selector);
@@ -771,8 +789,8 @@ contract AssetTest is BaseTest {
         vm.prank(signer);
         asset.cancelSubscription(SUBSCRIBER_ID, getCancellationSignature(SUBSCRIBER_ID, signer));
 
-        assertEq(asset.getSubscription(_subscriber), 0);
-        assertTrue(asset.isSubscriptionActive(otherSubscriber));
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
+        assertFalse(asset.isSubscriptionExpired(otherSubscriber));
     }
 
     function test_cancelSubscription_doesNotAffectOtherSubscriberIdSameAddress() public {
@@ -784,8 +802,8 @@ contract AssetTest is BaseTest {
         vm.prank(signer);
         asset.cancelSubscription(SUBSCRIBER_ID, getCancellationSignature(SUBSCRIBER_ID, signer));
 
-        assertEq(asset.getSubscription(_subscriber), 0);
-        assertTrue(asset.isSubscriptionActive(otherSubscriber));
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
+        assertFalse(asset.isSubscriptionExpired(otherSubscriber));
     }
 
     function test_cancelSubscription_withActiveMultiNonceSubscriptions_refundsCorrectly() public {
@@ -798,7 +816,7 @@ contract AssetTest is BaseTest {
         vm.prank(signer);
         asset.cancelSubscription(SUBSCRIBER_ID, getCancellationSignature(SUBSCRIBER_ID, signer));
 
-        assertEq(asset.getSubscription(_subscriber), 0);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
         assertEq(testToken.balanceOf(signer), tokenBalance);
     }
 
@@ -875,14 +893,66 @@ contract AssetTest is BaseTest {
         assertEq(testToken.balanceOf(registryOwner), registryBalance + registryFee);
     }
 
-    function test_getSubscription_nonexistentSubscriber() public view {
+    function test_getSubscriptionExpiration_nonexistentSubscriber() public view {
         bytes32 unknownSubscriber = keccak256("unknown");
-        assertEq(asset.getSubscription(unknownSubscriber), 0);
+        assertEq(asset.getSubscriptionExpiration(unknownSubscriber), 0);
     }
 
-    function test_isSubscriptionActive_nonexistentSubscriber() public view {
+    function test_isSubscriptionExpired_nonexistentSubscriber() public view {
         bytes32 unknownSubscriber = keccak256("unknown");
-        assertFalse(asset.isSubscriptionActive(unknownSubscriber));
+        assertTrue(asset.isSubscriptionExpired(unknownSubscriber));
+    }
+
+    function test_isSubscriptionExpired_naturalExpiry() public {
+        uint256 endTime = _subscribe(1);
+
+        assertFalse(asset.isSubscriptionExpired(_subscriber));
+
+        vm.warp(endTime);
+        assertTrue(asset.isSubscriptionExpired(_subscriber));
+    }
+
+    function test_isSubscriptionExpired_oneSecondBeforeEndTime() public {
+        uint256 endTime = _subscribe(1);
+
+        vm.warp(endTime - 1);
+        assertFalse(asset.isSubscriptionExpired(_subscriber));
+    }
+
+    function test_isSubscriptionExpired_atExactEndTimeBoundary() public {
+        // _isSubscriptionExpired uses `<= block.timestamp`, so endTime itself is expired
+        uint256 endTime = _subscribe(1);
+
+        vm.warp(endTime);
+        assertTrue(asset.isSubscriptionExpired(_subscriber));
+    }
+
+    function test_isSubscriptionExpired_afterCancelMidPeriod_atTruncatedEndTime() public {
+        _subscribe(1);
+
+        // Cancel halfway through — endTime is left unchanged since no full future period exists
+        uint256 elapsed = SUBSCRIPTION_DURATION / 2;
+        vm.warp(block.timestamp + elapsed);
+        _cancelAsSubscriber();
+
+        uint256 truncatedEndTime = asset.getSubscriptionExpiration(_subscriber);
+        assertFalse(asset.isSubscriptionExpired(_subscriber));
+
+        // At the truncated endTime the subscription must be expired
+        vm.warp(truncatedEndTime);
+        assertTrue(asset.isSubscriptionExpired(_subscriber));
+    }
+
+    function test_isSubscriptionExpired_reflectsLatestNonce_afterResubscribe() public {
+        uint256 endTime = _subscribe(1);
+
+        // Let the subscription fully expire
+        vm.warp(endTime + 1);
+        assertTrue(asset.isSubscriptionExpired(_subscriber));
+
+        // Re-subscribe — this creates a new nonce; isSubscriptionExpired should reflect the new endTime
+        _subscribe(1);
+        assertFalse(asset.isSubscriptionExpired(_subscriber));
     }
 
     function test_subscribe_expiredDeadline() public {
@@ -1200,7 +1270,7 @@ contract AssetTest is BaseTest {
         uint256 returnedEnd = _subscribe(1);
 
         assertEq(returnedEnd, newEnd);
-        assertEq(asset.getSubscription(_subscriber), newEnd);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), newEnd);
     }
 
     // --- Claim tracking resets correctly after all subscriptions are revoked ---
@@ -1212,7 +1282,12 @@ contract AssetTest is BaseTest {
         _subscribe(1);
         vm.prank(assetOwner);
         asset.revokeSubscription(_subscriber);
-        assertEq(asset.getSubscription(_subscriber), 0);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+
+        // Revocation now acts as a ban — must unrevoke before the subscriber can re-subscribe.
+        vm.prank(assetOwner);
+        asset.unrevokeSubscription(_subscriber);
 
         // Re-subscribe at a different price to prove claim tracking starts fresh with a new nonce 0.
         vm.prank(assetOwner);
@@ -1228,12 +1303,213 @@ contract AssetTest is BaseTest {
         assertEq(claimed, expectedFee);
     }
 
+    // --- Revocation ban behavior ---
+
+    function test_revokeSubscription_alreadyRevoked() public {
+        _subscribe(1);
+        vm.prank(assetOwner);
+        asset.revokeSubscription(_subscriber);
+
+        vm.prank(assetOwner);
+        vm.expectRevert(Asset.SubscriptionAlreadyRevoked.selector);
+        asset.revokeSubscription(_subscriber);
+    }
+
+    function test_subscribe_reverts_whenSubscriberRevoked() public {
+        _subscribe(1);
+        vm.prank(assetOwner);
+        asset.revokeSubscription(_subscriber);
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+
+        address payer = signer;
+        address spender = address(asset);
+        uint256 value = asset.getSubscriptionPrice(1);
+        uint256 deadline = block.timestamp;
+        (uint8 v, bytes32 r, bytes32 s) = getPermit(payer, spender, value, deadline);
+
+        vm.expectRevert(Asset.OnlyUnrevokedUnauthorizedSubscriber.selector);
+        asset.subscribe(_subscriber, payer, spender, 1, deadline, v, r, s);
+    }
+
+    function test_cancelSubscription_reverts_whenRevoked() public {
+        _subscribe(1);
+        vm.prank(assetOwner);
+        asset.revokeSubscription(_subscriber);
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+
+        bytes memory signature = getCancellationSignature(SUBSCRIBER_ID, signer);
+        vm.prank(signer);
+        vm.expectRevert(Asset.OnlyUnrevokedUnauthorizedSubscriber.selector);
+        asset.cancelSubscription(SUBSCRIBER_ID, signature);
+    }
+
+    function test_subscribe_afterUnrevoke_succeeds() public {
+        _subscribe(1);
+        vm.prank(assetOwner);
+        asset.revokeSubscription(_subscriber);
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+
+        vm.prank(assetOwner);
+        asset.unrevokeSubscription(_subscriber);
+        assertFalse(asset.isSubscriberRevoked(_subscriber));
+
+        uint256 endTime = _subscribe(1);
+        assertTrue(endTime > block.timestamp);
+        assertTrue(asset.isSubscriptionActive(_subscriber));
+    }
+
+    function test_cancelSubscription_doesNotBanSubscriber() public {
+        _subscribe(1);
+        _cancelAsSubscriber();
+
+        // Cancellation does not impose a ban — subscriber can immediately re-subscribe
+        assertFalse(asset.isSubscriberRevoked(_subscriber));
+
+        uint256 endTime = _subscribe(1);
+        assertTrue(endTime > block.timestamp);
+        assertTrue(asset.isSubscriptionActive(_subscriber));
+    }
+
+    // --- Unrevoking ---
+
+    function test_unrevokeSubscription() public {
+        _subscribe(1);
+
+        vm.prank(assetOwner);
+        asset.revokeSubscription(_subscriber);
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+
+        vm.prank(assetOwner);
+        vm.expectEmit(true, false, false, false);
+        emit Asset.SubscriptionUnrevoked(_subscriber);
+        asset.unrevokeSubscription(_subscriber);
+
+        assertFalse(asset.isSubscriberRevoked(_subscriber));
+    }
+
+    function test_unrevokeSubscription_unauthorized() public {
+        _subscribe(1);
+        vm.prank(assetOwner);
+        asset.revokeSubscription(_subscriber);
+
+        vm.prank(UNAUTHORIZED);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, UNAUTHORIZED));
+        asset.unrevokeSubscription(_subscriber);
+    }
+
+    function test_unrevokeSubscription_notRevoked() public {
+        _subscribe(1);
+        vm.prank(assetOwner);
+        vm.expectRevert(Asset.SubscriptionNotRevoked.selector);
+        asset.unrevokeSubscription(_subscriber);
+    }
+
+    // --- isSubscriptionActive ---
+
+    function test_isSubscriptionActive_activeSubscription() public {
+        _subscribe(1);
+        assertTrue(asset.isSubscriptionActive(_subscriber));
+    }
+
+    function test_isSubscriptionActive_expiredSubscription() public {
+        _subscribe(1);
+        vm.warp(block.timestamp + SUBSCRIPTION_DURATION + 1);
+        assertFalse(asset.isSubscriptionActive(_subscriber));
+    }
+
+    function test_isSubscriptionActive_revokedSubscription() public {
+        _subscribe(1);
+        vm.warp(block.timestamp + SUBSCRIPTION_DURATION / 2);
+
+        vm.prank(assetOwner);
+        asset.revokeSubscription(_subscriber);
+
+        // Revocation immediately ends the subscription and bans the subscriber
+        assertFalse(asset.isSubscriptionActive(_subscriber));
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+    }
+
+    function test_isSubscriptionActive_nonexistentSubscriber() public view {
+        bytes32 unknownSubscriber = keccak256("unknown_active");
+        assertFalse(asset.isSubscriptionActive(unknownSubscriber));
+    }
+
+    function test_isSubscriptionActive_midSubscription_notRevoked() public {
+        _subscribe(1);
+        vm.warp(block.timestamp + SUBSCRIPTION_DURATION / 2);
+        assertTrue(asset.isSubscriptionActive(_subscriber));
+    }
+
+    // --- isSubscriberRevoked ---
+
+    function test_isSubscriberRevoked_nonexistentSubscriber() public view {
+        bytes32 unknownSubscriber = keccak256("unknown_revoked");
+        assertFalse(asset.isSubscriberRevoked(unknownSubscriber));
+    }
+
+    function test_isSubscriberRevoked_afterRevokeAndUnrevoke() public {
+        _subscribe(1);
+        assertFalse(asset.isSubscriberRevoked(_subscriber));
+
+        vm.prank(assetOwner);
+        asset.revokeSubscription(_subscriber);
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+
+        vm.prank(assetOwner);
+        asset.unrevokeSubscription(_subscriber);
+        assertFalse(asset.isSubscriberRevoked(_subscriber));
+    }
+
+    // --- Revoke vs cancel refund difference ---
+
+    function test_revokeSubscription_refundsDust_midPeriod() public {
+        uint256 tokenBalance = testToken.balanceOf(signer);
+        _subscribe(1);
+
+        // Warp to a quarter through the period
+        uint256 elapsed = SUBSCRIPTION_DURATION / 4;
+        vm.warp(block.timestamp + elapsed);
+
+        // Revocation refunds proportionally: total paid minus the elapsed portion (including dust)
+        uint256 elapsedDust = (elapsed * SUBSCRIPTION_PRICE) / SUBSCRIPTION_DURATION;
+        uint256 expectedRefund = SUBSCRIPTION_PRICE - elapsedDust;
+
+        vm.prank(assetOwner);
+        asset.revokeSubscription(_subscriber);
+
+        assertEq(testToken.balanceOf(signer), tokenBalance - SUBSCRIPTION_PRICE + expectedRefund);
+        assertTrue(asset.isSubscriptionExpired(_subscriber));
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+        assertFalse(asset.isSubscriptionActive(_subscriber));
+    }
+
+    function test_cancelSubscription_noRefund_whenNullFullPeriodRemaining() public {
+        uint256 tokenBalance = testToken.balanceOf(signer);
+        _subscribe(1);
+
+        // Warp to a quarter through the period — less than one full period remains
+        vm.warp(block.timestamp + SUBSCRIPTION_DURATION / 4);
+
+        _cancelAsSubscriber();
+
+        // Cancellation only refunds whole future periods; no refund here since < 1 full period remains
+        assertEq(testToken.balanceOf(signer), tokenBalance - SUBSCRIPTION_PRICE);
+        // Subscription stays active until the original endTime (no truncation since no periods were refunded)
+        assertFalse(asset.isSubscriptionExpired(_subscriber));
+        assertFalse(asset.isSubscriberRevoked(_subscriber));
+    }
+
     function test_claimRegistryFee_afterRevokeAndResubscribe() public {
         // Subscribe and immediately revoke for a clean full-deletion and tracking reset.
         _subscribe(1);
         vm.prank(assetOwner);
         asset.revokeSubscription(_subscriber);
-        assertEq(asset.getSubscription(_subscriber), 0);
+        assertEq(asset.getSubscriptionExpiration(_subscriber), 0);
+        assertTrue(asset.isSubscriberRevoked(_subscriber));
+
+        // Revocation now acts as a ban — must unrevoke before the subscriber can re-subscribe.
+        vm.prank(assetOwner);
+        asset.unrevokeSubscription(_subscriber);
 
         // Re-subscribe from scratch; claim tracking must have been reset.
         uint256 endTime = _subscribe(1);

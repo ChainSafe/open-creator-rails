@@ -16,8 +16,9 @@ contract AssetRegistry is Ownable, IAssetRegistry {
 
     error AssetAlreadyExists();
     error AssetNotFound();
-    error OnlyAssetUnauthorizedAccount();
     error RegistryFeeShareOutOfBounds();
+    error OnlyAssetUnauthorizedAccount();
+    error OnlyUnrevokedUnauthorizedSubscriber();
 
     event AssetCreated(
         bytes32 indexed assetId,
@@ -82,16 +83,16 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return asset;
     }
 
-    function isSubscriptionActive(bytes32 _assetId, bytes32 _subscriber) external view returns (bool) {
+    function isSubscriptionExpired(bytes32 _assetId, bytes32 _subscriber) external view returns (bool) {
         address asset = getAsset(_assetId);
 
-        return IAsset(asset).isSubscriptionActive(_subscriber);
+        return IAsset(asset).isSubscriptionExpired(_subscriber);
     }
 
-    function getSubscription(bytes32 _assetId, bytes32 _subscriber) external view returns (uint256) {
+    function getSubscriptionExpiration(bytes32 _assetId, bytes32 _subscriber) external view returns (uint256) {
         address asset = getAsset(_assetId);
 
-        return IAsset(asset).getSubscription(_subscriber);
+        return IAsset(asset).getSubscriptionExpiration(_subscriber);
     }
 
     function getSubscriptionPrice(bytes32 _assetId, uint256 _count) external view returns (uint256) {
@@ -116,6 +117,17 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return IAsset(asset).getSubscriptionPriceAndDuration(_count);
     }
 
+    function isSubscriberRevoked(bytes32 _assetId, bytes32 _subscriber) external view returns (bool) {
+        address asset = getAsset(_assetId);
+
+        return IAsset(asset).isSubscriberRevoked(_subscriber);
+    }
+
+    function isSubscriptionActive(bytes32 _assetId, bytes32 _subscriber) external view returns (bool) {
+        address asset = getAsset(_assetId);
+        return IAsset(asset).isSubscriptionActive(_subscriber);
+    }
+
     function subscribe(
         bytes32 _assetId,
         bytes32 _subscriber,
@@ -126,7 +138,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         uint8 _v,
         bytes32 _r,
         bytes32 _s
-    ) external returns (uint256) {
+    ) external onlyUnrevoked(_assetId, _subscriber) returns (uint256) {
         address asset = getAsset(_assetId);
         return IAsset(asset).subscribe(_subscriber, _payer, _spender, _count, _deadline, _v, _r, _s);
     }
@@ -195,15 +207,33 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         uint256 claimedAmount,
         uint256 claimedAtTimestamp,
         uint256 claimedAtNonce
-    ) external {
-        if (msg.sender != getAsset(_assetId)) {
-            revert OnlyAssetUnauthorizedAccount();
-        }
-
+    ) external onlyAsset(_assetId) {
         emit RegistryFeeClaimed(_assetId, _subscriber, claimedAmount, claimedAtTimestamp, claimedAtNonce);
     }
 
     function getOwner() external view returns (address) {
         return owner();
+    }
+
+    modifier onlyAsset(bytes32 _assetId) {
+        _onlyAsset(_assetId);
+        _;
+    }
+
+    function _onlyAsset(bytes32 _assetId) internal view {
+        if (msg.sender != getAsset(_assetId)) {
+            revert OnlyAssetUnauthorizedAccount();
+        }
+    }
+
+    modifier onlyUnrevoked(bytes32 _assetId, bytes32 _subscriber) {
+        _onlyUnrevoked(_assetId, _subscriber);
+        _;
+    }
+
+    function _onlyUnrevoked(bytes32 _assetId, bytes32 _subscriber) internal view {
+        if (IAsset(getAsset(_assetId)).isSubscriberRevoked(_subscriber)) {
+            revert OnlyUnrevokedUnauthorizedSubscriber();
+        }
     }
 }
