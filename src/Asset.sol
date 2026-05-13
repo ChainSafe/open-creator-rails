@@ -39,6 +39,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     mapping(bytes32 => uint256) internal registryClaimedAtNonces;
 
     EnumerableSet.Bytes32Set internal subscribers;
+    EnumerableSet.Bytes32Set internal revokedSubscribers;
 
     uint256 internal subscriptionPrice;
 
@@ -57,10 +58,13 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     error PermitFailed();
     error InsufficientFunds();
     error SubscriptionNotFound();
+    error SubscriptionAlreadyRevoked();
+    error SubscriptionNotRevoked();
     error SubscriptionRevocationFailed();
     error SubscriptionCancellationFailed();
     error InvalidSignature();
     error OnlyRegistryUnauthorizedAccount();
+    error OnlyUnrevokedUnauthorizedSubscriber();
 
     event SubscriptionAdded(
         bytes32 indexed subscriber,
@@ -87,6 +91,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     );
     event CreatorFeeClaimedBatch(bytes32[] indexed subscribers, uint256 totalAmount);
     event SubscriptionPriceUpdated(uint256 newSubscriptionPrice);
+    event SubscriptionUnrevoked(bytes32 indexed subscriber);
     event SubscriptionRevoked(bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime);
     event SubscriptionCancelled(bytes32 indexed subscriber, uint256 indexed nonce, uint256 indexed endTime);
     event SubscriptionRemoved(bytes32 indexed subscriber);
@@ -168,8 +173,24 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return _getSubscriptionExpiration(subscriber);
     }
 
-    function isSubscriptionExpired(bytes32 subscriber) external view returns (bool) {
+    function _isSubscriptionExpired(bytes32 subscriber) internal view returns (bool) {
         return _getSubscriptionExpiration(subscriber) <= block.timestamp;
+    }
+
+    function isSubscriptionExpired(bytes32 subscriber) external view returns (bool) {
+        return _isSubscriptionExpired(subscriber);
+    }
+
+    function _isRevoked(bytes32 subscriber) internal view returns (bool) {
+        return revokedSubscribers.contains(subscriber);
+    }
+
+    function isSubscriptionRevoked(bytes32 subscriber) external view returns (bool) {
+        return _isRevoked(subscriber);
+    }
+
+    function isSubscriptionActive(bytes32 subscriber) external view returns (bool) {
+        return !_isSubscriptionExpired(subscriber) && !_isRevoked(subscriber);
     }
 
     function subscribe(
@@ -181,7 +202,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external nonReentrant returns (uint256) {
+    ) external nonReentrant onlyUnrevoked(subscriber) returns (uint256) {
         if (count == 0) {
             revert InsufficientFunds();
         }
@@ -329,7 +350,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             uint256 dust = 0;
 
             if (endTime == subscription.endTime) {
-
                 uint256 dustDuration = claimableDuration - (count * SUBSCRIPTION_DURATION);
 
                 dust = (dustDuration * subscription.subscriptionPrice) / SUBSCRIPTION_DURATION;
@@ -522,7 +542,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             }
 
             uint256 returnable;
-            
+
             uint256 duration = subscription.endTime - subscription.startTime;
 
             uint256 count = duration / SUBSCRIPTION_DURATION;
@@ -546,7 +566,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                 }
                 // If the subscription is being revoked, return all of the remaining time not just whole periods
                 else if (isRevocation) {
-
                     uint256 total = count * subscription.subscriptionPrice;
 
                     uint256 elapsedDuration = timestamp - subscription.startTime;
@@ -558,7 +577,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                     uint256 dust = (dustDuration * subscription.subscriptionPrice) / SUBSCRIPTION_DURATION;
 
                     returnable = total - ((expiredPeriods * subscription.subscriptionPrice) + dust);
-                    
+
                     subscriptions[id].endTime = timestamp;
                 }
             }
@@ -587,16 +606,32 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     }
 
     function revokeSubscription(bytes32 subscriber) external onlyOwner nonReentrant {
+        if (_isRevoked(subscriber)) {
+            revert SubscriptionAlreadyRevoked();
+        }
+
         _removeSubscription(subscriber, false, true);
 
         uint256 nonce = nonces[subscriber];
 
         bytes32 id = _hash(subscriber, nonce);
 
+        revokedSubscribers.add(subscriber);
+
         emit SubscriptionRevoked(subscriber, nonce, subscriptions[id].endTime);
     }
 
-    function cancelSubscription(string memory subscriberId, bytes memory signature) external nonReentrant {
+    function unrevokeSubscription(bytes32 subscriber) external onlyOwner nonReentrant {
+        if (!_isRevoked(subscriber)) {
+            revert SubscriptionNotRevoked();
+        }
+
+        revokedSubscribers.remove(subscriber);
+
+        emit SubscriptionUnrevoked(subscriber);
+    }
+
+    function cancelSubscription(string memory subscriberId, bytes memory signature) external onlyUnrevokedSubscriberId(subscriberId) nonReentrant {
         bytes32 subscriber = _hash(subscriberId, msg.sender);
 
         bytes32 hash = _hash(block.chainid, address(this), subscriber);
@@ -648,5 +683,27 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         if (msg.sender != REGISTRY_ADDRESS) {
             revert OnlyRegistryUnauthorizedAccount();
         }
+    }
+
+    modifier onlyUnrevoked(bytes32 subscriber) {
+        _onlyUnrevoked(subscriber);
+        _;
+    }
+
+    function _onlyUnrevoked(bytes32 subscriber) internal view {
+        if (_isRevoked(subscriber)) {
+            revert OnlyUnrevokedUnauthorizedSubscriber();
+        }
+    }
+
+    modifier onlyUnrevokedSubscriberId(string memory subscriberId) {
+        _onlyUnrevokedSubscriberId(subscriberId);
+        _;
+    }
+
+    function _onlyUnrevokedSubscriberId(string memory subscriberId) internal view {
+        bytes32 subscriber = _hash(subscriberId, msg.sender);
+
+        _onlyUnrevoked(subscriber);
     }
 }

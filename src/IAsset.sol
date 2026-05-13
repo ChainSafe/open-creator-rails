@@ -48,6 +48,10 @@ interface IAsset {
     /// @return True if the subscriber's subscription has expired (or never existed).
     function isSubscriptionExpired(bytes32 subscriber) external view returns (bool);
 
+    function isSubscriptionRevoked(bytes32 subscriber) external view returns (bool);
+
+    function isSubscriptionActive(bytes32 subscriber) external view returns (bool);
+
     /// @notice Subscribes using ERC-2612 permit: payer signs permit,
     ///         then payment is pulled and subscription is attributed to `subscriber`.
     /// @param subscriber Subscriber hash to subscribe (recommended canonical form:
@@ -103,6 +107,8 @@ interface IAsset {
     /// @notice Revokes a subscriber's subscription. Callable only by the asset owner.
     /// @param subscriber Subscriber hash whose subscription to revoke.
     function revokeSubscription(bytes32 subscriber) external;
+
+    function unrevokeSubscription(bytes32 subscriber) external;
 
     /// @notice Cancels your subscription for subscriber hash derived from `(subscriberId, msg.sender)`.
     /// @param subscriberId Human-readable subscriber ID used in `keccak256(abi.encode(subscriberId, msg.sender))`.

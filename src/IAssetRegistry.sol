@@ -50,6 +50,10 @@ interface IAssetRegistry {
     /// @return Total price for the number of subscription durations.
     function getSubscriptionPrice(bytes32 _assetId, uint256 _count) external view returns (uint256);
 
+    function isSubscriptionRevoked(bytes32 _assetId, bytes32 _subscriber) external view returns (bool);
+
+    function isSubscriptionActive(bytes32 _assetId, bytes32 _subscriber) external view returns (bool);
+
     /// @notice Returns the asset's fixed subscription duration in seconds.
     /// @param _assetId Asset identifier.
     /// @return Subscription duration in seconds.

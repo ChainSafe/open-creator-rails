@@ -442,7 +442,6 @@ contract AssetTest is BaseTest {
         uint256 dustDuration = SUBSCRIPTION_DURATION / 2;
         uint256 dust = (dustDuration * value) / SUBSCRIPTION_DURATION;
 
-
         uint256 returnable = fullValue - (value + dust);
 
         assertEq(testToken.balanceOf(signer), tokenBalance - fullValue + returnable);
