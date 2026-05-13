@@ -14,9 +14,10 @@ This document walks through the major execution flows in `AssetRegistry` and `As
    - [Renew Subscription (New Nonce)](#renew-subscription-new-nonce)
 4. [cancelSubscription](#cancelsubscription)
 5. [revokeSubscription](#revokesubscription)
-6. [claimCreatorFee (single subscriber)](#claimcreatorfeesingle-subscriber)
-7. [claimCreatorFee (batch)](#claimcreatorfeebatch)
-8. [claimRegistryFee](#claimregistryfee)
+6. [unrevokeSubscription](#unrevokesubscription)
+7. [claimCreatorFee (single subscriber)](#claimcreatorfeesingle-subscriber)
+8. [claimCreatorFee (batch)](#claimcreatorfeebatch)
+9. [claimRegistryFee](#claimregistryfee)
 
 ---
 
@@ -106,7 +107,9 @@ sequenceDiagram
 
     Note over P: 2. Submit on-chain
     P->>AR: subscribe(assetId, subscriber, payer, spender,<br/>count, deadline, v, r, s)
+    AR->>AR: onlyUnrevoked — revert if subscriber revoked
     AR->>A: subscribe(subscriber, payer, spender, count, deadline, v, r, s)
+    A->>A: onlyUnrevoked — revert if subscriber revoked
     A->>A: validatePermit — revert if spender ≠ address(this)
     A->>ERC20: permit(payer, asset, value, deadline, v, r, s)
     ERC20-->>A: approval recorded
@@ -140,7 +143,9 @@ sequenceDiagram
     P->>P: sign EIP-2612 permit(spender=Asset, value=count×price, deadline)
 
     P->>AR: subscribe(assetId, subscriber, payer, …)
+    AR->>AR: onlyUnrevoked — revert if subscriber revoked
     AR->>A: subscribe(subscriber, payer, …)
+    A->>A: onlyUnrevoked — revert if subscriber revoked
     A->>ERC20: permit + safeTransferFrom (payment pulled)
 
     A->>A: subscriber already in set
@@ -170,7 +175,9 @@ sequenceDiagram
     P->>P: sign EIP-2612 permit(spender=Asset, value=count×newPrice, deadline)
 
     P->>AR: subscribe(assetId, subscriber, payer, …)
+    AR->>AR: onlyUnrevoked — revert if subscriber revoked
     AR->>A: subscribe(…)
+    A->>A: onlyUnrevoked — revert if subscriber revoked
     A->>ERC20: permit + safeTransferFrom
 
     A->>A: subscriber already in set
@@ -213,12 +220,13 @@ sequenceDiagram
 
     Note over S: 3. Submit on-chain
     S->>A: cancelSubscription(subscriberId, signature)
+    A->>A: onlyUnrevokedSubscriberId — revert if subscriber revoked
     A->>A: re-derive subscriberBytes32 = keccak256(subscriberId, msg.sender)
     A->>A: re-derive hash = keccak256(chainId, address(this), subscriber)
     A->>A: signer = ECDSA.recover(ethSignedHash, signature)
     A->>A: revert InvalidSignature if signer ≠ msg.sender
 
-    A->>A: _removeSubscription(subscriber)
+    A->>A: _removeSubscription(subscriber, isCancellation=true, isRevocation=false)
     Note over A: Iterate from newest to oldest nonce
     loop for each active / future subscription
         A->>A: count = refundable whole periods
@@ -228,7 +236,7 @@ sequenceDiagram
     A-->>S: emit SubscriptionCancelled(subscriber, nonce, endTime)
 ```
 
-**Refund logic inside `_removeSubscription`:**
+**Refund logic inside `_removeSubscription` (cancellation):**
 - Future (not-yet-started) subscription records → full refund for all periods
 - Active subscription → refund for all **remaining whole periods** (partial current period is non-refundable)
 - Expired subscriptions → no refund; loop breaks early
@@ -237,7 +245,7 @@ sequenceDiagram
 
 ## revokeSubscription
 
-The **creator (asset owner)** forcibly removes a subscriber. Uses the same `_removeSubscription` refund logic but does not require a signature — only the `onlyOwner` modifier.
+The **creator (asset owner)** forcibly ends a subscriber's access. Unlike cancellation, revocation refunds all remaining time including partial-period dust, and **permanently bans** the subscriber from resubscribing until the owner calls `unrevokeSubscription`.
 
 ```mermaid
 sequenceDiagram
@@ -247,15 +255,43 @@ sequenceDiagram
 
     C->>A: revokeSubscription(subscriber)
     A->>A: onlyOwner check
+    A->>A: revert SubscriptionAlreadyRevoked if already revoked
 
-    A->>A: _removeSubscription(subscriber)
+    A->>A: _removeSubscription(subscriber, isCancellation=false, isRevocation=true)
     loop for each active / future subscription
-        A->>ERC20: safeTransfer(payer, refundable amount)
+        A->>A: endTime = block.timestamp (cut off immediately)
+        A->>A: returnable = total paid − (elapsed periods + dust)
+        A->>ERC20: safeTransfer(payer, returnable)
     end
-    A->>A: update nonces / remove subscriber if fully deleted
+    A->>A: revokedSubscribers.add(subscriber)
 
     A-->>C: emit SubscriptionRevoked(subscriber, nonce, endTime)
 ```
+
+**Revocation refund logic (differs from cancellation):**
+- Active subscription → the `endTime` is set to `block.timestamp`; the payer receives a full refund of unspent time, including partial-period dust (proportional to the fractional period elapsed)
+- Future (not-yet-started) subscription records → full refund for all periods (same as cancellation)
+- The subscriber is added to the `revokedSubscribers` set regardless; they cannot call `subscribe` or `cancelSubscription` until unrevoked
+
+---
+
+## unrevokeSubscription
+
+The **creator (asset owner)** lifts a permanent revocation, allowing the subscriber to resubscribe.
+
+```mermaid
+sequenceDiagram
+    actor C as Creator (onlyOwner)
+    participant A as Asset
+
+    C->>A: unrevokeSubscription(subscriber)
+    A->>A: onlyOwner check
+    A->>A: revert SubscriptionNotRevoked if not currently revoked
+    A->>A: revokedSubscribers.remove(subscriber)
+    A-->>C: emit SubscriptionUnrevoked(subscriber)
+```
+
+> After unrevoking, the subscriber may call `subscribe` again. Their prior subscription history (nonces, claim cursors) is preserved.
 
 ---
 
@@ -402,15 +438,24 @@ The `_claimable` internal function is the heart of both claim flows. It never do
 
 ```
 for nonce = lastClaimedNonce → currentNonce:
-    startTime = max(subscription.startTime, claimedAtTimestamp)
-    endTime   = min(subscription.endTime,   block.timestamp)
-    count     = (endTime - startTime) / SUBSCRIPTION_DURATION   // whole periods only
-    fee       = count × subscription.subscriptionPrice
+    startTime         = max(subscription.startTime, claimedAtTimestamp)
+    endTime           = min(subscription.endTime,   block.timestamp)
+    claimableDuration = endTime - startTime
+    count             = claimableDuration / SUBSCRIPTION_DURATION   // whole periods
+    fee               = count × subscription.subscriptionPrice
+
+    // dust: partial period at the very end of a fully-elapsed subscription
+    if endTime == subscription.endTime:
+        dustDuration = claimableDuration - (count × SUBSCRIPTION_DURATION)
+        dust         = (dustDuration × subscription.subscriptionPrice) / SUBSCRIPTION_DURATION
+        fee         += dust
+
     claimable += (isOwner ? fee - registryFee : registryFee)
     claimedAtTimestamp = startTime + count × SUBSCRIPTION_DURATION
 ```
 
 Key properties:
-- **Whole-period granularity** — no sub-period dust is ever distributed
+- **Whole-period granularity for active subscriptions** — sub-period time is not distributed while a subscription is still running
+- **Dust distribution at subscription end** — once a subscription has fully elapsed (`endTime <= block.timestamp`), any partial period that was paid for but not yet distributed is included in the next claim, ensuring no tokens are permanently locked in the contract
 - **Snapshot prices** — each `Subscription` record carries the price and fee share that were active at subscribe time; retroactive price changes do not affect already-paid subscriptions
 - **Independent cursors** — creator and registry each maintain their own `claimedAtTimestamp`/`claimedAtNonce`, so one party claiming does not affect the other's position

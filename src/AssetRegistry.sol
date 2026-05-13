@@ -117,10 +117,10 @@ contract AssetRegistry is Ownable, IAssetRegistry {
         return IAsset(asset).getSubscriptionPriceAndDuration(_count);
     }
 
-    function isSubscriptionRevoked(bytes32 _assetId, bytes32 _subscriber) external view returns (bool) {
+    function isSubscriberRevoked(bytes32 _assetId, bytes32 _subscriber) external view returns (bool) {
         address asset = getAsset(_assetId);
 
-        return IAsset(asset).isSubscriptionRevoked(_subscriber);
+        return IAsset(asset).isSubscriberRevoked(_subscriber);
     }
 
     function isSubscriptionActive(bytes32 _assetId, bytes32 _subscriber) external view returns (bool) {
@@ -232,7 +232,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
     }
 
     function _onlyUnrevoked(bytes32 _assetId, bytes32 _subscriber) internal view {
-        if (IAsset(getAsset(_assetId)).isSubscriptionRevoked(_subscriber)) {
+        if (IAsset(getAsset(_assetId)).isSubscriberRevoked(_subscriber)) {
             revert OnlyUnrevokedUnauthorizedSubscriber();
         }
     }

@@ -55,7 +55,10 @@ class IAsset {
   +AssetRegistryService AssetRegistryService
   
   %% For subscriber
-  +Promise~DateTime~ GetSubscription(string subscriberId)
+  +Promise~DateTime~ GetSubscriptionExpiration(string subscriberId)
+  +Promise~bool~ IsSubscriptionExpired(string subscriberId)
+  +Promise~bool~ IsSubscriberRevoked(string subscriberId)
+  +Promise~bool~ IsSubscriptionActive(string subscriberId)
   +Promise CancelSubscription(string subscriberId)
   +Promise~DateTime~ Subscribe(string subscriberId, TimeSpan duration)
 
@@ -64,6 +67,7 @@ class IAsset {
   +Promise~BigInteger~ ClaimCreatorFee(string subscriberId)
   +Promise~BigInteger~ ClaimCreatorFee(string[] subscriberIds)
   +Promise RevokeSubscription(string subscriberId)
+  +Promise UnrevokeSubscription(string subscriberId)
 }
 
 class PonderIndexerProvider {

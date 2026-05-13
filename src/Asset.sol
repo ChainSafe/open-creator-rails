@@ -185,7 +185,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
         return revokedSubscribers.contains(subscriber);
     }
 
-    function isSubscriptionRevoked(bytes32 subscriber) external view returns (bool) {
+    function isSubscriberRevoked(bytes32 subscriber) external view returns (bool) {
         return _isRevoked(subscriber);
     }
 

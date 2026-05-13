@@ -48,12 +48,22 @@ interface IAsset {
     /// @return True if the subscriber's subscription has expired (or never existed).
     function isSubscriptionExpired(bytes32 subscriber) external view returns (bool);
 
-    function isSubscriptionRevoked(bytes32 subscriber) external view returns (bool);
+    /// @notice Checks whether a subscriber's subscription has been permanently revoked by the asset owner.
+    ///         Revoked subscribers cannot resubscribe or cancel until the owner calls `unrevokeSubscription`.
+    /// @param subscriber Subscriber hash to check (recommended canonical form:
+    ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
+    /// @return True if the subscriber has been revoked.
+    function isSubscriberRevoked(bytes32 subscriber) external view returns (bool);
 
+    /// @notice Checks whether a subscriber has an active subscription (not expired and not revoked).
+    /// @param subscriber Subscriber hash to check (recommended canonical form:
+    ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
+    /// @return True if the subscriber's subscription is currently active.
     function isSubscriptionActive(bytes32 subscriber) external view returns (bool);
 
     /// @notice Subscribes using ERC-2612 permit: payer signs permit,
     ///         then payment is pulled and subscription is attributed to `subscriber`.
+    ///         Reverts if the subscriber has been permanently revoked.
     /// @param subscriber Subscriber hash to subscribe (recommended canonical form:
     ///        keccak256(abi.encode(subscriberId, subscriberAddress))).
     /// @param payer Subscription payer and subscription refund beneficiary.
@@ -105,9 +115,15 @@ interface IAsset {
     function claimRegistryFee(bytes32[] calldata subscribers) external returns (uint256 totalClaimedAmount);
 
     /// @notice Revokes a subscriber's subscription. Callable only by the asset owner.
+    ///         Refunds all remaining time to the payer, including any partial-period dust.
+    ///         Permanently marks the subscriber as revoked — they cannot resubscribe or cancel
+    ///         until the owner calls `unrevokeSubscription`.
     /// @param subscriber Subscriber hash whose subscription to revoke.
     function revokeSubscription(bytes32 subscriber) external;
 
+    /// @notice Lifts a permanent revocation for a subscriber, allowing them to resubscribe.
+    ///         Callable only by the asset owner.
+    /// @param subscriber Subscriber hash whose revocation to lift.
     function unrevokeSubscription(bytes32 subscriber) external;
 
     /// @notice Cancels your subscription for subscriber hash derived from `(subscriberId, msg.sender)`.

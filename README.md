@@ -342,6 +342,30 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
+**isSubscriberRevoked** : Checks whether a subscriber has been permanently revoked for the given asset. Revoked subscribers cannot resubscribe or cancel until the asset owner unrevokes them.
+- Type: read
+- Permission: none
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier.
+  - `bytes32 _subscriber` : Hash of the subscriber identity.
+- Returns:
+  - `bool` : True if the subscriber has been revoked.
+
+
+---
+
+**isSubscriptionActive** : Checks whether a subscriber has an active subscription for the given asset (not expired and not revoked).
+- Type: read
+- Permission: none
+- Parameters:
+  - `bytes32 _assetId` : Asset identifier.
+  - `bytes32 _subscriber` : Hash of the subscriber identity.
+- Returns:
+  - `bool` : True if the subscriber's subscription is currently active.
+
+
+---
+
 **getSubscriptionDuration** : Returns the asset's fixed subscription period length in seconds.
 - Type: read
 - Permission: none
@@ -366,9 +390,10 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**subscribe** : Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract. The permit is signed by the payer; the subscription is attributed to `_subscriber` (payer and subscriber can differ). The payer is the refund beneficiary on cancel/revoke. The permit `value` must equal `getSubscriptionPrice(_count)`. For cancellation-compatible identity, `_subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will call `cancelSubscription` and sign the cancellation payload.
+**subscribe** : Subscribes a subscriber to the asset using ERC-2612 permit; forwards to the asset contract. The permit is signed by the payer; the subscription is attributed to `_subscriber` (payer and subscriber can differ). The payer is the refund beneficiary on cancel/revoke. The permit `value` must equal `getSubscriptionPrice(_count)`. For cancellation-compatible identity, `_subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will call `cancelSubscription` and sign the cancellation payload. Reverts if the subscriber has been permanently revoked for the asset.
 - Type: write
-- Permission: none
+- Permission: `onlyUnrevoked(_assetId, _subscriber)`
+> reverts if the subscriber has been permanently revoked for the asset
 - Parameters:
   - `bytes32 _assetId` : Asset identifier.
   - `bytes32 _subscriber` : Hash of the subscriber identity (who gets the access). Recommended canonical form: `keccak256(abi.encode(subscriberId, subscriberAddress))`.
@@ -489,7 +514,8 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 **emitRegistryFeeClaimedEvent** : Emits `RegistryFeeClaimed` for a single subscriber claim cursor update. Intended for calls from the corresponding Asset contract.
 - Type: write (event emission)
-- Permission: only the deployed asset for `_assetId`
+- Permission: `onlyAsset(_assetId)`
+> reverts if `msg.sender` is not the Asset contract registered under `_assetId`; prevents any external caller from spoofing fee-claim log entries
 - Parameters:
   - `bytes32 _assetId` : Asset identifier.
   - `bytes32 _subscriber` : Subscriber identity hash.
@@ -610,9 +636,32 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**subscribe** : Subscribes a subscriber using ERC-2612 permit: payer signs permit, then payment is pulled and subscription is attributed to the given subscriber. Payer and subscriber can differ (e.g. pay for someone else). The payer is the refund beneficiary on cancel/revoke. The permit `value` must equal `getSubscriptionPrice(count)`. For cancellation-compatible identity, `subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will call `cancelSubscription` and sign the cancellation payload.
-- Type: write
+**isSubscriberRevoked** : Checks whether a subscriber has been permanently revoked by the asset owner. Revoked subscribers cannot resubscribe or cancel until the owner calls `unrevokeSubscription`.
+- Type: read
 - Permission: none
+- Parameters:
+  - `bytes32 subscriber` : Hash of the subscriber identity to check.
+- Returns:
+  - `bool` : True if the subscriber has been revoked.
+
+
+---
+
+**isSubscriptionActive** : Checks whether a subscriber has an active subscription (not expired and not revoked).
+- Type: read
+- Permission: none
+- Parameters:
+  - `bytes32 subscriber` : Hash of the subscriber identity to check.
+- Returns:
+  - `bool` : True if the subscriber's subscription is currently active.
+
+
+---
+
+**subscribe** : Subscribes a subscriber using ERC-2612 permit: payer signs permit, then payment is pulled and subscription is attributed to the given subscriber. Payer and subscriber can differ (e.g. pay for someone else). The payer is the refund beneficiary on cancel/revoke. The permit `value` must equal `getSubscriptionPrice(count)`. For cancellation-compatible identity, `subscriber` should be `keccak256(abi.encode(subscriberId, subscriberAddress))`, where `subscriberAddress` is the address that will call `cancelSubscription` and sign the cancellation payload. Reverts if the subscriber has been permanently revoked.
+- Type: write
+- Permission: `onlyUnrevoked(subscriber)`
+> reverts if the subscriber has been permanently revoked
 - Parameters:
   - `bytes32 subscriber` : Hash of the subscriber identity (who gets the access). Recommended canonical form: `keccak256(abi.encode(subscriberId, subscriberAddress))`.
   - `address payer` : Payer; signs the permit and pays. Receives refunds on cancel/revoke.
@@ -628,7 +677,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**claimCreatorFee** (single) : Claims the creator fee for a single subscriber.
+**claimCreatorFee** (single) : Claims the creator fee for a single subscriber. Accrual covers all completed subscription periods since the last claim. Additionally, when a subscription has fully ended, any partial-period time that was paid for but not yet distributed (dust) is also claimable.
 - Type: write
 - Permission: `onlyOwner`
 - Parameters:
@@ -639,7 +688,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**claimCreatorFee** (batch) : Claims the creator fee for multiple subscribers in a single call. Subscribers with no accrued fee or no subscription are silently skipped.
+**claimCreatorFee** (batch) : Claims the creator fee for multiple subscribers in a single call. Subscribers with no accrued fee or no subscription are silently skipped. Additionally, when a subscription has fully ended, any partial-period time that was paid for but not yet distributed (dust) is also claimable.
 - Type: write
 - Permission: `onlyOwner`
 - Parameters:
@@ -674,7 +723,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**revokeSubscription** : Revokes a subscriber's subscription. The payer of each subscription is entitled to a refund of the unearned portion (tokens are returned to the payer address).
+**revokeSubscription** : Revokes a subscriber's subscription. Refunds all remaining time to each original payer, including any partial-period dust (unlike cancellation which only refunds whole remaining periods). Permanently marks the subscriber as revoked — they cannot resubscribe or cancel until the owner calls `unrevokeSubscription`. Reverts if the subscriber is already revoked.
 - Type: write
 - Permission: `onlyOwner`
 - Parameters:
@@ -684,9 +733,20 @@ All external functions for the registry and asset contracts, for use with JSON-R
 
 ---
 
-**cancelSubscription** : Cancels the caller's subscription after validating an EIP-191 signature from `msg.sender`. Unearned subscription value is refunded to each original payer. There is no separate on-chain commit step: the subscriber signs an off-chain message, then submits one transaction with that signature.
+**unrevokeSubscription** : Lifts a permanent revocation for a subscriber, allowing them to resubscribe. Reverts if the subscriber is not currently revoked.
 - Type: write
-- Permission: `msg.sender` must be the subscriber address represented in `keccak256(abi.encode(subscriberId, msg.sender))` (the recovered signer must equal `msg.sender`).
+- Permission: `onlyOwner`
+- Parameters:
+  - `bytes32 subscriber` : Subscriber whose revocation to lift.
+- Returns: void
+
+
+---
+
+**cancelSubscription** : Cancels the caller's subscription after validating an EIP-191 signature from `msg.sender`. Unearned whole subscription periods are refunded to each original payer (partial periods are non-refundable). There is no separate on-chain commit step: the subscriber signs an off-chain message, then submits one transaction with that signature. Reverts if the subscriber has been permanently revoked.
+- Type: write
+- Permission: `onlyUnrevokedSubscriberId(subscriberId)`
+> reverts if the subscriber derived from `keccak256(abi.encode(subscriberId, msg.sender))` has been permanently revoked; additionally, `msg.sender` must be the subscriber address (the recovered ECDSA signer must equal `msg.sender`).
 - Parameters:
   - `string subscriberId` : Human-readable subscriber id used in the subscriber hash.
   - `bytes signature` : ECDSA signature by `msg.sender` over the Ethereum signed message hash of `keccak256(abi.encodePacked(chainid, assetAddress, subscriber))`, where `subscriber` is `keccak256(abi.encode(subscriberId, msg.sender))` and `assetAddress` is this asset contract.
@@ -813,12 +873,20 @@ All events emitted by the registry and asset contracts. Use for indexing, loggin
 
 ---
 
-**SubscriptionRevoked** : Emitted when a subscriber's subscription is revoked by the asset owner.
+**SubscriptionRevoked** : Emitted when a subscriber's subscription is revoked by the asset owner. The subscriber is permanently added to the revoked set; they cannot resubscribe until `unrevokeSubscription` is called.
 - Contract: `Asset`
 - Parameters:
   - `bytes32 indexed subscriber` : Subscriber whose subscription was revoked.
   - `uint256 indexed nonce` : Active nonce after revocation/removal processing.
-  - `uint256 indexed endTime` : Effective end time after revocation. Will be `0` when the subscriber is fully removed.
+  - `uint256 indexed endTime` : Effective end time after revocation (set to `block.timestamp`). Will be `0` when the subscriber is fully removed.
+
+
+---
+
+**SubscriptionUnrevoked** : Emitted when the asset owner lifts a permanent revocation for a subscriber.
+- Contract: `Asset`
+- Parameters:
+  - `bytes32 indexed subscriber` : Subscriber whose revocation was lifted.
 
 
 ---
