@@ -1,19 +1,29 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+pushd "$PROJECT_ROOT" >/dev/null || exit 1
+
+cleanup() {
+    if [ -n "$ANVIL_PID" ]; then
+        kill "$ANVIL_PID" 2>/dev/null || true
+    fi
+
+    popd >/dev/null || true
+}
+
+trap cleanup EXIT
+
 environment=$1
 
-if [ -f $environment ]; then
-    source $environment
+if [ -f "$environment" ]; then
+    # shellcheck source=./.env.local
+    source "$PROJECT_ROOT/$environment"
     
-    if [ $environment == ".env.local" ]; then
+    if [ "$environment" == ".env.local" ]; then
         anvil &
         ANVIL_PID=$!
-        
-        cleanup() {
-            kill "$ANVIL_PID" 2>/dev/null || true
-        }
-
-        trap cleanup EXIT
     fi
 fi
 
