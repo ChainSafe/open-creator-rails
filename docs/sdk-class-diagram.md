@@ -46,6 +46,7 @@ class IAsset {
   +string AssetIdHash // 32 length
   +EthereumAddress Address
   +BigInteger SubscriptionPrice
+  +TimeSpan SubscriptionDuration
   +EthereumAddress Owner
   +EthereumAddress TokenAddress
   +Subscription[] Subscriptions
@@ -59,8 +60,10 @@ class IAsset {
   +Promise~bool~ IsSubscriptionExpired(string subscriberId)
   +Promise~bool~ IsSubscriberRevoked(string subscriberId)
   +Promise~bool~ IsSubscriptionActive(string subscriberId)
+  +Promise~price, duration~ GetSubscriptionPriceAndDuration(BigInteger count);
+  +Promise~DateTime~ Subscribe(string subscriberId, BigInteger count)
   +Promise CancelSubscription(string subscriberId)
-  +Promise~DateTime~ Subscribe(string subscriberId, TimeSpan duration)
+  
 
   %% For asset owner
   +Promise SetSubscriptionPrice(BigInteger newSubscriptionPrice)
