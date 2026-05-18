@@ -22,7 +22,7 @@ contract AssetRegistry is Ownable, IAssetRegistry {
 
     event AssetCreated(
         bytes32 indexed assetId,
-        address indexed asset,
+        address indexed assetAddress,
         uint256 subscriptionPrice,
         uint256 subscriptionDuration,
         address tokenAddress,
