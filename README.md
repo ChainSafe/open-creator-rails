@@ -104,7 +104,7 @@ Create an asset in a registry (registry owner only):
 |-------|--------------|
 | `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json` (e.g. `0` for the first registry). |
 | `asset_id` | Human-readable identifier for the asset. The script hashes it with keccak256 to get the bytes32 used on-chain. |
-| `subscription_price` | Price for one subscription period, in the token’s smallest unit. Total payment for `n` periods is `n * subscription_price` (see `getSubscriptionPrice`). |
+| `subscription_price` | Price for one subscription period, in the token’s smallest unit. Must be a non-zero multiple of 100 to ensure integer precision when splitting fees between the registry and creator (`fee × registryFeeShare / 100`). Total payment for `n` periods is `n * subscription_price` (see `getSubscriptionPrice`). |
 | `subscription_duration` | Length of one subscription period in seconds (non-zero). Subscriptions are always whole multiples of this duration. |
 | `token_address` | Address of the ERC20 contract used for subscription payments. Must implement ERC-2612 (Permits), as subscription payments use gasless permit approvals. |
 | `owner` | Creator/owner address of the asset; receives the creator share of subscription fees. |
@@ -270,7 +270,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 - Permission: `onlyOwner`
 - Parameters:
   - `bytes32 _assetId` : Unique identifier for the asset.
-  - `uint256 _subscriptionPrice` : Price per subscription period for the asset.
+  - `uint256 _subscriptionPrice` : Price per subscription period for the asset. Must be a non-zero multiple of 100; reverts with `InvalidSubscriptionPrice` otherwise.
   - `uint256 _subscriptionDuration` : Fixed period length in seconds (non-zero). Subscriptions are whole multiples of this duration.
   - `address _tokenAddress` : ERC20 (with permit) used for subscription payments.
   - `address _owner` : Creator/owner of the new asset.

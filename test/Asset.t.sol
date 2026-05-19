@@ -243,6 +243,48 @@ contract AssetTest is BaseTest {
         assertEq(testToken.balanceOf(assetOwner), tokenBalance);
     }
 
+    /// @dev Verifies that claimedAtNonce is NOT advanced when a mid-period claim yields zero fees
+    ///      for the latest subscription nonce. With a two-nonce scenario (nonce 0 expired, nonce 1
+    ///      mid-period), the emitted claimedAtNonce after the first claim must reflect the last nonce
+    ///      that actually contributed fees (nonce 0), not the zero-fee ongoing nonce (nonce 1).
+    function test_claimCreatorFee_claimedAtNonce_notAdvanced_forZeroFeeSubscription() public {
+        // Subscribe (nonce 0)
+        uint256 nonce0End = _subscribe(1);
+
+        // Expire nonce 0 and change price to force a new nonce on the next subscribe
+        vm.warp(nonce0End);
+        vm.prank(assetOwner);
+        asset.setSubscriptionPrice(SUBSCRIPTION_PRICE * 2);
+
+        // Subscribe at the new price (nonce 1, startTime = nonce0End)
+        uint256 nonce1End = _subscribe(1);
+
+        // Advance to mid-nonce-1: less than one full period has elapsed so count=0, dust=0
+        vm.warp(nonce0End + SUBSCRIPTION_DURATION / 2);
+
+        uint256 creatorFeeNonce0 = SUBSCRIPTION_PRICE * (100 - REGISTRY_FEE_SHARE) / 100;
+
+        vm.startPrank(assetOwner);
+        // claimedAtNonce must be 0 (nonce 0 contributed fees), NOT 1 (nonce 1 had zero fees)
+        vm.expectEmit(true, true, true, true);
+        emit Asset.CreatorFeeClaimed(_subscriber, creatorFeeNonce0, nonce0End, 0);
+        asset.claimCreatorFee(_subscriber);
+        vm.stopPrank();
+
+        // Warp to end of nonce 1 and confirm its fees are still fully collectable
+        vm.warp(nonce1End);
+
+        uint256 creatorFeeNonce1 = (SUBSCRIPTION_PRICE * 2) * (100 - REGISTRY_FEE_SHARE) / 100;
+
+        vm.startPrank(assetOwner);
+        vm.expectEmit(true, true, true, true);
+        emit Asset.CreatorFeeClaimed(_subscriber, creatorFeeNonce1, nonce1End, 1);
+        uint256 claimed = asset.claimCreatorFee(_subscriber);
+        vm.stopPrank();
+
+        assertEq(claimed, creatorFeeNonce1);
+    }
+
     function test_claimCreatorFee_multiple_creatorFeeShare() public {
         // creator fee share is 70%
         uint256 tokenBalance = testToken.balanceOf(assetOwner);
