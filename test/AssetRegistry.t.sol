@@ -182,6 +182,35 @@ contract AssetRegistryTest is BaseTest {
         assetRegistry.createAsset(zeroDurationId, SUBSCRIPTION_PRICE, 0, address(testToken), assetOwner);
     }
 
+    function test_createAsset_invalidSubscriptionPrice_zero() public {
+        bytes32 newAssetId = keccak256(abi.encodePacked("zero_price_asset"));
+        vm.prank(registryOwner);
+        vm.expectRevert(Asset.InvalidSubscriptionPrice.selector);
+        assetRegistry.createAsset(newAssetId, 0, SUBSCRIPTION_DURATION, address(testToken), assetOwner);
+    }
+
+    function test_createAsset_invalidSubscriptionPrice_notMultipleOf100() public {
+        bytes32 newAssetId = keccak256(abi.encodePacked("bad_price_asset"));
+        vm.prank(registryOwner);
+        vm.expectRevert(Asset.InvalidSubscriptionPrice.selector);
+        assetRegistry.createAsset(newAssetId, 50, SUBSCRIPTION_DURATION, address(testToken), assetOwner);
+    }
+
+    function test_createAsset_invalidSubscriptionPrice_oneUnderMultiple() public {
+        bytes32 newAssetId = keccak256(abi.encodePacked("under_multiple_asset"));
+        vm.prank(registryOwner);
+        vm.expectRevert(Asset.InvalidSubscriptionPrice.selector);
+        assetRegistry.createAsset(newAssetId, 99, SUBSCRIPTION_DURATION, address(testToken), assetOwner);
+    }
+
+    function test_createAsset_validSubscriptionPrice_exactMultipleOf100() public {
+        bytes32 newAssetId = keccak256(abi.encodePacked("valid_price_asset"));
+        vm.prank(registryOwner);
+        IAsset newAsset =
+            IAsset(assetRegistry.createAsset(newAssetId, 200, SUBSCRIPTION_DURATION, address(testToken), assetOwner));
+        assertEq(newAsset.getSubscriptionPrice(1), 200);
+    }
+
     function test_getSubscriptionPrice_assetNotFound() public {
         bytes32 nonexistentId = keccak256("nonexistent");
 

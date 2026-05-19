@@ -71,6 +71,7 @@ sequenceDiagram
 - `_owner != address(0)` — creator address must be set
 - `_tokenAddress != address(0)` — payment token must be set
 - `_subscriptionDuration > 0` — period length must be non-zero
+- `_subscriptionPrice > 0 && _subscriptionPrice % 100 == 0` — price must be a non-zero multiple of 100, ensuring integer precision when computing `registryFee = fee × registryFeeShare / 100`
 - `msg.sender` (the registry) is stored as `REGISTRY_ADDRESS` — only the registry can call `onlyRegistry` functions
 
 ---
