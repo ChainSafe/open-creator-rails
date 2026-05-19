@@ -41,8 +41,8 @@ registry_owner_private_key=$(get_private_key 0)
 registry_index=0
 
 asset_id_0="default_asset_id_0"
-subscription_price_0=1
-subscription_duration_0=1
+subscription_price_0=100
+subscription_duration_0=100
 owner_0=$(get_wallet_address 1)
 
 ./scripts/createAsset.sh $registry_index $asset_id_0 $subscription_price_0 $subscription_duration_0 $token_address $owner_0 $registry_owner_private_key
