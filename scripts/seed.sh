@@ -89,8 +89,8 @@ subscriber_id_3="default_subscriber_id_3"
 subscriber_id_4="default_subscriber_id_4"
 subscriber_id_5="default_subscriber_id_5"
 
-./scripts/subscribe.sh $registry_index $asset_id_0 $subscriber_id_0 $subscriber_address_0 600 $subscriber_private_key_0 # 10 Minutes
-./scripts/subscribe.sh $registry_index $asset_id_0 $subscriber_id_1 $subscriber_address_1 86400 $subscriber_private_key_1 # 1 Day
+./scripts/subscribe.sh $registry_index $asset_id_0 $subscriber_id_0 $subscriber_address_0 6 $subscriber_private_key_0 # 10 Minutes
+./scripts/subscribe.sh $registry_index $asset_id_0 $subscriber_id_1 $subscriber_address_1 864 $subscriber_private_key_1 # 1 Day
 
 ./scripts/subscribe.sh $registry_index $asset_id_1 $subscriber_id_2 $subscriber_address_2 1 $subscriber_private_key_2 # 1 Month
 ./scripts/subscribe.sh $registry_index $asset_id_1 $subscriber_id_3 $subscriber_address_3 2 $subscriber_private_key_3 # 2 Months
