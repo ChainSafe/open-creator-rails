@@ -153,6 +153,10 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     }
 
     function setSubscriptionPrice(uint256 newSubscriptionPrice) external onlyOwner {
+        // Ensure the subscription price is a multiple of 100
+        if (newSubscriptionPrice == 0 || newSubscriptionPrice % 100 != 0) {
+            revert InvalidSubscriptionPrice();
+        }
         subscriptionPrice = newSubscriptionPrice;
         emit SubscriptionPriceUpdated(newSubscriptionPrice);
     }
