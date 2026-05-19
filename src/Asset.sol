@@ -53,6 +53,7 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
 
     error InvalidOwner();
     error InvalidTokenAddress();
+    error InvalidSubscriptionPrice();
     error InvalidSubscriptionDuration();
     error InvalidSpender();
     error PermitFailed();
@@ -112,6 +113,11 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
     ) Ownable(_owner) {
         if (_subscriptionDuration == 0) {
             revert InvalidSubscriptionDuration();
+        }
+
+        // Ensure the subscription price is a multiple of 100
+        if (_subscriptionPrice == 0 || _subscriptionPrice % 100 != 0) {
+            revert InvalidSubscriptionPrice();
         }
 
         ASSET_ID = _assetId;
@@ -335,8 +341,6 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
                 continue;
             }
 
-            claimedAtNonce = i;
-
             // startTime is aligned to this record's period grid (invariant: claimedAtTimestamp is
             // either 0, a previous snappedEnd on this record's grid, or <= subscription.startTime).
             uint256 startTime = Math.max(subscription.startTime, claimedAtTimestamp);
@@ -358,6 +362,8 @@ contract Asset is Ownable, ReentrancyGuard, IAsset {
             if (count == 0 && dust == 0) {
                 continue;
             }
+
+            claimedAtNonce = i;
 
             uint256 fee = (count * subscription.subscriptionPrice) + dust;
             uint256 registryFee = (fee * subscription.registryFeeShare) / 100;
