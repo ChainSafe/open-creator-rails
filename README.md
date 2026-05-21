@@ -155,13 +155,13 @@ Update the subscription price for an asset (asset owner only):
 |-------|--------------|
 | `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
-| `new_subscription_price` | New price per subscription duration in the token's smallest unit. |
+| `new_subscription_price` | New price per subscription period in the token's smallest unit. Must be a non-zero multiple of 100; reverts with `InvalidSubscriptionPrice` otherwise. |
 | `asset_owner_private_key` | Private key of the asset owner. Used to send the transaction. |
 
 Example:
 
 ```bash
-./scripts/setSubscriptionPrice.sh 0 "default_asset_id" 8 0x1b97...
+./scripts/setSubscriptionPrice.sh 0 "default_asset_id" 200 0x1b97...
 ```
 
 The script updates the `subscriptionPrice` for the asset in `deployments/registries_<chain_id>.json`.
@@ -604,7 +604,7 @@ All external functions for the registry and asset contracts, for use with JSON-R
 - Type: write
 - Permission: `onlyOwner`
 - Parameters:
-  - `uint256 newSubscriptionPrice` : New subscription price.
+  - `uint256 newSubscriptionPrice` : New price per subscription period. Must be a non-zero multiple of 100; reverts with `InvalidSubscriptionPrice` otherwise.
 - Returns: void
 
 
