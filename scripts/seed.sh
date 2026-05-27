@@ -24,6 +24,7 @@ if [ -f "$environment" ]; then
     if [ "$environment" == ".env.local" ]; then
         anvil &
         ANVIL_PID=$!
+        until nc -z -w 1 127.0.0.1 8545; do :; done
     fi
 fi
 
