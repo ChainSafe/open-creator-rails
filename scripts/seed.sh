@@ -64,7 +64,7 @@ owner_2=$(get_wallet_address 3)
 
 asset_id_3="default_asset_id_3"
 subscription_price_3=$((60 * 10 ** 6)) # 60 TEST
-subscription_duration_3=$((12 * 30 * 24 * 60 * 60)) # 12 months
+subscription_duration_3=$((365 * 24 * 60 * 60)) # 1 Year
 owner_3=$(get_wallet_address 4)
 
 ./scripts/createAsset.sh $registry_index $asset_id_3 $subscription_price_3 $subscription_duration_3 $token_address $owner_3 $registry_owner_private_key

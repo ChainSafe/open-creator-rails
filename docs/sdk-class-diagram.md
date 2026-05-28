@@ -12,7 +12,6 @@ class Sdk {
   +IWalletProvider WalletProvider
   + EventHandler: IEventHandler
   +IAsset[] Assets
-  +Initialize(EthereumAddress[] assets) Promise
   +AddAsset(EthereumAddress asset) Promise~IAsset~
   +GetAsset(string assetId, EthereumAddress? registryAddress = null) IAsset
   +static DeployRegistry(decimal registryFeeShare) AssetRegistryService
@@ -23,6 +22,8 @@ class IIndexerProvider {
   <<interface>>
   +string IndexerUrl
   +GetAsset(string assetIdHash, EthereumAddress registryAddress) Promise~AssetDto~
+  +GetActiveSubscriptions(string assetIdHash, EthereumAddress registryAddress) Promise~SubscriptionDto[]~
+  +GetExpiringSubscriptions(string assetIdHash, EthereumAddress registryAddress, TimeSpan expiresIn) Promise~SubscriptionDto[]~
 }
 
 class IWalletProvider {
@@ -38,6 +39,7 @@ class IWalletProvider {
 class IEventHandler {
   <<interface>>
   +Subscribe~T~(EthereumAddress address, IWeb3 web3, EventDelegate~T~ callback) void //Where T is the specific event data
+  +Unsubscribe~T~(EthereumAddress address, IWeb3 web3, EventDelegate~T~ callback) void
 }
 
 class IAsset {
@@ -49,6 +51,8 @@ class IAsset {
   +TimeSpan SubscriptionDuration
   +EthereumAddress Owner
   +EthereumAddress TokenAddress
+  +string TokenSymbol
+  +BigInteger TokenDecimal
   +Subscription[] Subscriptions
   +EthereumAddress RegistryAddress
   +AssetService AssetService
