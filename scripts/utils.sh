@@ -79,5 +79,5 @@ function encode_subscriber() {
     subscriber_id=$1
     subscriber_address=$2
 
-    echo $(cast abi-encode "f(string,address)" "$subscriber_id" "$subscriber_address")
+    echo $(cast keccak "$(cast abi-encode "f(string,address)" "$subscriber_id" "$subscriber_address")")
 }

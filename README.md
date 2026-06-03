@@ -53,7 +53,7 @@ Open Creator Rails is a minimal, verifiable on-chain primitive for managing acce
    export RPC_URL=http://127.0.0.1:8545
    ```
 
-   > **Note:** Scripts do **not** auto-source the env file themselves — you must source it before running individual scripts (`source .env` or `source .env.local`), or pass the env file path to `seed.sh` as the first argument (e.g. `./scripts/seed.sh .env.local`).
+   > **Note:** All scripts optionally accept an environment file (`.env` or `.env.local`) as their first argument (e.g. `./scripts/subscribe.sh .env.local ...`). If `.env.local` is passed, Anvil is automatically started before the script runs. Alternatively, source the env file manually in your shell before running any script: `source .env` or `source .env.local`.
 
 3. **Build**
 
@@ -76,18 +76,19 @@ Open Creator Rails is a minimal, verifiable on-chain primitive for managing acce
 Deploy an AssetRegistry with the specified registry fee share:
 
 ```bash
-./scripts/deployRegistry.sh <registry_fee_share> <registry_owner_private_key>
+./scripts/deployRegistry.sh [env_file] <registry_fee_share> <registry_owner_private_key>
 ```
 
 | Input | Description |
 |-------|--------------|
+| `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
 | `registry_fee_share` | Percentage of subscription payments allocated to the registry. Must be 0–100. The creator receives the remainder (`100 - registry_fee_share`). |
 | `registry_owner_private_key` | Private key of the registry owner; used to deploy the contract and send transactions. |
 
 Example:
 
 ```bash
-./scripts/deployRegistry.sh 20 0x1b97...
+./scripts/deployRegistry.sh .env.local 20 0x1b97...
 ```
 
 Deployments are recorded in `deployments/registries_<chain_id>.json`, where `chain_id` is the chain ID of the network from `RPC_URL` (e.g. `registries_11155111.json` for Sepolia, `registries_84532.json` for Base Sepolia). The file is an array of registry objects with `address`, `registryFeeShare`, `owner`, and `assets`.
@@ -97,11 +98,12 @@ Deployments are recorded in `deployments/registries_<chain_id>.json`, where `cha
 Create an asset in a registry (registry owner only):
 
 ```bash
-./scripts/createAsset.sh <registry_index> <asset_id> <subscription_price> <subscription_duration> <token_address> <owner> <registry_owner_private_key>
+./scripts/createAsset.sh [env_file] <registry_index> <asset_id> <subscription_price> <subscription_duration> <token_address> <owner> <registry_owner_private_key>
 ```
 
 | Input | Description |
 |-------|--------------|
+| `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
 | `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json` (e.g. `0` for the first registry). |
 | `asset_id` | Human-readable identifier for the asset. The script hashes it with keccak256 to get the bytes32 used on-chain. |
 | `subscription_price` | Price for one subscription period, in the token’s smallest unit. Must be a non-zero multiple of 100 to ensure integer precision when splitting fees between the registry and creator (`fee × registryFeeShare / 100`). Total payment for `n` periods is `n * subscription_price` (see `getSubscriptionPrice`). |
@@ -113,7 +115,7 @@ Create an asset in a registry (registry owner only):
 Example:
 
 ```bash
-./scripts/createAsset.sh 0 "default_asset_id" 4 3600 0x1234... 0xabcd... 0x1b97...
+./scripts/createAsset.sh .env.local 0 "default_asset_id" 4 3600 0x1234... 0xabcd... 0x1b97...
 ```
 
 The token address must implement ERC-2612 / IERC20Permit, as subscription payments use gasless permit approvals.
@@ -125,11 +127,12 @@ New assets are appended to the `assets` array of the corresponding registry in `
 Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs the permit and pays with tokens; the subscription is associated with a **subscriber** identity (a `bytes32` hash). The subscriber hash is computed as `keccak256(abi.encode(subscriber_id, subscriber_address))`, so only that `subscriber_address` can cancel by signing an off-chain message and calling `cancelSubscription` in one step (no on-chain commit or timestamp binding). The payer and the subscriber can be the same or different (e.g. “pay for someone else”). The **payer** is the address entitled to refunds if the subscription is later cancelled or revoked (unearned time is refunded to the payer).
 
 ```bash
-./scripts/subscribe.sh <registry_index> <asset_id> <subscriber_id> <subscriber_address> <count> <payer_private_key>
+./scripts/subscribe.sh [env_file] <registry_index> <asset_id> <subscriber_id> <subscriber_address> <count> <payer_private_key>
 ```
 
 | Input | Description |
 |-------|--------------|
+| `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
 | `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). The script hashes it with keccak256 for the on-chain call. |
 | `subscriber_id` | Human-readable subscriber identity (e.g. user id, wallet-derived id). Combined with `subscriber_address` to derive the on-chain `bytes32` subscriber hash: `keccak256(abi.encode(subscriber_id, subscriber_address))`. |
@@ -140,7 +143,123 @@ Subscribe to an asset using ERC-2612 permit (gasless approval). The payer signs 
 Example:
 
 ```bash
-./scripts/subscribe.sh 0 "default_asset_id" "user_123" 0xabcd... 12 0x1b97...
+./scripts/subscribe.sh .env.local 0 "default_asset_id" "user_123" 0xabcd... 12 0x1b97...
+```
+
+### Cancel Subscription
+
+Cancel a subscription as the subscriber. Unearned whole subscription periods are refunded to the original payer; partial periods are non-refundable. The subscriber signs an EIP-191 message off-chain and the script submits `cancelSubscription` in a single transaction — no on-chain commit step is required. Reverts if the subscriber has been permanently revoked by the asset owner.
+
+```bash
+./scripts/cancelSubscription.sh [env_file] <registry_index> <asset_id> <subscriber_id> <subscriber_private_key>
+```
+
+| Input | Description |
+|-------|--------------|
+| `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
+| `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
+| `subscriber_id` | Human-readable subscriber identity string used when subscribing. Combined with `msg.sender` (the subscriber's address) to derive the on-chain subscriber hash. |
+| `subscriber_private_key` | Private key of the subscriber. Used both to sign the cancellation payload off-chain and to send the transaction on-chain (`msg.sender` must match the subscriber address). |
+
+Example:
+
+```bash
+./scripts/cancelSubscription.sh .env.local 0 "default_asset_id" "user_123" 0x1b97...
+```
+
+### Claim Creator Fee
+
+Claim the accrued creator fee for a single subscriber (asset owner only). Accrual covers all completed subscription periods since the last claim; any partial-period dust is also claimable once the subscription has fully ended. Logs the claimed amount formatted with the token's symbol and decimals.
+
+```bash
+./scripts/claimCreatorFee.sh [env_file] <registry_index> <asset_id> <subscriber> <asset_owner_private_key>
+```
+
+| Input | Description |
+|-------|--------------|
+| `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
+| `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
+| `subscriber` | Pre-computed `bytes32` subscriber hash: `keccak256(abi.encode(subscriber_id, subscriber_address))`. Compute it with: `$(cast keccak "$(cast abi-encode "f(string,address)" "$subscriber_id" "$subscriber_address")")`. |
+| `asset_owner_private_key` | Private key of the asset owner. Used to send the transaction. |
+
+Example:
+
+```bash
+SUBSCRIBER=$(cast keccak "$(cast abi-encode "f(string,address)" "user_123" 0xabcd...)")
+./scripts/claimCreatorFee.sh .env.local 0 "default_asset_id" $SUBSCRIBER 0x1b97...
+```
+
+### Claim Creator Fee (Batch)
+
+Claim accrued creator fees for multiple subscribers in a single transaction (asset owner only). Subscribers with no accrued fee are silently skipped. Logs the total claimed amount formatted with the token's symbol and decimals.
+
+```bash
+./scripts/claimCreatorFeeBatch.sh [env_file] <registry_index> <asset_id> <asset_owner_private_key> <subscriber_1> [<subscriber_2> ...]
+```
+
+| Input | Description |
+|-------|--------------|
+| `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
+| `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
+| `asset_owner_private_key` | Private key of the asset owner. Used to send the transaction. |
+| `subscriber_1`, `subscriber_2`, … | One or more pre-computed `bytes32` subscriber hashes: `keccak256(abi.encode(subscriber_id, subscriber_address))`. Each can be computed with: `$(cast keccak "$(cast abi-encode "f(string,address)" "$subscriber_id" "$subscriber_address")")`. |
+
+Example:
+
+```bash
+SUB_0=$(cast keccak "$(cast abi-encode "f(string,address)" "user_0" 0xaaaa...)")
+SUB_1=$(cast keccak "$(cast abi-encode "f(string,address)" "user_1" 0xbbbb...)")
+./scripts/claimCreatorFeeBatch.sh .env.local 0 "default_asset_id" 0x1b97... $SUB_0 $SUB_1
+```
+
+### Claim Registry Fee
+
+Claim the accrued registry fee for a single subscriber (registry owner only). Logs the claimed amount formatted with the token's symbol and decimals.
+
+```bash
+./scripts/claimRegistryFee.sh [env_file] <registry_index> <asset_id> <subscriber> <registry_owner_private_key>
+```
+
+| Input | Description |
+|-------|--------------|
+| `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
+| `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
+| `subscriber` | Pre-computed `bytes32` subscriber hash: `keccak256(abi.encode(subscriber_id, subscriber_address))`. Compute it with: `$(cast keccak "$(cast abi-encode "f(string,address)" "$subscriber_id" "$subscriber_address")")`. |
+| `registry_owner_private_key` | Private key of the registry owner. Used to send the transaction. |
+
+Example:
+
+```bash
+SUBSCRIBER=$(cast keccak "$(cast abi-encode "f(string,address)" "user_123" 0xabcd...)")
+./scripts/claimRegistryFee.sh .env.local 0 "default_asset_id" $SUBSCRIBER 0x1b97...
+```
+
+### Claim Registry Fee (Batch)
+
+Claim accrued registry fees for multiple subscribers in a single transaction (registry owner only). Subscribers with no accrued fee are silently skipped. Logs the total claimed amount formatted with the token's symbol and decimals.
+
+```bash
+./scripts/claimRegistryFeeBatch.sh [env_file] <registry_index> <asset_id> <registry_owner_private_key> <subscriber_1> [<subscriber_2> ...]
+```
+
+| Input | Description |
+|-------|--------------|
+| `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
+| `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
+| `registry_owner_private_key` | Private key of the registry owner. Used to send the transaction. |
+| `subscriber_1`, `subscriber_2`, … | One or more pre-computed `bytes32` subscriber hashes: `keccak256(abi.encode(subscriber_id, subscriber_address))`. Each can be computed with: `$(cast keccak "$(cast abi-encode "f(string,address)" "$subscriber_id" "$subscriber_address")")`. |
+
+Example:
+
+```bash
+SUB_0=$(cast keccak "$(cast abi-encode "f(string,address)" "user_0" 0xaaaa...)")
+SUB_1=$(cast keccak "$(cast abi-encode "f(string,address)" "user_1" 0xbbbb...)")
+./scripts/claimRegistryFeeBatch.sh .env.local 0 "default_asset_id" 0x1b97... $SUB_0 $SUB_1
 ```
 
 ### Set Subscription Price
@@ -148,11 +267,12 @@ Example:
 Update the subscription price for an asset (asset owner only):
 
 ```bash
-./scripts/setSubscriptionPrice.sh <registry_index> <asset_id> <new_subscription_price> <asset_owner_private_key>
+./scripts/setSubscriptionPrice.sh [env_file] <registry_index> <asset_id> <new_subscription_price> <asset_owner_private_key>
 ```
 
 | Input | Description |
 |-------|--------------|
+| `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
 | `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
 | `new_subscription_price` | New price per subscription period in the token's smallest unit. Must be a non-zero multiple of 100; reverts with `InvalidSubscriptionPrice` otherwise. |
@@ -161,7 +281,7 @@ Update the subscription price for an asset (asset owner only):
 Example:
 
 ```bash
-./scripts/setSubscriptionPrice.sh 0 "default_asset_id" 200 0x1b97...
+./scripts/setSubscriptionPrice.sh .env.local 0 "default_asset_id" 200 0x1b97...
 ```
 
 The script updates the `subscriptionPrice` for the asset in `deployments/registries_<chain_id>.json`.
@@ -171,11 +291,12 @@ The script updates the `subscriptionPrice` for the asset in `deployments/registr
 Transfer ownership of an asset to a new address (asset owner only). The asset owner is the address that can claim the creator fee share of subscription payments.
 
 ```bash
-./scripts/transferAssetOwnership.sh <registry_index> <asset_id> <asset_owner_private_key> <new_owner>
+./scripts/transferAssetOwnership.sh [env_file] <registry_index> <asset_id> <asset_owner_private_key> <new_owner>
 ```
 
 | Input | Description |
 |-------|--------------|
+| `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
 | `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
 | `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
 | `asset_owner_private_key` | Private key of the current asset owner. Used to send the transaction. |
@@ -184,7 +305,7 @@ Transfer ownership of an asset to a new address (asset owner only). The asset ow
 Example:
 
 ```bash
-./scripts/transferAssetOwnership.sh 0 "default_asset_id" 0x1b97... 0xabcd...
+./scripts/transferAssetOwnership.sh .env.local 0 "default_asset_id" 0x1b97... 0xabcd...
 ```
 
 The script updates the `owner` for the asset in `deployments/registries_<chain_id>.json`.
@@ -241,17 +362,18 @@ Use `seed.sh` to spin up a fully seeded local environment in one command. Pass t
 > **Deploy a test token** (records the address in `deployments/token_addresses.json` for the current chain):
 >
 > ```bash
-> ./scripts/deployTestToken.sh
+> ./scripts/deployTestToken.sh [env_file]
 > ```
 >
 > **Mint test tokens** to an address (uses the token in `deployments/token_addresses.json` for the current chain):
 >
 > ```bash
-> ./scripts/mintTestToken.sh <to> <amount>
+> ./scripts/mintTestToken.sh [env_file] <to> <amount>
 > ```
 >
 > | Input | Description |
 > |-------|--------------|
+> | `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
 > | `to` | Recipient address. |
 > | `amount` | Amount to mint in the token's smallest unit. |
 
