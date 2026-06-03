@@ -18,6 +18,7 @@ asset_address=$(jq -r ".[$registry_index].assets[] | select(.assetIdHash == \"$a
 
 result=$(cast send $asset_address "transferOwnership(address)" $new_owner --rpc-url $RPC_URL --private-key $asset_owner_private_key --json)
 EXIT_CODE=$?
+cooldown
 
 if [ $EXIT_CODE -ne 0 ]; then
     return $EXIT_CODE 2>/dev/null || exit $EXIT_CODE

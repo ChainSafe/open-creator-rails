@@ -20,6 +20,7 @@ fi
 
 forge create --rpc-url $RPC_URL --private-key $owner_private_key src/$contract_name.sol:$contract_name --broadcast --json $constructor_args
 EXIT_CODE=$?
+cooldown
 
 if [ $EXIT_CODE -ne 0 ]; then
     return $EXIT_CODE 2>/dev/null || exit $EXIT_CODE

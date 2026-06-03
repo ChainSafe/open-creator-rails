@@ -22,5 +22,5 @@ gh release create "$version" \
   --notes "$notes" \
   deployments/*
 
-git tag "v$version" "$version"
+git tag "v$version" HEAD
 git push origin "v$version"

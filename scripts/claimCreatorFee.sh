@@ -22,6 +22,7 @@ token_decimals=$(cast call $token_address "decimals()(uint8)" --rpc-url $RPC_URL
 
 result=$(cast send $asset_address "claimCreatorFee(bytes32)" $subscriber --rpc-url $RPC_URL --private-key $asset_owner_private_key --json)
 EXIT_CODE=$?
+cooldown
 
 if [ $EXIT_CODE -ne 0 ]; then
     return $EXIT_CODE 2>/dev/null || exit $EXIT_CODE

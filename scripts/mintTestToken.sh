@@ -14,6 +14,7 @@ amount=$2
 
 result=$(cast send $token_address "mint(address,uint256)" $to $amount --rpc-url $RPC_URL --private-key $(get_private_key 0) --json)
 EXIT_CODE=$?
+cooldown
 
 if [ $EXIT_CODE -ne 0 ]; then
     return $EXIT_CODE 2>/dev/null || exit $EXIT_CODE

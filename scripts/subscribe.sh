@@ -44,6 +44,7 @@ payer=$(echo $signed_permit | jq -r '.returns.owner.value')
 
 result=$(cast send $registry_address "subscribe(bytes32,bytes32,address,address,uint256,uint256,uint8,bytes32,bytes32)" $asset_id $subscriber $payer $spender $count $deadline $v $r $s --rpc-url $RPC_URL --private-key $(get_private_key 0) --json)
 EXIT_CODE=$?
+cooldown
 
 if [ $EXIT_CODE -ne 0 ]; then
     return $EXIT_CODE 2>/dev/null || exit $EXIT_CODE

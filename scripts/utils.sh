@@ -81,3 +81,13 @@ function encode_subscriber() {
 
     echo $(cast keccak "$(cast abi-encode "f(string,address)" "$subscriber_id" "$subscriber_address")")
 }
+
+function cooldown() {
+    case "$RPC_URL" in
+        *localhost*|*127.0.0.1*|*0.0.0.0*)
+            return 0
+            ;;
+    esac
+
+    sleep 5
+}

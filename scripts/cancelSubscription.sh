@@ -28,6 +28,7 @@ subscriber=$(echo $signed_cancel | jq -r '.returns.subscriber.value')
 
 result=$(cast send $asset_address "cancelSubscription(string,bytes)" "$subscriber_id" $signature --rpc-url $RPC_URL --private-key $subscriber_private_key --json)
 EXIT_CODE=$?
+cooldown
 
 if [ $EXIT_CODE -ne 0 ]; then
     return $EXIT_CODE 2>/dev/null || exit $EXIT_CODE
