@@ -2,6 +2,11 @@
 
 source ./scripts/utils.sh
 
+source_environment $1
+if [ $? -eq 0 ]; then
+    shift 1
+fi
+
 result=$(./scripts/deploy.sh "TestToken" $(get_private_key 0))
 EXIT_CODE=$?
 

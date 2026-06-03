@@ -2,6 +2,11 @@
 
 source ./scripts/utils.sh
 
+source_environment $1
+if [ $? -eq 0 ]; then
+    shift 1
+fi
+
 registry_fee_share=$1
 registry_owner_private_key=$2
 

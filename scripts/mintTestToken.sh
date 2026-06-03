@@ -2,6 +2,11 @@
 
 source ./scripts/utils.sh
 
+source_environment $1
+if [ $? -eq 0 ]; then
+    shift 1
+fi
+
 token_address=$(get_token_address)
 
 to=$1
