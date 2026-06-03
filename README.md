@@ -32,12 +32,13 @@ Open Creator Rails is a minimal, verifiable on-chain primitive for managing acce
 
 2. **Environment variables**
 
-   Create a `.env` or a `.env.local` file in the project root with the following variables:
+   Create a `.env` or a `.env.local` file in the project root with at least these variables:
 
    | Variable   | Description |
    |------------|-------------|
    | `MNEMONIC` | BIP-39 mnemonic phrase used to derive all wallets via an index. |
    | `RPC_URL`  | JSON-RPC URL of the network (e.g. `https://sepolia.infura.io/v3/YOUR_KEY` for Sepolia, or `http://127.0.0.1:8545` for local Anvil). |
+   | `COOLDOWN` | (**Optional**) Seconds to pause between RPC-heavy script steps (see `cooldown` in `scripts/utils.sh`). Defaults to `0` if unset. On testnet/mainnet, set a small positive value (e.g. `export COOLDOWN=5`) to reduce RPC rate-limit errors. |
 
    **For testnet / mainnet** — create `.env`:
 
@@ -347,6 +348,7 @@ Use `seed.sh` to spin up a fully seeded local environment in one command. Pass t
    > ```bash
    > export MNEMONIC='your twelve word mnemonic phrase here ...'
    > export RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
+   > export COOLDOWN=5  # optional; helps avoid RPC rate limits
    > ```
    > Once you've made sure the account at index 0 of the mnemonic has some ETH for gas, run:
    > ```bash
