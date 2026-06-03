@@ -2,6 +2,11 @@
 
 source ./scripts/utils.sh
 
+source_environment $1
+if [ $? -eq 0 ]; then
+    shift 1
+fi
+
 registry_index=$1
 asset_id=$(cast keccak $2)
 asset_owner_private_key=$3

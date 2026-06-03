@@ -50,3 +50,34 @@ function get_token_address() {
     result=$(jq -r ".[\"$chain_id\"]" "$file_name")
     echo $result
 }
+
+function source_environment() {
+    if [ ! $SOURCE_SCRIPT ]; then
+        
+        environment=$1
+    
+        if [ -f "$environment" ]; then
+            # shellcheck source=./.env.local
+            source "$PROJECT_ROOT/$environment"
+
+            if [ "$environment" == ".env.local" ]; then
+                anvil &
+                ANVIL_PID=$!
+                until nc -z -w 1 127.0.0.1 8545; do :; done
+            fi
+
+            export SOURCE_SCRIPT=true
+
+            return 0
+        fi
+    else
+        return 1
+    fi
+}
+
+function encode_subscriber() {
+    subscriber_id=$1
+    subscriber_address=$2
+
+    echo $(cast keccak "$(cast abi-encode "f(string,address)" "$subscriber_id" "$subscriber_address")")
+}

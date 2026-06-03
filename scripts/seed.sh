@@ -15,20 +15,12 @@ cleanup() {
 
 trap cleanup EXIT
 
-environment=$1
-
-if [ -f "$environment" ]; then
-    # shellcheck source=./.env.local
-    source "$PROJECT_ROOT/$environment"
-    
-    if [ "$environment" == ".env.local" ]; then
-        anvil &
-        ANVIL_PID=$!
-        until nc -z -w 1 127.0.0.1 8545; do :; done
-    fi
-fi
-
 source ./scripts/utils.sh
+
+source_environment $1
+if [ $? -eq 0 ]; then
+    shift 1
+fi
 
 ./scripts/deployTestToken.sh
 
