@@ -32,13 +32,13 @@ Open Creator Rails is a minimal, verifiable on-chain primitive for managing acce
 
 2. **Environment variables**
 
-   Create a `.env` or a `.env.local` file in the project root with at least these variables:
+   Create a `.env` or a `.env.local` file in the project root with the following variables:
 
    | Variable   | Description |
    |------------|-------------|
    | `MNEMONIC` | BIP-39 mnemonic phrase used to derive all wallets via an index. |
    | `RPC_URL`  | JSON-RPC URL of the network (e.g. `https://sepolia.infura.io/v3/YOUR_KEY` for Sepolia, or `http://127.0.0.1:8545` for local Anvil). |
-   | `COOLDOWN` | (**Optional**) Seconds to pause between RPC-heavy script steps (see `cooldown` in `scripts/utils.sh`). Defaults to `0` if unset. On testnet/mainnet, set a small positive value (e.g. `export COOLDOWN=5`) to reduce RPC rate-limit errors. |
+   | `COOLDOWN` | (**Optional**) Seconds to pause between RPC-heavy script steps (see `cooldown` in `scripts/utils.sh`). Defaults to `0` if unset. On testnet/mainnet, set a positive value, preferably equal to average block time (e.g. `export COOLDOWN=12`), to reduce RPC rate-limit errors. |
 
    **For testnet / mainnet** — create `.env`:
 
