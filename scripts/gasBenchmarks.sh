@@ -6,6 +6,8 @@ SNAPSHOTS="$ROOT/snapshots/gas"
 DOC="$ROOT/docs/gas-benchmarks.md"
 Y_MAX=1000000000
 
+mkdir -p "$SNAPSHOTS"
+
 FOUNDRY_PROFILE=gas forge snapshot --isolate -vv
 
 charts="$(mktemp)"
