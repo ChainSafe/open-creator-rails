@@ -21,4 +21,6 @@ jobs:
           version: stable
 
       - name: Forge Snapshot Check
-        run: FOUNDRY_PROFILE=gas forge snapshot --check --isolate
+        run: |
+          mkdir -p snapshots/gas
+          FOUNDRY_PROFILE=gas forge snapshot --check --isolate

@@ -47,7 +47,7 @@ jobs:
           git config user.email "$GIT_USERNAME@users.noreply.github.com"
           git checkout -b "$branch"
 
-          git add .gas-snapshot snapshots/gas/ docs/gas-benchmarks.md
+          git add --ignore-missing .gas-snapshot snapshots/gas/ docs/gas-benchmarks.md
 
           if git diff --cached --quiet; then
             echo "No gas benchmark changes to commit."
