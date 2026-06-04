@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - rob1997/gas-performance-tests
 
 permissions:
   contents: write
@@ -28,7 +27,7 @@ jobs:
       - name: Update Gas Benchmarks
         run: |
           if git diff --quiet HEAD^ HEAD -- src/ gas/ foundry.toml; then
-            echo "No gas benchmark changes to commit."
+            exit 0
           fi
 
           ./scripts/gasBenchmarks.sh
