@@ -28,7 +28,7 @@ jobs:
       - name: Update Gas Benchmarks
         run: |
           if git diff --quiet HEAD^ HEAD -- src/ gas/ foundry.toml; then
-            exit 0
+            # exit 0
           fi
 
           ./scripts/gasBenchmarks.sh
