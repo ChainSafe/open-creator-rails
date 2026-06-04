@@ -152,5 +152,36 @@ Example: `1,344,960` gas at `30 gwei` → `0.0403 ETH` (~$101 at $2,500/ETH).
 - Compiler settings (`optimizer`, `via_ir`, `optimizer_runs`) affect absolute gas; compare runs with the same `foundry.toml` profile.
 
 <!-- Begin: generated -->
+```mermaid
+xychart
+    title "Cancel Subscription"
+    x-axis "Nonce" [1, 10, 100, 1000, 10000]
+    y-axis "Gas Cost" 0 --> 1000000000
+    line [87880, 301327, 2414287, 23632999, 244730106]
+```
+
+```mermaid
+xychart
+    title "Claim Creator Fee"
+    x-axis "Nonce" [1, 10, 100, 1000, 10000]
+    y-axis "Gas Cost" 0 --> 1000000000
+    line [105201, 235896, 1344957, 12546948, 135704354]
+```
+
+```mermaid
+xychart
+    title "Claim Registry Fee"
+    x-axis "Nonce" [1, 10, 100, 1000, 10000]
+    y-axis "Gas Cost" 0 --> 1000000000
+    line [103871, 233991, 1337301, 12481776, 135064026]
+```
+
+```mermaid
+xychart
+    title "Revoke Subscription"
+    x-axis "Nonce" [1, 10, 100, 1000, 10000]
+    y-axis "Gas Cost" 0 --> 1000000000
+    line [137670, 351205, 2465050, 23692608, 244878183]
+```
 
 <!-- End: generated -->
