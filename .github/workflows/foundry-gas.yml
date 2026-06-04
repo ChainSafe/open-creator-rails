@@ -1,6 +1,9 @@
 name: foundry-gas
 
 on:
+  push:
+    branches:
+      - rob1997/gas-performance-tests
   pull_request:
     branches: [main]
 

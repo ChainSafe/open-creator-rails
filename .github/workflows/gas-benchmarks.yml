@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - rob1997/gas-performance-tests
 
 permissions:
   contents: write
