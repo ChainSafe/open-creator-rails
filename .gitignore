@@ -20,6 +20,8 @@ yarn.lock
 *.swo
 *~
 .DS_Store
+.claude
+.zed
 
 # Solidity
 *.sol.bak
