@@ -169,6 +169,52 @@ Example:
 ./scripts/cancelSubscription.sh .env.local 0 "default_asset_id" "user_123" 0x1b97...
 ```
 
+### Revoke Subscription
+
+Revoke a subscriber's subscription as the asset owner. Unlike cancellation, revocation refunds all remaining time to each original payer, including partial-period dust, and **permanently bans** the subscriber from resubscribing or cancelling until the owner calls `unrevokeSubscription`. Reverts if the subscriber is already revoked.
+
+```bash
+./scripts/revokeSubscription.sh [env_file] <registry_index> <asset_id> <subscriber> <asset_owner_private_key>
+```
+
+| Input | Description |
+|-------|--------------|
+| `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
+| `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
+| `subscriber` | Pre-computed `bytes32` subscriber hash: `keccak256(abi.encode(subscriber_id, subscriber_address))`. Compute it with: `$(cast keccak "$(cast abi-encode "f(string,address)" "$subscriber_id" "$subscriber_address")")`. |
+| `asset_owner_private_key` | Private key of the asset owner. Used to send the transaction. |
+
+Example:
+
+```bash
+SUBSCRIBER=$(cast keccak "$(cast abi-encode "f(string,address)" "user_123" 0xabcd...)")
+./scripts/revokeSubscription.sh .env.local 0 "default_asset_id" $SUBSCRIBER 0x1b97...
+```
+
+### Unrevoke Subscription
+
+Lift a permanent revocation for a subscriber as the asset owner, allowing them to resubscribe and cancel again. Reverts if the subscriber is not currently revoked.
+
+```bash
+./scripts/unrevokeSubscription.sh [env_file] <registry_index> <asset_id> <subscriber> <asset_owner_private_key>
+```
+
+| Input | Description |
+|-------|--------------|
+| `env_file` | Path to an env file to source (e.g. `.env` or `.env.local`). If `.env.local` is passed, Anvil is auto-started. |
+| `registry_index` | Zero-based index of the registry in `deployments/registries_<chain_id>.json`. |
+| `asset_id` | Human-readable asset identifier (same string used when creating the asset). |
+| `subscriber` | Pre-computed `bytes32` subscriber hash: `keccak256(abi.encode(subscriber_id, subscriber_address))`. Compute it with: `$(cast keccak "$(cast abi-encode "f(string,address)" "$subscriber_id" "$subscriber_address")")`. |
+| `asset_owner_private_key` | Private key of the asset owner. Used to send the transaction. |
+
+Example:
+
+```bash
+SUBSCRIBER=$(cast keccak "$(cast abi-encode "f(string,address)" "user_123" 0xabcd...)")
+./scripts/unrevokeSubscription.sh .env.local 0 "default_asset_id" $SUBSCRIBER 0x1b97...
+```
+
 ### Claim Creator Fee
 
 Claim the accrued creator fee for a single subscriber (asset owner only). Accrual covers all completed subscription periods since the last claim; any partial-period dust is also claimable once the subscription has fully ended. Logs the claimed amount formatted with the token's symbol and decimals.
